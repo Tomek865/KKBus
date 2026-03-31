@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  kkbus-db:
+    image: postgres:15-alpine
+    container_name: kkbus_postgres
+    environment:
+      POSTGRES_USER: kkbus_admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: kkbus_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
