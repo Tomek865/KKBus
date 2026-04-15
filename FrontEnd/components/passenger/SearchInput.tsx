@@ -1,11 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-export const SearchInput = ({ label, value, flex, marginRight }: any) => (
-    <View style={[styles.container, { flex, marginRight }]}>
+export const SearchInput = ({ label, value, flex, marginRight, onPress }: any) => (
+    <TouchableOpacity
+        style={[styles.container, { flex, marginRight }]}
+        onPress={onPress}
+        activeOpacity={0.7}
+    >
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.value}>{value}</Text>
-    </View>
+    </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({
