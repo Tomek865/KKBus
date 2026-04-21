@@ -1,0 +1,48 @@
+# Środowisko wirtualne
+.venv/
+venv/
+ENV/
+env/
+
+# Cache Pythona (skompilowane pliki)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pliki środowiskowe (zmienne środowiskowe, hasła)
+.env
+.env.local
+
+# Bazy danych (jeśli SQLite, chociaż używamy PostgreSQL w Dockerze)
+*.sqlite3
+*.db
+
+# Pliki tymczasowe edytorów i systemów
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logi (jeśli aplikacja generuje pliki logów)
+*.log
+
+# Foldery instalacyjne (jeśli użyto by pip install w folderze)
+lib/
+lib64/
+share/python-wheels/
+
+# Pakiety dystrybucyjne / build
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
