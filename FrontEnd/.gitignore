@@ -18,6 +18,11 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Lock files (Blokowanie plików blokady)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
 # Metro
 .metro-health-check*
 

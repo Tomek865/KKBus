@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Numpad } from '../../components/driver/Numpad';
 
@@ -7,7 +7,9 @@ export default function DriverSegmentReport() {
     const [boarded, setBoarded] = useState('0');
     const [alighted, setAlighted] = useState('0');
     const [activeField, setActiveField] = useState<'boarded' | 'alighted'>('boarded');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Obsługa wpisywania cyfr
     const handleNumpadPress = (val: string) => {
         if (activeField === 'boarded') {
             setBoarded(prev => prev === '0' ? val : prev + val);
@@ -16,6 +18,7 @@ export default function DriverSegmentReport() {
         }
     };
 
+    // Usuwanie ostatniej cyfry
     const handleDelete = () => {
         if (activeField === 'boarded') {
             setBoarded(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
@@ -27,6 +30,26 @@ export default function DriverSegmentReport() {
     const handleClear = () => {
         if (activeField === 'boarded') setBoarded('0');
         else setAlighted('0');
+    };
+
+    // MIEJSCE NA TWOJE API
+    const submitReport = async () => {
+        setIsSubmitting(true);
+        try {
+            // TUTAJ: await fetch('https://twoje-api.pl/reports', { ... })
+            console.log(`API: Sending report - Boarded: ${boarded}, Alighted: ${alighted}`);
+
+            // Symulacja opóźnienia serwera
+            await new Promise(resolve => setTimeout(resolve, 1200));
+
+            Alert.alert("Success", "Segment report submitted correctly.");
+            setBoarded('0');
+            setAlighted('0');
+        } catch (error) {
+            Alert.alert("Error", "Could not send report. Check connection.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -41,7 +64,6 @@ export default function DriverSegmentReport() {
                 </View>
 
                 <View style={styles.contentRow}>
-                    {/* Lewa kolumna - Pola wprowadzania */}
                     <View style={styles.inputCol}>
                         <TouchableOpacity
                             style={[styles.inputBox, activeField === 'boarded' && styles.inputBoxActive]}
@@ -71,15 +93,24 @@ export default function DriverSegmentReport() {
                         </View>
                     </View>
 
-                    {/* Prawa kolumna - Klawiatura */}
                     <View style={styles.numpadCol}>
                         <Numpad onPress={handleNumpadPress} onDelete={handleDelete} leftActionLabel="CLEAR" onLeftAction={handleClear} />
                     </View>
                 </View>
 
-                <TouchableOpacity style={styles.submitBtn}>
-                    <Ionicons name="save-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
-                    <Text style={styles.submitBtnText}>SUBMIT REPORT</Text>
+                <TouchableOpacity
+                    style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]}
+                    onPress={submitReport}
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <>
+                            <Ionicons name="save-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
+                            <Text style={styles.submitBtnText}>SUBMIT REPORT</Text>
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         </View>
@@ -88,22 +119,22 @@ export default function DriverSegmentReport() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 30, width: '90%', maxWidth: 700, elevation: 4 },
+    card: { backgroundColor: '#fff', borderRadius: 24, padding: 30, width: '95%', maxWidth: 700, elevation: 4 },
     header: { flexDirection: 'row', alignItems: 'center', marginBottom: 30 },
     iconContainer: { backgroundColor: '#111827', width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
     title: { fontSize: 24, fontWeight: 'bold', color: '#111' },
     subtitle: { fontSize: 12, color: '#888', fontWeight: 'bold', marginTop: 4 },
-    contentRow: { flexDirection: 'row', gap: 30, marginBottom: 30 },
+    contentRow: { flexDirection: 'row', gap: 20, marginBottom: 30, flex: 1 },
     inputCol: { flex: 1, justifyContent: 'space-between' },
-    inputBox: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 16, borderWidth: 2, borderColor: '#f3f4f6', backgroundColor: '#f9fafb' },
+    inputBox: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 16, borderWidth: 2, borderColor: '#f3f4f6', backgroundColor: '#f9fafb' },
     inputBoxActive: { borderColor: '#e60000', backgroundColor: '#fff' },
     inputTexts: { marginLeft: 15, alignItems: 'center', flex: 1 },
     inputLabel: { fontSize: 10, fontWeight: 'bold', color: '#888', marginBottom: 4 },
     inputLabelActive: { color: '#e60000' },
-    inputValue: { fontSize: 40, fontWeight: 'bold' },
-    warningBox: { flexDirection: 'row', backgroundColor: '#fffbeb', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 },
-    warningText: { color: '#d97706', fontSize: 12, marginLeft: 10, flex: 1, fontWeight: '500' },
-    numpadCol: { flex: 1 },
+    inputValue: { fontSize: 36, fontWeight: 'bold' },
+    warningBox: { flexDirection: 'row', backgroundColor: '#fffbeb', padding: 12, borderRadius: 12, alignItems: 'center', marginTop: 10 },
+    warningText: { color: '#d97706', fontSize: 10, marginLeft: 10, flex: 1, fontWeight: '500' },
+    numpadCol: { width: 260 },
     submitBtn: { backgroundColor: '#e60000', padding: 20, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     submitBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 });
