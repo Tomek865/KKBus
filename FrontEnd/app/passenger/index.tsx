@@ -3,6 +3,43 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Mod
 import { Ionicons } from '@expo/vector-icons';
 import { SearchInput } from '../../components/passenger/SearchInput';
 
+// --- TYPES ---
+export interface Departure {
+    id: string;
+    departureTime: string;
+    arrivalTime: string;
+    departureStation: string;
+    arrivalStation: string;
+    duration: string;
+    seatsLeft: number;
+    price: number;
+}
+
+// --- MOCK DATA ---
+const MOCK_DEPARTURES: Departure[] = [
+    {
+        id: '1',
+        departureTime: '08:15',
+        arrivalTime: '09:40',
+        departureStation: 'Krakow MDA',
+        arrivalStation: 'Katowice Dworzec',
+        duration: '1H 25M',
+        seatsLeft: 12,
+        price: 24,
+    },
+    {
+        id: '2',
+        departureTime: '09:30',
+        arrivalTime: '10:55',
+        departureStation: 'Krakow MDA',
+        arrivalStation: 'Katowice Dworzec',
+        duration: '1H 25M',
+        seatsLeft: 4,
+        price: 24,
+    }
+];
+
+
 // Helper function to generate the next 14 days
 const generateNext14Days = () => {
     const dates = [];
@@ -12,6 +49,53 @@ const generateNext14Days = () => {
         dates.push(d);
     }
     return dates;
+};
+
+// --- COMPONENTS ---
+const DepartureCard = ({ departure }: { departure: Departure }) => {
+    const isLowSeats = departure.seatsLeft <= 5;
+
+    return (
+        <View style={styles.departureCard}>
+            {/* Top Row: Times & Line */}
+            <View style={styles.routeContainer}>
+                <View style={styles.timeBlock}>
+                    <Text style={styles.timeText}>{departure.departureTime}</Text>
+                    <Text style={styles.stationText}>{departure.departureStation}</Text>
+                </View>
+
+                <View style={styles.durationBlock}>
+                    <Text style={styles.durationText}>{departure.duration}</Text>
+                    <View style={styles.durationLineWrapper}>
+                        <View style={styles.durationDotGray} />
+                        <View style={styles.durationLine} />
+                        <View style={styles.durationDotRed} />
+                    </View>
+                </View>
+
+                <View style={[styles.timeBlock, { alignItems: 'flex-end' }]}>
+                    <Text style={styles.timeText}>{departure.arrivalTime}</Text>
+                    <Text style={styles.stationText}>{departure.arrivalStation}</Text>
+                </View>
+            </View>
+
+            {/* Bottom Row: Status & Price */}
+            <View style={styles.departureFooter}>
+                <View style={[styles.seatsBadge, isLowSeats ? styles.seatsBadgeOrange : styles.seatsBadgeGreen]}>
+                    <Text style={[styles.seatsText, isLowSeats ? styles.seatsTextOrange : styles.seatsTextGreen]}>
+                        {departure.seatsLeft} SEATS LEFT
+                    </Text>
+                </View>
+
+                <View style={styles.priceContainer}>
+                    <Text style={styles.priceText}>{departure.price} PLN</Text>
+                    <TouchableOpacity style={styles.actionIcon}>
+                        <Ionicons name="swap-horizontal" size={18} color="#e60000" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+    );
 };
 
 export default function PassengerSearch() {
@@ -29,6 +113,24 @@ export default function PassengerSearch() {
         student: 0,
         reduced: 0
     });
+
+    // --- DEPARTURES STATES ---
+    const [departures, setDepartures] = useState<Departure[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
+
+    // --- SEARCH LOGIC ---
+    const handleSearchRoutes = () => {
+        setIsSearching(true);
+        setHasSearched(true);
+        setDepartures([]); // Czyścimy poprzednie wyniki
+        
+        // Symulacja opóźnienia sieciowego (pobieranie z backendu)
+        setTimeout(() => {
+            setDepartures(MOCK_DEPARTURES);
+            setIsSearching(false);
+        }, 1200); // 1.2s opóźnienia
+    };
 
     // Modals
     const [modalVisible, setModalVisible] = useState(false);
@@ -94,7 +196,7 @@ export default function PassengerSearch() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.logo}>Trans<Text style={styles.logoRed}>Region</Text></Text>
+                <Text style={styles.logo}>KK<Text style={styles.logoRed}>Bus</Text></Text>
 
                 <View style={styles.searchCard}>
                     <SearchInput label="FROM" value={fromStation} onPress={() => { setSelectingField('from'); setModalVisible(true); }} />
@@ -110,10 +212,31 @@ export default function PassengerSearch() {
                         <SearchInput label="PASSENGERS" value={getPassengersSummary()} flex={1} onPress={() => setPassengerModalVisible(true)} />
                     </View>
 
-                    <TouchableOpacity style={styles.searchButton}>
-                        <Text style={styles.searchButtonText}>Search Routes</Text>
+                    <TouchableOpacity style={styles.searchButton} onPress={handleSearchRoutes}>
+                        <Text style={styles.searchButtonText}>
+                        {isSearching ? 'Searching...' : 'Search Routes'}
+                         </Text>
                     </TouchableOpacity>
                 </View>
+                
+                {hasSearched && (
+                    <View style={styles.resultsSection}>
+                        <View style={styles.resultsHeader}>
+                            <Text style={styles.resultsTitle}>Available Departures</Text>
+                            <View style={styles.optionsBadge}>
+                                <Text style={styles.optionsText}>{departures.length} options</Text>
+                            </View>
+                        </View>
+
+                        {isSearching ? (
+                            <Text style={styles.loadingText}>Loading routes...</Text>
+                        ) : (
+                            departures.map(dep => (
+                                <DepartureCard key={dep.id} departure={dep} />
+                            ))
+                        )}
+                    </View>
+                )}
             </ScrollView>
 
             {/* --- DATE MODAL --- */}
@@ -276,5 +399,40 @@ const styles = StyleSheet.create({
     countBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
     countText: { fontSize: 18, fontWeight: 'bold', marginHorizontal: 15, minWidth: 20, textAlign: 'center' },
     doneButton: { backgroundColor: '#e60000', margin: 20, padding: 18, borderRadius: 16, alignItems: 'center', marginTop: 'auto' },
-    doneButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
+    doneButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+
+    // --- DEPARTURES STYLES ---
+    resultsSection: { marginTop: 30, paddingBottom: 40 },
+    resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
+    resultsTitle: { fontSize: 22, fontWeight: '900', color: '#111' },
+    optionsBadge: { backgroundColor: '#eef0f3', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16 },
+    optionsText: { fontSize: 14, color: '#555', fontWeight: '600' },
+    
+    // Departure Card Styles
+    departureCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 15, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5 },
+    routeContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    timeBlock: { flex: 1 },
+    timeText: { fontSize: 24, fontWeight: 'bold', color: '#111', marginBottom: 4 },
+    stationText: { fontSize: 13, color: '#888', fontWeight: '500' },
+    
+    // Duration Line
+    durationBlock: { flex: 1.5, alignItems: 'center', marginHorizontal: 10 },
+    durationText: { fontSize: 11, color: '#aaa', fontWeight: 'bold', marginBottom: 5, letterSpacing: 0.5 },
+    durationLineWrapper: { flexDirection: 'row', alignItems: 'center', width: '100%' },
+    durationDotGray: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ccc' },
+    durationLine: { flex: 1, height: 2, backgroundColor: '#eee' },
+    durationDotRed: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#e60000' },
+    
+    // Footer (Seats & Price)
+    departureFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderColor: '#f8f8f8', paddingTop: 15 },
+    seatsBadge: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
+    seatsBadgeGreen: { backgroundColor: '#e6f7ec' },
+    seatsBadgeOrange: { backgroundColor: '#fdf0d5' },
+    seatsText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+    seatsTextGreen: { color: '#10b981' },
+    seatsTextOrange: { color: '#f59e0b' },
+    
+    priceContainer: { flexDirection: 'row', alignItems: 'center' },
+    priceText: { fontSize: 20, fontWeight: '900', color: '#e60000', marginRight: 15 },
+    actionIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fcecec', justifyContent: 'center', alignItems: 'center' }
 });
