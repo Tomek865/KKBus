@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Mod
 import { Ionicons } from '@expo/vector-icons';
 import { SearchInput } from '../../components/passenger/SearchInput';
 
-// --- TYPES ---
+// ==========================================
+// TYPES & INTERFACES
+// ==========================================
 export interface Departure {
     id: string;
     departureTime: string;
@@ -15,32 +17,18 @@ export interface Departure {
     price: number;
 }
 
+<<<<<<< HEAD
 // --- MOCK DATA --- fetch
+=======
+// ==========================================
+// MOCK DATA & HELPERS
+// ==========================================
+>>>>>>> 9e38eb9340d1d4f37c1f0cbbf255fc5b6044f4b1
 const MOCK_DEPARTURES: Departure[] = [
-    {
-        id: '1',
-        departureTime: '08:15',
-        arrivalTime: '09:40',
-        departureStation: 'Krakow MDA',
-        arrivalStation: 'Katowice Dworzec',
-        duration: '1H 25M',
-        seatsLeft: 12,
-        price: 24,
-    },
-    {
-        id: '2',
-        departureTime: '09:30',
-        arrivalTime: '10:55',
-        departureStation: 'Krakow MDA',
-        arrivalStation: 'Katowice Dworzec',
-        duration: '1H 25M',
-        seatsLeft: 4,
-        price: 24,
-    }
+    { id: '1', departureTime: '08:15', arrivalTime: '09:40', departureStation: 'Krakow MDA', arrivalStation: 'Katowice Dworzec', duration: '1H 25M', seatsLeft: 12, price: 24 },
+    { id: '2', departureTime: '09:30', arrivalTime: '10:55', departureStation: 'Krakow MDA', arrivalStation: 'Katowice Dworzec', duration: '1H 25M', seatsLeft: 4, price: 24 }
 ];
 
-
-// Helper function to generate the next 14 days
 const generateNext14Days = () => {
     const dates = [];
     for (let i = 0; i < 14; i++) {
@@ -51,19 +39,19 @@ const generateNext14Days = () => {
     return dates;
 };
 
-// --- COMPONENTS ---
+// ==========================================
+// SUB-COMPONENTS
+// ==========================================
 const DepartureCard = ({ departure }: { departure: Departure }) => {
     const isLowSeats = departure.seatsLeft <= 5;
 
     return (
         <View style={styles.departureCard}>
-            {/* Top Row: Times & Line */}
             <View style={styles.routeContainer}>
                 <View style={styles.timeBlock}>
                     <Text style={styles.timeText}>{departure.departureTime}</Text>
                     <Text style={styles.stationText}>{departure.departureStation}</Text>
                 </View>
-
                 <View style={styles.durationBlock}>
                     <Text style={styles.durationText}>{departure.duration}</Text>
                     <View style={styles.durationLineWrapper}>
@@ -72,21 +60,17 @@ const DepartureCard = ({ departure }: { departure: Departure }) => {
                         <View style={styles.durationDotRed} />
                     </View>
                 </View>
-
                 <View style={[styles.timeBlock, { alignItems: 'flex-end' }]}>
                     <Text style={styles.timeText}>{departure.arrivalTime}</Text>
                     <Text style={styles.stationText}>{departure.arrivalStation}</Text>
                 </View>
             </View>
-
-            {/* Bottom Row: Status & Price */}
             <View style={styles.departureFooter}>
                 <View style={[styles.seatsBadge, isLowSeats ? styles.seatsBadgeOrange : styles.seatsBadgeGreen]}>
                     <Text style={[styles.seatsText, isLowSeats ? styles.seatsTextOrange : styles.seatsTextGreen]}>
                         {departure.seatsLeft} SEATS LEFT
                     </Text>
                 </View>
-
                 <View style={styles.priceContainer}>
                     <Text style={styles.priceText}>{departure.price} PLN</Text>
                     <TouchableOpacity style={styles.actionIcon}>
@@ -98,26 +82,23 @@ const DepartureCard = ({ departure }: { departure: Departure }) => {
     );
 };
 
+// ==========================================
+// MAIN COMPONENT
+// ==========================================
 export default function PassengerSearch() {
-    // --- STATES ---
+    // --- STATES: Search Parameters ---
     const [stations, setStations] = useState<string[]>([]);
     const [fromStation, setFromStation] = useState('Krakow');
     const [toStation, setToStation] = useState('Katowice');
-
     const [availableDates] = useState(generateNext14Days());
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [passengerCounts, setPassengerCounts] = useState({ adult: 1, student: 0, reduced: 0 });
 
-    // Passenger counts object
-    const [passengerCounts, setPassengerCounts] = useState({
-        adult: 1,
-        student: 0,
-        reduced: 0
-    });
-
-    // --- DEPARTURES STATES ---
+    // --- STATES: Results & UI ---
     const [departures, setDepartures] = useState<Departure[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+<<<<<<< HEAD
 
     // --- SEARCH LOGIC ---
     const handleSearchRoutes = () => {
@@ -133,14 +114,24 @@ export default function PassengerSearch() {
     };
 
     // Modals
+=======
+>>>>>>> 9e38eb9340d1d4f37c1f0cbbf255fc5b6044f4b1
     const [modalVisible, setModalVisible] = useState(false);
     const [selectingField, setSelectingField] = useState<'from' | 'to' | null>(null);
     const [passengerModalVisible, setPassengerModalVisible] = useState(false);
     const [dateModalVisible, setDateModalVisible] = useState(false);
 
+<<<<<<< HEAD
     // --- MOCK BACKEND --- fetch
+=======
+    // ==========================================
+    // API / BACKEND CALLS
+    // ==========================================
+>>>>>>> 9e38eb9340d1d4f37c1f0cbbf255fc5b6044f4b1
     useEffect(() => {
         const fetchStationsFromDB = async () => {
+            // TODO: BACKEND FETCH - Pobieranie listy dostępnych stacji
+            // Przykład: const response = await fetch('/api/stations'); const data = await response.json(); setStations(data);
             setTimeout(() => {
                 setStations(['Krakow', 'Katowice', 'Warszawa', 'Wroclaw', 'Gdansk', 'Zakopane']);
             }, 500);
@@ -148,18 +139,34 @@ export default function PassengerSearch() {
         fetchStationsFromDB();
     }, []);
 
-    // --- PASSENGER FUNCTIONS ---
+    const handleSearchRoutes = () => {
+        setIsSearching(true);
+        setHasSearched(true);
+        setDepartures([]);
+        
+        // TODO: BACKEND FETCH - Wyszukiwanie połączeń na podstawie parametrów (fromStation, toStation, selectedDate, passengerCounts)
+        // Przykład: const response = await fetch(`/api/routes?from=${fromStation}&to=${toStation}...`); setDepartures(data);
+        setTimeout(() => {
+            setDepartures(MOCK_DEPARTURES);
+            setIsSearching(false);
+        }, 1200); 
+    };
+
+    // ==========================================
+    // HANDLERS
+    // ==========================================
     const updateCount = (type: 'adult' | 'student' | 'reduced', delta: number) => {
         setPassengerCounts(prev => {
             const newVal = prev[type] + delta;
-            // Prevent negative values and ensure at least 1 passenger total
             if (newVal < 0) return prev;
             if (type === 'adult' && newVal === 0 && prev.student === 0 && prev.reduced === 0) return prev;
+<<<<<<< HEAD
 
             // Overall limit of 10 passengers fetch
+=======
+>>>>>>> 9e38eb9340d1d4f37c1f0cbbf255fc5b6044f4b1
             const total = prev.adult + prev.student + prev.reduced + delta;
             if (total > 10) return prev;
-
             return { ...prev, [type]: newVal };
         });
     };
@@ -169,11 +176,9 @@ export default function PassengerSearch() {
         if (passengerCounts.adult > 0) parts.push(`${passengerCounts.adult} Adult${passengerCounts.adult > 1 ? 's' : ''}`);
         if (passengerCounts.student > 0) parts.push(`${passengerCounts.student} Student${passengerCounts.student > 1 ? 's' : ''}`);
         if (passengerCounts.reduced > 0) parts.push(`${passengerCounts.reduced} Reduced`);
-
         return parts.length > 0 ? parts.join(', ') : 'Select passengers';
     };
 
-    // --- OTHER FUNCTIONS ---
     const handleStationSelect = (station: string) => {
         if (selectingField === 'from') setFromStation(station);
         if (selectingField === 'to') setToStation(station);
@@ -193,18 +198,19 @@ export default function PassengerSearch() {
 
     const formattedDate = selectedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
+    // ==========================================
+    // RENDER
+    // ==========================================
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.logo}>KK<Text style={styles.logoRed}>Bus</Text></Text>
+                <Text style={styles.logo}>Trans<Text style={styles.logoRed}>Region</Text></Text>
 
                 <View style={styles.searchCard}>
                     <SearchInput label="FROM" value={fromStation} onPress={() => { setSelectingField('from'); setModalVisible(true); }} />
-
                     <TouchableOpacity style={styles.swapIconContainer} onPress={swapStations}>
                         <Ionicons name="swap-vertical" size={20} color="#e60000" />
                     </TouchableOpacity>
-
                     <SearchInput label="TO" value={toStation} onPress={() => { setSelectingField('to'); setModalVisible(true); }} />
 
                     <View style={styles.row}>
@@ -214,8 +220,8 @@ export default function PassengerSearch() {
 
                     <TouchableOpacity style={styles.searchButton} onPress={handleSearchRoutes}>
                         <Text style={styles.searchButtonText}>
-                        {isSearching ? 'Searching...' : 'Search Routes'}
-                         </Text>
+                            {isSearching ? 'Searching...' : 'Search Routes'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
                 
@@ -231,24 +237,41 @@ export default function PassengerSearch() {
                         {isSearching ? (
                             <Text style={styles.loadingText}>Loading routes...</Text>
                         ) : (
-                            departures.map(dep => (
-                                <DepartureCard key={dep.id} departure={dep} />
-                            ))
+                            departures.map(dep => <DepartureCard key={dep.id} departure={dep} />)
                         )}
                     </View>
                 )}
             </ScrollView>
 
-            {/* --- DATE MODAL --- */}
+            {/* MODALS */}
+            {/* Station Modal */}
+            <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
+                <SafeAreaView style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Select Station</Text>
+                        <TouchableOpacity onPress={() => setModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
+                    </View>
+                    <FlatList
+                        data={stations}
+                        keyExtractor={(item) => item}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity style={styles.listItem} onPress={() => handleStationSelect(item)}>
+                                <Ionicons name="location-outline" size={20} color="#888" />
+                                <Text style={styles.listItemText}>{item}</Text>
+                            </TouchableOpacity>
+                        )}
+                        ListEmptyComponent={<Text style={styles.loadingText}>Loading stations...</Text>}
+                    />
+                </SafeAreaView>
+            </Modal>
+
+            {/* Date Modal */}
             <Modal visible={dateModalVisible} animationType="slide" presentationStyle="pageSheet">
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Select Date</Text>
-                        <TouchableOpacity onPress={() => setDateModalVisible(false)}>
-                            <Ionicons name="close-circle" size={32} color="#aaa" />
-                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setDateModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
                     </View>
-
                     <FlatList
                         data={availableDates}
                         keyExtractor={(item) => item.toISOString()}
@@ -270,106 +293,54 @@ export default function PassengerSearch() {
                 </SafeAreaView>
             </Modal>
 
-            {/* --- PASSENGER MODAL (COUNTERS) --- */}
+            {/* Passenger Modal */}
             <Modal visible={passengerModalVisible} animationType="slide" presentationStyle="pageSheet">
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Select Passengers</Text>
-                        <TouchableOpacity onPress={() => setPassengerModalVisible(false)}>
-                            <Ionicons name="close-circle" size={32} color="#aaa" />
-                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setPassengerModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
                     </View>
-
                     <View style={styles.counterList}>
-                        {/* ADULTS */}
+                        {/* Adults */}
                         <View style={styles.counterRow}>
-                            <View>
-                                <Text style={styles.counterLabel}>Adult</Text>
-                                <Text style={styles.counterSub}>Standard ticket</Text>
-                            </View>
+                            <View><Text style={styles.counterLabel}>Adult</Text><Text style={styles.counterSub}>Standard ticket</Text></View>
                             <View style={styles.counterControls}>
-                                <TouchableOpacity onPress={() => updateCount('adult', -1)} style={styles.countBtn}>
-                                    <Ionicons name="remove" size={20} color="#111" />
-                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => updateCount('adult', -1)} style={styles.countBtn}><Ionicons name="remove" size={20} color="#111" /></TouchableOpacity>
                                 <Text style={styles.countText}>{passengerCounts.adult}</Text>
-                                <TouchableOpacity onPress={() => updateCount('adult', 1)} style={styles.countBtn}>
-                                    <Ionicons name="add" size={20} color="#111" />
-                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => updateCount('adult', 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
                             </View>
                         </View>
-
-                        {/* STUDENTS */}
+                        {/* Students */}
                         <View style={styles.counterRow}>
-                            <View>
-                                <Text style={styles.counterLabel}>Student</Text>
-                                <Text style={styles.counterSub}>Valid student ID required (-51%)</Text>
-                            </View>
+                            <View><Text style={styles.counterLabel}>Student</Text><Text style={styles.counterSub}>Valid student ID required (-51%)</Text></View>
                             <View style={styles.counterControls}>
-                                <TouchableOpacity onPress={() => updateCount('student', -1)} style={styles.countBtn}>
-                                    <Ionicons name="remove" size={20} color="#111" />
-                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => updateCount('student', -1)} style={styles.countBtn}><Ionicons name="remove" size={20} color="#111" /></TouchableOpacity>
                                 <Text style={styles.countText}>{passengerCounts.student}</Text>
-                                <TouchableOpacity onPress={() => updateCount('student', 1)} style={styles.countBtn}>
-                                    <Ionicons name="add" size={20} color="#111" />
-                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => updateCount('student', 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
                             </View>
                         </View>
-
-                        {/* REDUCED */}
+                        {/* Reduced */}
                         <View style={styles.counterRow}>
-                            <View>
-                                <Text style={styles.counterLabel}>Reduced</Text>
-                                <Text style={styles.counterSub}>Children, Seniors (-37%)</Text>
-                            </View>
+                            <View><Text style={styles.counterLabel}>Reduced</Text><Text style={styles.counterSub}>Children, Seniors (-37%)</Text></View>
                             <View style={styles.counterControls}>
-                                <TouchableOpacity onPress={() => updateCount('reduced', -1)} style={styles.countBtn}>
-                                    <Ionicons name="remove" size={20} color="#111" />
-                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => updateCount('reduced', -1)} style={styles.countBtn}><Ionicons name="remove" size={20} color="#111" /></TouchableOpacity>
                                 <Text style={styles.countText}>{passengerCounts.reduced}</Text>
-                                <TouchableOpacity onPress={() => updateCount('reduced', 1)} style={styles.countBtn}>
-                                    <Ionicons name="add" size={20} color="#111" />
-                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => updateCount('reduced', 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
                             </View>
                         </View>
                     </View>
-
-                    <TouchableOpacity
-                        style={styles.doneButton}
-                        onPress={() => setPassengerModalVisible(false)}
-                    >
+                    <TouchableOpacity style={styles.doneButton} onPress={() => setPassengerModalVisible(false)}>
                         <Text style={styles.doneButtonText}>Confirm</Text>
                     </TouchableOpacity>
                 </SafeAreaView>
             </Modal>
-
-            {/* --- STATION MODAL --- */}
-            <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-                <SafeAreaView style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Select Station</Text>
-                        <TouchableOpacity onPress={() => setModalVisible(false)}>
-                            <Ionicons name="close-circle" size={32} color="#aaa" />
-                        </TouchableOpacity>
-                    </View>
-
-                    <FlatList
-                        data={stations}
-                        keyExtractor={(item) => item}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity style={styles.listItem} onPress={() => handleStationSelect(item)}>
-                                <Ionicons name="location-outline" size={20} color="#888" />
-                                <Text style={styles.listItemText}>{item}</Text>
-                            </TouchableOpacity>
-                        )}
-                        ListEmptyComponent={<Text style={styles.loadingText}>Loading stations...</Text>}
-                    />
-                </SafeAreaView>
-            </Modal>
-
         </SafeAreaView>
     );
 }
 
+// ==========================================
+// STYLES
+// ==========================================
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#f4f5f7' },
     container: { padding: 20 },
@@ -381,7 +352,7 @@ const styles = StyleSheet.create({
     searchButton: { backgroundColor: '#e60000', borderRadius: 16, padding: 18, alignItems: 'center', marginTop: 10 },
     searchButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
 
-    // Shared Modal Styles
+    // Modals
     modalContainer: { flex: 1, backgroundColor: '#fff' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderColor: '#eee' },
     modalTitle: { fontSize: 20, fontWeight: 'bold' },
@@ -390,7 +361,7 @@ const styles = StyleSheet.create({
     iconBg: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
     loadingText: { textAlign: 'center', marginTop: 20, color: '#888' },
 
-    // Counter Styles
+    // Counters
     counterList: { padding: 20 },
     counterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 20, borderBottomWidth: 1, borderColor: '#f4f4f4' },
     counterLabel: { fontSize: 18, fontWeight: 'bold', color: '#111' },
@@ -401,29 +372,23 @@ const styles = StyleSheet.create({
     doneButton: { backgroundColor: '#e60000', margin: 20, padding: 18, borderRadius: 16, alignItems: 'center', marginTop: 'auto' },
     doneButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 
-    // --- DEPARTURES STYLES ---
+    // Departures
     resultsSection: { marginTop: 30, paddingBottom: 40 },
     resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
     resultsTitle: { fontSize: 22, fontWeight: '900', color: '#111' },
     optionsBadge: { backgroundColor: '#eef0f3', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16 },
     optionsText: { fontSize: 14, color: '#555', fontWeight: '600' },
-    
-    // Departure Card Styles
     departureCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 15, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5 },
     routeContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     timeBlock: { flex: 1 },
     timeText: { fontSize: 24, fontWeight: 'bold', color: '#111', marginBottom: 4 },
     stationText: { fontSize: 13, color: '#888', fontWeight: '500' },
-    
-    // Duration Line
     durationBlock: { flex: 1.5, alignItems: 'center', marginHorizontal: 10 },
     durationText: { fontSize: 11, color: '#aaa', fontWeight: 'bold', marginBottom: 5, letterSpacing: 0.5 },
     durationLineWrapper: { flexDirection: 'row', alignItems: 'center', width: '100%' },
     durationDotGray: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ccc' },
     durationLine: { flex: 1, height: 2, backgroundColor: '#eee' },
     durationDotRed: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#e60000' },
-    
-    // Footer (Seats & Price)
     departureFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderColor: '#f8f8f8', paddingTop: 15 },
     seatsBadge: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
     seatsBadgeGreen: { backgroundColor: '#e6f7ec' },
@@ -431,7 +396,6 @@ const styles = StyleSheet.create({
     seatsText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
     seatsTextGreen: { color: '#10b981' },
     seatsTextOrange: { color: '#f59e0b' },
-    
     priceContainer: { flexDirection: 'row', alignItems: 'center' },
     priceText: { fontSize: 20, fontWeight: '900', color: '#e60000', marginRight: 15 },
     actionIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fcecec', justifyContent: 'center', alignItems: 'center' }
