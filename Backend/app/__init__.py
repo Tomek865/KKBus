@@ -2,25 +2,22 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
-from app.klient import klient_bp
-# from app.kierowca import kierowca_bp
-# from app.wlasciciel import wlasciciel_bp
+from app.client import client_bp
+from app.driver import driver_bp
+from app.admin import admin_bp
 
-# Wczytanie zmiennych z pliku .env
 load_dotenv()
-
 
 def create_app():
     app = Flask(__name__)
-
-    # Odczytanie tajnego klucza z pliku .env
-    app.config["SECRET_KEY"] = os.getenv(
-        "SECRET_KEY", "domyslny_niebezpieczny_klucz")
-
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
-
-    app.register_blueprint(klient_bp)
-    # app.register_blueprint(kierowca_bp)
-    # app.register_blueprint(wlasciciel_bp)
-
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key_123')
+    
+    # Konfiguracja CORS
+    CORS(app)
+    
+    # Rejestracja głównych modułów z nowymi prefixami
+    app.register_blueprint(client_bp, url_prefix='/api/client')
+    app.register_blueprint(driver_bp, url_prefix='/api/driver')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    
     return app
