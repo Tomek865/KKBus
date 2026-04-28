@@ -27,7 +27,7 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        // Symulacja: const res = await fetch('https://api.transregion.pl/admin/stats');
+        // Symulacja: const res = await fetch('https://api.transregion.pl/admin/stats'); fetch
         setTimeout(() => {
           setStats({
             revenue: "124,500 PLN",

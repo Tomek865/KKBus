@@ -15,7 +15,7 @@ export interface Departure {
     price: number;
 }
 
-// --- MOCK DATA ---
+// --- MOCK DATA --- fetch
 const MOCK_DEPARTURES: Departure[] = [
     {
         id: '1',
@@ -125,7 +125,7 @@ export default function PassengerSearch() {
         setHasSearched(true);
         setDepartures([]); // Czyścimy poprzednie wyniki
         
-        // Symulacja opóźnienia sieciowego (pobieranie z backendu)
+        // Symulacja opóźnienia sieciowego (pobieranie z backendu) fetch
         setTimeout(() => {
             setDepartures(MOCK_DEPARTURES);
             setIsSearching(false);
@@ -138,7 +138,7 @@ export default function PassengerSearch() {
     const [passengerModalVisible, setPassengerModalVisible] = useState(false);
     const [dateModalVisible, setDateModalVisible] = useState(false);
 
-    // --- MOCK BACKEND ---
+    // --- MOCK BACKEND --- fetch
     useEffect(() => {
         const fetchStationsFromDB = async () => {
             setTimeout(() => {
@@ -156,7 +156,7 @@ export default function PassengerSearch() {
             if (newVal < 0) return prev;
             if (type === 'adult' && newVal === 0 && prev.student === 0 && prev.reduced === 0) return prev;
 
-            // Overall limit of 10 passengers
+            // Overall limit of 10 passengers fetch
             const total = prev.adult + prev.student + prev.reduced + delta;
             if (total > 10) return prev;
 

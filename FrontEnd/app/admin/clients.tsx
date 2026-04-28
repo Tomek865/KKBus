@@ -18,7 +18,7 @@ export default function AdminClients() {
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-    // Pobieranie danych (symulacja)
+    // Pobieranie danych (symulacja) fetch
     useEffect(() => {
         const fetchUsers = async () => {
             setLoading(true);

@@ -1,143 +1,110 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import {
+    View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+    Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Numpad } from '../../components/driver/Numpad';
 
 export default function DriverEndShift() {
-    const [volume, setVolume] = useState('0');
-    const [cost, setCost] = useState('0');
-    const [activeField, setActiveField] = useState<'volume' | 'cost'>('volume');
+    const [volume, setVolume] = useState('');
+    const [cost, setCost] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [focusedField, setFocusedField] = useState<'volume' | 'cost' | null>(null);
 
-    const handleNumpadPress = (val: string) => {
-        if (activeField === 'volume') {
-            setVolume(prev => prev === '0' ? val : prev + val);
-        } else {
-            setCost(prev => prev === '0' ? val : prev + val);
-        }
-    };
-
-    const handleDelete = () => {
-        if (activeField === 'volume') {
-            setVolume(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
-        } else {
-            setCost(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
-        }
-    };
-
-    // Obsługa kropki dziesiętnej
-    const handleDot = () => {
-        if (activeField === 'volume' && !volume.includes('.')) setVolume(prev => prev + '.');
-        if (activeField === 'cost' && !cost.includes('.')) setCost(prev => prev + '.');
-    };
-
-    // MIEJSCE NA TWOJE API
     const completeShift = async () => {
+        if (!volume || !cost) {
+            Alert.alert("Error", "Please fill in all data.");
+            return;
+        }
         setIsSubmitting(true);
         try {
-            // TUTAJ: await fetch('https://twoje-api.pl/shift/end', { ... })
-            console.log(`API: Refueling data - Volume: ${volume}L, Cost: ${cost}PLN`);
-
+            console.log(`API: Refueling - ${volume}L, ${cost}PLN`); //fetch
             await new Promise(resolve => setTimeout(resolve, 1500));
-
-            Alert.alert("Shift Ended", "Refueling data has been saved. Safe travels!");
-            setVolume('0');
-            setCost('0');
+            Alert.alert("Success", "Shift data saved!");
+            setVolume(''); setCost('');
         } catch (error) {
-            Alert.alert("Error", "Failed to save shift data.");
+            Alert.alert("Error", "Failed to save.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.card}>
-                <View style={styles.header}>
-                    <View style={styles.iconContainer}><Ionicons name="water" size={24} color="#fff" /></View>
-                    <View>
-                        <Text style={styles.title}>End of Shift</Text>
-                        <Text style={styles.subtitle}>BUS #402 REFUELING</Text>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+        >
+            <ScrollView contentContainerStyle={styles.container}>
+                <View style={styles.card}>
+                    <View style={styles.header}>
+                        <View style={styles.iconContainer}><Ionicons name="water" size={24} color="#fff" /></View>
+                        <View>
+                            <Text style={styles.title}>End of Shift</Text>
+                            <Text style={styles.subtitle}>BUS #402 REFUELING</Text>
+                        </View>
                     </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>VOLUME FUELED</Text>
+                        <View style={[styles.inputWrapper, focusedField === 'volume' && styles.activeWrapper]}>
+                            <TextInput
+                                style={styles.textInput}
+                                value={volume}
+                                onChangeText={setVolume}
+                                placeholder="0.00"
+                                keyboardType="decimal-pad"
+                                onFocus={() => setFocusedField('volume')}
+                                onBlur={() => setFocusedField(null)}
+                            />
+                            <Text style={styles.unitText}>Liters</Text>
+                        </View>
+
+                        <Text style={[styles.label, { marginTop: 20 }]}>TOTAL COST</Text>
+                        <View style={[styles.inputWrapper, focusedField === 'cost' && styles.activeWrapper]}>
+                            <TextInput
+                                style={styles.textInput}
+                                value={cost}
+                                onChangeText={setCost}
+                                placeholder="0.00"
+                                keyboardType="decimal-pad"
+                                onFocus={() => setFocusedField('cost')}
+                                onBlur={() => setFocusedField(null)}
+                            />
+                            <Text style={styles.unitText}>PLN</Text>
+                        </View>
+                    </View>
+
+                    <TouchableOpacity
+                        style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]}
+                        onPress={completeShift}
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? <ActivityIndicator color="#fff" /> : (
+                            <>
+                                <Ionicons name="checkmark-done" size={24} color="#fff" style={{ marginRight: 10 }} />
+                                <Text style={styles.submitBtnText}>COMPLETE SHIFT</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
                 </View>
-
-                <View style={styles.contentRow}>
-                    <View style={styles.inputCol}>
-                        <TouchableOpacity
-                            style={[styles.inputBox, activeField === 'volume' && styles.inputBoxActive]}
-                            onPress={() => setActiveField('volume')}
-                        >
-                            <View style={[styles.iconBg, activeField === 'volume' ? { backgroundColor: '#111827' } : { backgroundColor: '#f3f4f6' }]}>
-                                <Ionicons name="water-outline" size={24} color={activeField === 'volume' ? '#fff' : '#aaa'} />
-                            </View>
-                            <View style={styles.inputTexts}>
-                                <Text style={styles.inputLabel}>VOLUME FUELED</Text>
-                                <View style={styles.inputValueRow}>
-                                    <Text style={[styles.inputValue, activeField === 'volume' ? { color: '#111' } : { color: '#ccc' }]}>{volume}</Text>
-                                    <Text style={styles.unit}> L</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.inputBox, activeField === 'cost' && styles.inputBoxActive]}
-                            onPress={() => setActiveField('cost')}
-                        >
-                            <View style={[styles.iconBg, activeField === 'cost' ? { backgroundColor: '#111827' } : { backgroundColor: '#f3f4f6' }]}>
-                                <Text style={{ fontSize: 20, color: activeField === 'cost' ? '#fff' : '#aaa', fontWeight: 'bold' }}>PLN</Text>
-                            </View>
-                            <View style={styles.inputTexts}>
-                                <Text style={styles.inputLabel}>TOTAL COST</Text>
-                                <View style={styles.inputValueRow}>
-                                    <Text style={[styles.inputValue, activeField === 'cost' ? { color: '#111' } : { color: '#ccc' }]}>{cost}</Text>
-                                    <Text style={styles.unit}> PLN</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.numpadCol}>
-                        <Numpad onPress={handleNumpadPress} onDelete={handleDelete} leftActionLabel="." onLeftAction={handleDot} />
-                    </View>
-                </View>
-
-                <TouchableOpacity
-                    style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]}
-                    onPress={completeShift}
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <>
-                            <Ionicons name="checkmark-circle-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
-                            <Text style={styles.submitBtnText}>COMPLETE SHIFT</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 30, width: '95%', maxWidth: 700, elevation: 4 },
-    header: { flexDirection: 'row', alignItems: 'center', marginBottom: 30 },
-    iconContainer: { backgroundColor: '#111827', width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-    title: { fontSize: 24, fontWeight: 'bold', color: '#111' },
-    subtitle: { fontSize: 12, color: '#888', fontWeight: 'bold', marginTop: 4 },
-    contentRow: { flexDirection: 'row', gap: 20, marginBottom: 30 },
-    inputCol: { flex: 1, justifyContent: 'center', gap: 20 },
-    inputBox: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 16, borderWidth: 2, borderColor: '#f3f4f6', backgroundColor: '#f9fafb' },
-    inputBoxActive: { borderColor: '#111827', backgroundColor: '#fff' },
-    iconBg: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-    inputTexts: { marginLeft: 15, flex: 1, alignItems: 'center' },
-    inputLabel: { fontSize: 10, fontWeight: 'bold', color: '#888', marginBottom: 4 },
-    inputValueRow: { flexDirection: 'row', alignItems: 'baseline' },
-    inputValue: { fontSize: 32, fontWeight: 'bold' },
-    unit: { fontSize: 14, fontWeight: 'bold', color: '#888' },
-    numpadCol: { width: 260 },
-    submitBtn: { backgroundColor: '#e60000', padding: 20, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+    container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 15 },
+    card: { backgroundColor: '#fff', borderRadius: 28, padding: 25, width: '100%', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+    header: { flexDirection: 'row', alignItems: 'center', marginBottom: 35 },
+    iconContainer: { backgroundColor: '#111827', width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    title: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
+    subtitle: { fontSize: 11, color: '#6b7280', fontWeight: '800', marginTop: 2, letterSpacing: 0.5 },
+    inputGroup: { marginBottom: 35 },
+    label: { fontSize: 11, fontWeight: 'bold', color: '#9ca3af', marginBottom: 8, marginLeft: 4 },
+    inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 18, borderWidth: 2, borderColor: '#f3f4f6', paddingHorizontal: 20, height: 70 },
+    activeWrapper: { borderColor: '#e60000', backgroundColor: '#fff' },
+    textInput: { flex: 1, fontSize: 28, fontWeight: 'bold', color: '#111827' },
+    unitText: { fontSize: 14, fontWeight: 'bold', color: '#9ca3af', marginLeft: 10 },
+    submitBtn: { backgroundColor: '#e60000', padding: 22, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 }
 });

@@ -33,7 +33,7 @@ export default function AdminSchedule() {
 
     // SYMULACJA POBIERANIA DANYCH
     useEffect(() => {
-        const fetchInitialData = async () => {
+        const fetchInitialData = async () => { //fetch
             setLoading(true);
             setTimeout(() => {
                 setFleet([
@@ -55,7 +55,7 @@ export default function AdminSchedule() {
                 text: "Delete",
                 style: "destructive",
                 onPress: () => {
-                    // API CALL: await fetch(`/api/fleet/${id}`, { method: 'DELETE' });
+                    // API CALL: await fetch(`/api/fleet/${id}`, { method: 'DELETE' }); fetch
                     setFleet(prev => prev.filter(item => item.id !== id));
                 }
             }
@@ -69,6 +69,7 @@ export default function AdminSchedule() {
             return;
         }
 
+        // API CALL: await fetch('/api/fleet', { method: 'POST', body: JSON.stringify(newEntry) }); fetch
         const created: BusRoute = { id: Math.random().toString(), ...newEntry };
         setFleet(prev => [...prev, created]);
         setModalVisible(false);

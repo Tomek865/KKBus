@@ -1,140 +1,114 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import {
+    View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+    Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Numpad } from '../../components/driver/Numpad';
 
 export default function DriverSegmentReport() {
-    const [boarded, setBoarded] = useState('0');
-    const [alighted, setAlighted] = useState('0');
-    const [activeField, setActiveField] = useState<'boarded' | 'alighted'>('boarded');
+    const [boarded, setBoarded] = useState('');
+    const [alighted, setAlighted] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [focused, setFocused] = useState<'in' | 'out' | null>(null);
 
-    // Obsługa wpisywania cyfr
-    const handleNumpadPress = (val: string) => {
-        if (activeField === 'boarded') {
-            setBoarded(prev => prev === '0' ? val : prev + val);
-        } else {
-            setAlighted(prev => prev === '0' ? val : prev + val);
-        }
-    };
-
-    // Usuwanie ostatniej cyfry
-    const handleDelete = () => {
-        if (activeField === 'boarded') {
-            setBoarded(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
-        } else {
-            setAlighted(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
-        }
-    };
-
-    const handleClear = () => {
-        if (activeField === 'boarded') setBoarded('0');
-        else setAlighted('0');
-    };
-
-    // MIEJSCE NA TWOJE API
     const submitReport = async () => {
+        if (!boarded || !alighted) {
+            Alert.alert("Empty fields", "Please enter the number of passengers.");
+            return;
+        }
         setIsSubmitting(true);
         try {
-            // TUTAJ: await fetch('https://twoje-api.pl/reports', { ... })
-            console.log(`API: Sending report - Boarded: ${boarded}, Alighted: ${alighted}`);
-
-            // Symulacja opóźnienia serwera
+            console.log(`API: Boarded ${boarded}, Alighted ${alighted}`); //fetch
             await new Promise(resolve => setTimeout(resolve, 1200));
-
-            Alert.alert("Success", "Segment report submitted correctly.");
-            setBoarded('0');
-            setAlighted('0');
+            Alert.alert("Report Sent", "Passenger count has been updated.");
+            setBoarded(''); setAlighted('');
         } catch (error) {
-            Alert.alert("Error", "Could not send report. Check connection.");
+            Alert.alert("Error", "Check connection.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.card}>
-                <View style={styles.header}>
-                    <View style={styles.iconContainer}><Ionicons name="document-text" size={24} color="#fff" /></View>
-                    <View>
-                        <Text style={styles.title}>Segment Report</Text>
-                        <Text style={styles.subtitle}>CHRZANOW {'>'} JAWORZNO</Text>
-                    </View>
-                </View>
-
-                <View style={styles.contentRow}>
-                    <View style={styles.inputCol}>
-                        <TouchableOpacity
-                            style={[styles.inputBox, activeField === 'boarded' && styles.inputBoxActive]}
-                            onPress={() => setActiveField('boarded')}
-                        >
-                            <Ionicons name="arrow-down" size={28} color={activeField === 'boarded' ? '#e60000' : '#888'} />
-                            <View style={styles.inputTexts}>
-                                <Text style={[styles.inputLabel, activeField === 'boarded' && styles.inputLabelActive]}>BOARDED</Text>
-                                <Text style={[styles.inputValue, activeField === 'boarded' ? { color: '#111' } : { color: '#ccc' }]}>{boarded}</Text>
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.inputBox, activeField === 'alighted' && styles.inputBoxActive]}
-                            onPress={() => setActiveField('alighted')}
-                        >
-                            <Ionicons name="arrow-up" size={28} color={activeField === 'alighted' ? '#e60000' : '#888'} />
-                            <View style={styles.inputTexts}>
-                                <Text style={[styles.inputLabel, activeField === 'alighted' && styles.inputLabelActive]}>ALIGHTED</Text>
-                                <Text style={[styles.inputValue, activeField === 'alighted' ? { color: '#111' } : { color: '#ccc' }]}>{alighted}</Text>
-                            </View>
-                        </TouchableOpacity>
-
-                        <View style={styles.warningBox}>
-                            <Ionicons name="warning-outline" size={20} color="#d97706" />
-                            <Text style={styles.warningText}>Ensure accurate passenger counts for capacity management.</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={styles.container}>
+                <View style={styles.card}>
+                    <View style={styles.header}>
+                        <View style={styles.iconBg}><Ionicons name="people" size={24} color="#fff" /></View>
+                        <View>
+                            <Text style={styles.title}>Segment Report</Text>
+                            <Text style={styles.subtitle}>CHRZANOW {'>'} JAWORZNO</Text>
                         </View>
                     </View>
 
-                    <View style={styles.numpadCol}>
-                        <Numpad onPress={handleNumpadPress} onDelete={handleDelete} leftActionLabel="CLEAR" onLeftAction={handleClear} />
-                    </View>
-                </View>
+                    <View style={styles.mainContent}>
+                        <View style={[styles.field, focused === 'in' && styles.fieldActive]}>
+                            <View style={styles.fieldInfo}>
+                                <Ionicons name="arrow-down-circle" size={30} color={focused === 'in' ? '#e60000' : '#d1d5db'} />
+                                <Text style={styles.fieldText}>BOARDED</Text>
+                            </View>
+                            <TextInput
+                                style={styles.input}
+                                value={boarded}
+                                onChangeText={setBoarded}
+                                placeholder="0"
+                                keyboardType="number-pad"
+                                onFocus={() => setFocused('in')}
+                                onBlur={() => setFocused(null)}
+                            />
+                        </View>
 
-                <TouchableOpacity
-                    style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]}
-                    onPress={submitReport}
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <>
-                            <Ionicons name="save-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
-                            <Text style={styles.submitBtnText}>SUBMIT REPORT</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </View>
+                        <View style={[styles.field, focused === 'out' && styles.fieldActive, { marginTop: 15 }]}>
+                            <View style={styles.fieldInfo}>
+                                <Ionicons name="arrow-up-circle" size={30} color={focused === 'out' ? '#e60000' : '#d1d5db'} />
+                                <Text style={styles.fieldText}>ALIGHTED</Text>
+                            </View>
+                            <TextInput
+                                style={styles.input}
+                                value={alighted}
+                                onChangeText={setAlighted}
+                                placeholder="0"
+                                keyboardType="number-pad"
+                                onFocus={() => setFocused('out')}
+                                onBlur={() => setFocused(null)}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.infoBox}>
+                        <Ionicons name="information-circle" size={20} color="#3b82f6" />
+                        <Text style={styles.infoText}>Data is used for live capacity tracking.</Text>
+                    </View>
+
+                    <TouchableOpacity style={styles.btn} onPress={submitReport} disabled={isSubmitting}>
+                        {isSubmitting ? <ActivityIndicator color="#fff" /> : (
+                            <>
+                                <Ionicons name="cloud-upload" size={22} color="#fff" style={{ marginRight: 10 }} />
+                                <Text style={styles.btnText}>SEND REPORT</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    card: { backgroundColor: '#fff', borderRadius: 24, padding: 30, width: '95%', maxWidth: 700, elevation: 4 },
+    container: { flexGrow: 1, justifyContent: 'center', padding: 15 },
+    card: { backgroundColor: '#fff', borderRadius: 32, padding: 25, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
     header: { flexDirection: 'row', alignItems: 'center', marginBottom: 30 },
-    iconContainer: { backgroundColor: '#111827', width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-    title: { fontSize: 24, fontWeight: 'bold', color: '#111' },
-    subtitle: { fontSize: 12, color: '#888', fontWeight: 'bold', marginTop: 4 },
-    contentRow: { flexDirection: 'row', gap: 20, marginBottom: 30, flex: 1 },
-    inputCol: { flex: 1, justifyContent: 'space-between' },
-    inputBox: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 16, borderWidth: 2, borderColor: '#f3f4f6', backgroundColor: '#f9fafb' },
-    inputBoxActive: { borderColor: '#e60000', backgroundColor: '#fff' },
-    inputTexts: { marginLeft: 15, alignItems: 'center', flex: 1 },
-    inputLabel: { fontSize: 10, fontWeight: 'bold', color: '#888', marginBottom: 4 },
-    inputLabelActive: { color: '#e60000' },
-    inputValue: { fontSize: 36, fontWeight: 'bold' },
-    warningBox: { flexDirection: 'row', backgroundColor: '#fffbeb', padding: 12, borderRadius: 12, alignItems: 'center', marginTop: 10 },
-    warningText: { color: '#d97706', fontSize: 10, marginLeft: 10, flex: 1, fontWeight: '500' },
-    numpadCol: { width: 260 },
-    submitBtn: { backgroundColor: '#e60000', padding: 20, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+    iconBg: { backgroundColor: '#e60000', width: 50, height: 50, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    title: { fontSize: 22, fontWeight: 'bold' },
+    subtitle: { fontSize: 11, fontWeight: 'bold', color: '#9ca3af', marginTop: 2 },
+    mainContent: { marginBottom: 25 },
+    field: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9fafb', padding: 20, borderRadius: 20, borderWidth: 2, borderColor: '#f3f4f6' },
+    fieldActive: { borderColor: '#e60000', backgroundColor: '#fff' },
+    fieldInfo: { flexDirection: 'row', alignItems: 'center' },
+    fieldText: { marginLeft: 12, fontSize: 12, fontWeight: 'bold', color: '#4b5563' },
+    input: { fontSize: 32, fontWeight: 'bold', color: '#111827', width: 80, textAlign: 'right' },
+    infoBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', padding: 15, borderRadius: 15, marginBottom: 25 },
+    infoText: { marginLeft: 10, fontSize: 12, color: '#1e40af', fontWeight: '500' },
+    btn: { backgroundColor: '#111827', padding: 22, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    btnText: { color: '#fff', fontWeight: 'bold', fontSize: 15, letterSpacing: 1 }
 });

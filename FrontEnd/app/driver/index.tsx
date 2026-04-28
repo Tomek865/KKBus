@@ -5,12 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 // --- MOCK DATA ---
 const initialStops = [
     { id: 1, name: 'Krakow MDA', time: '15:00', status: 'done' }, // done, active, future
-    { id: 2, name: 'Chrzanow', time: '15:25', status: 'active' },
+    { id: 2, name: 'Chrzanow', time: '15:25', status: 'active' }, //fetch
     { id: 3, name: 'Jaworzno', time: '15:50', status: 'future' }
 ];
 
 const initialPassengers = [
-    { id: '1', seat: '12A', name: 'Jan Kowalski', ticket: 'JS-12A', type: 'STUDENT', status: 'boarded' },
+    { id: '1', seat: '12A', name: 'Jan Kowalski', ticket: 'JS-12A', type: 'STUDENT', status: 'boarded' }, //fetch
     { id: '2', seat: '14B', name: 'Anna Nowak', ticket: 'AN-14B', type: 'ADULT', status: 'pending' },
     { id: '3', seat: '15C', name: 'Piotr Wiśniewski', ticket: 'PW-15C', type: 'REDUCED', status: 'pending' },
 ];
@@ -29,7 +29,7 @@ export default function DriverDashboard() {
 
     // 1. Zaznaczenie przybycia na przystanek
     const handleArriveAtStop = async () => {
-        // Symulacja wysłania GPS/Statusu do bazy danych
+        // Symulacja wysłania GPS/Statusu do bazy danych     fetch
         console.log("API CALL: Zaktualizowano pozycję autobusu na backendzie.");
 
         setStops(prevStops => {
@@ -50,7 +50,7 @@ export default function DriverDashboard() {
 
     // 2. Ręczna weryfikacja pasażera (Przycisk MANUAL)
     const handleManualValidation = async (passengerId: string) => {
-        // TUTAJ BACKEND: np. await fetch(`/api/tickets/${ticketId}/validate`, { method: 'POST' })
+        // TUTAJ BACKEND: np. await fetch(`/api/tickets/${ticketId}/validate`, { method: 'POST' }) fetch
         console.log(`API CALL: Bilet pasażera ${passengerId} zwalidowany ręcznie.`);
 
         setPassengers(prev => prev.map(p =>

@@ -23,7 +23,7 @@ export default function PassengerProfile() {
             <ScrollView contentContainerStyle={styles.container}>
                 <Text style={styles.headerTitle}>My Profile</Text>
 
-                {/* Karta z danymi użytkownika */}
+                {/* Karta z danymi użytkownika fetch */}
                 <View style={styles.profileCard}>
                     <View style={styles.avatarContainer}>
                         <Text style={styles.avatarText}>AK</Text>

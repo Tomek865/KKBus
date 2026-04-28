@@ -9,7 +9,7 @@ export default function PassengerTickets() {
                 <Text style={styles.headerTitle}>My Tickets</Text>
 
                 <Text style={styles.sectionTitle}>Upcoming Journeys</Text>
-                <TicketCard
+                <TicketCard //fetch
                     depTime="14:20" arrTime="15:45"
                     depStation="Krakow MDA" arrStation="Katowice Dworzec"
                     duration="1H 25M" seats={1} price={24}
