@@ -1,72 +1,78 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import ProfileSettingsModal from './profileSettingsModal';
+import { SearchInput } from '../../components/passenger/SearchInput';
 
 // ==========================================
-// TYPES & MOCKS
+// TYPES & INTERFACES
 // ==========================================
-interface LoyaltyData {
-    points: number;
-    currentTier: string;
-    nextTier: string;
-    nextTierPoints: number;
+export interface Departure {
+    id: string;
+    departureTime: string;
+    arrivalTime: string;
+    departureStation: string;
+    arrivalStation: string;
+    duration: string;
+    seatsLeft: number;
+    price: number;
 }
 
-const MOCK_LOYALTY_DATA: LoyaltyData = {
-    points: 1450,
-    currentTier: 'SILVER TIER',
-    nextTier: 'GOLD',
-    nextTierPoints: 2000,
+// ==========================================
+// MOCK DATA & HELPERS
+// ==========================================
+const MOCK_DEPARTURES: Departure[] = [
+    { id: '1', departureTime: '08:15', arrivalTime: '09:40', departureStation: 'Krakow MDA', arrivalStation: 'Katowice Dworzec', duration: '1H 25M', seatsLeft: 12, price: 24 },
+    { id: '2', departureTime: '09:30', arrivalTime: '10:55', departureStation: 'Krakow MDA', arrivalStation: 'Katowice Dworzec', duration: '1H 25M', seatsLeft: 4, price: 24 }
+];
+
+const generateNext14Days = () => {
+    const dates = [];
+    for (let i = 0; i < 14; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        dates.push(d);
+    }
+    return dates;
 };
 
 // ==========================================
 // SUB-COMPONENTS
 // ==========================================
-const ProfileMenuItem = ({ icon, title, onPress, isDestructive = false }: any) => (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-        <View style={styles.menuItemLeft}>
-            <Ionicons name={icon} size={24} color={isDestructive ? '#e60000' : '#4b5563'} />
-            <Text style={[styles.menuItemText, isDestructive && styles.destructiveText]}>{title}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="#ccc" />
-    </TouchableOpacity>
-);
-
-const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading: boolean }) => {
-    if (isLoading || !data) {
-        return (
-            <View style={[styles.loyaltyCard, styles.loyaltyCardLoading]}>
-                <Text style={styles.loadingText}>Loading loyalty points...</Text>
-            </View>
-        );
-    }
-    const progressPercentage = (data.points / data.nextTierPoints) * 100;
+const DepartureCard = ({ departure }: { departure: Departure }) => {
+    const isLowSeats = departure.seatsLeft <= 5;
 
     return (
-        <View style={styles.loyaltyCard}>
-            <View style={styles.loyaltyHeader}>
-                <View>
-                    <View style={styles.loyaltyTitleRow}>
-                        <Ionicons name="star" size={14} color="#facc15" />
-                        <Text style={styles.loyaltyTitleText}>LOYALTY POINTS</Text>
+        <View style={styles.departureCard}>
+            <View style={styles.routeContainer}>
+                <View style={styles.timeBlock}>
+                    <Text style={styles.timeText}>{departure.departureTime}</Text>
+                    <Text style={styles.stationText}>{departure.departureStation}</Text>
+                </View>
+                <View style={styles.durationBlock}>
+                    <Text style={styles.durationText}>{departure.duration}</Text>
+                    <View style={styles.durationLineWrapper}>
+                        <View style={styles.durationDotGray} />
+                        <View style={styles.durationLine} />
+                        <View style={styles.durationDotRed} />
                     </View>
-                    <Text style={styles.pointsValue}>
-                        {data.points.toLocaleString('en-US')}
-                        <Text style={styles.pointsSuffix}> pts</Text>
+                </View>
+                <View style={[styles.timeBlock, { alignItems: 'flex-end' }]}>
+                    <Text style={styles.timeText}>{departure.arrivalTime}</Text>
+                    <Text style={styles.stationText}>{departure.arrivalStation}</Text>
+                </View>
+            </View>
+            <View style={styles.departureFooter}>
+                <View style={[styles.seatsBadge, isLowSeats ? styles.seatsBadgeOrange : styles.seatsBadgeGreen]}>
+                    <Text style={[styles.seatsText, isLowSeats ? styles.seatsTextOrange : styles.seatsTextGreen]}>
+                        {departure.seatsLeft} SEATS LEFT
                     </Text>
                 </View>
-                <TouchableOpacity style={styles.trendButton}>
-                    <Ionicons name="trending-up" size={24} color="#4ade80" />
-                </TouchableOpacity>
-            </View>
-            <View style={styles.tierInfoRow}>
-                <Text style={styles.tierText}>{data.currentTier}</Text>
-                <Text style={styles.nextTierText}>{data.nextTier} ({data.nextTierPoints})</Text>
-            </View>
-            <View style={styles.progressBarBackground}>
-                <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+                <View style={styles.priceContainer}>
+                    <Text style={styles.priceText}>{departure.price} PLN</Text>
+                    <TouchableOpacity style={styles.actionIcon}>
+                        <Ionicons name="swap-horizontal" size={18} color="#e60000" />
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
     );
@@ -75,40 +81,91 @@ const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading:
 // ==========================================
 // MAIN COMPONENT
 // ==========================================
-export default function PassengerProfile() {
-    // --- STATES ---
-    const [loyaltyData, setLoyaltyData] = useState<LoyaltyData | null>(null);
-    const [isLoadingLoyalty, setIsLoadingLoyalty] = useState(true);
-    const [settingsModalVisible, setSettingsModalVisible] = useState(false);
-    const [activeSection, setActiveSection] = useState<'personal' | 'payment' | 'notifications' | 'language' | 'help' | 'terms' | null>(null);
+export default function PassengerSearch() {
+    // --- STATES: Search Parameters ---
+    const [stations, setStations] = useState<string[]>([]);
+    const [fromStation, setFromStation] = useState('Krakow');
+    const [toStation, setToStation] = useState('Katowice');
+    const [availableDates] = useState(generateNext14Days());
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [passengerCounts, setPassengerCounts] = useState({ adult: 1, student: 0, reduced: 0 });
+
+    // --- STATES: Results & UI ---
+    const [departures, setDepartures] = useState<Departure[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectingField, setSelectingField] = useState<'from' | 'to' | null>(null);
+    const [passengerModalVisible, setPassengerModalVisible] = useState(false);
+    const [dateModalVisible, setDateModalVisible] = useState(false);
 
     // ==========================================
     // API / BACKEND CALLS
     // ==========================================
     useEffect(() => {
-        const fetchLoyaltyData = async () => {
-            // TODO: BACKEND FETCH - Pobieranie punktów lojalnościowych użytkownika
-            // Przykład: const res = await fetch('/api/user/loyalty'); const data = await res.json();
+        const fetchStationsFromDB = async () => {
+            // TODO: BACKEND FETCH - Pobieranie listy dostępnych stacji
+            // Przykład: const response = await fetch('/api/stations'); const data = await response.json(); setStations(data);
             setTimeout(() => {
-                setLoyaltyData(MOCK_LOYALTY_DATA);
-                setIsLoadingLoyalty(false);
-            }, 800);
+                setStations(['Krakow', 'Katowice', 'Warszawa', 'Wroclaw', 'Gdansk', 'Zakopane']);
+            }, 500);
         };
-        fetchLoyaltyData();
+        fetchStationsFromDB();
     }, []);
+
+    const handleSearchRoutes = () => {
+        setIsSearching(true);
+        setHasSearched(true);
+        setDepartures([]);
+        
+        // TODO: BACKEND FETCH - Wyszukiwanie połączeń na podstawie parametrów (fromStation, toStation, selectedDate, passengerCounts)
+        // Przykład: const response = await fetch(`/api/routes?from=${fromStation}&to=${toStation}...`); setDepartures(data);
+        setTimeout(() => {
+            setDepartures(MOCK_DEPARTURES);
+            setIsSearching(false);
+        }, 1200); 
+    };
 
     // ==========================================
     // HANDLERS
     // ==========================================
-    const openSettings = (section: 'personal' | 'payment' | 'notifications' | 'language' | 'help' | 'terms') => {
-        setActiveSection(section);
-        setSettingsModalVisible(true);
+    const updateCount = (type: 'adult' | 'student' | 'reduced', delta: number) => {
+        setPassengerCounts(prev => {
+            const newVal = prev[type] + delta;
+            if (newVal < 0) return prev;
+            if (type === 'adult' && newVal === 0 && prev.student === 0 && prev.reduced === 0) return prev;
+            const total = prev.adult + prev.student + prev.reduced + delta;
+            if (total > 10) return prev;
+            return { ...prev, [type]: newVal };
+        });
     };
 
-    const handleLogout = () => {
-        // TODO: BACKEND MUTATION - Wylogowanie sesji z serwera (opcjonalnie przed redirectem)
-        router.replace('/');
+    const getPassengersSummary = () => {
+        const parts = [];
+        if (passengerCounts.adult > 0) parts.push(`${passengerCounts.adult} Adult${passengerCounts.adult > 1 ? 's' : ''}`);
+        if (passengerCounts.student > 0) parts.push(`${passengerCounts.student} Student${passengerCounts.student > 1 ? 's' : ''}`);
+        if (passengerCounts.reduced > 0) parts.push(`${passengerCounts.reduced} Reduced`);
+        return parts.length > 0 ? parts.join(', ') : 'Select passengers';
     };
+
+    const handleStationSelect = (station: string) => {
+        if (selectingField === 'from') setFromStation(station);
+        if (selectingField === 'to') setToStation(station);
+        setModalVisible(false);
+    };
+
+    const swapStations = () => {
+        const temp = fromStation;
+        setFromStation(toStation);
+        setToStation(temp);
+    };
+
+    const handleDateSelect = (date: Date) => {
+        setSelectedDate(date);
+        setDateModalVisible(false);
+    };
+
+    const formattedDate = selectedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
     // ==========================================
     // RENDER
@@ -116,47 +173,136 @@ export default function PassengerProfile() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.headerTitle}>My Profile</Text>
+                <Text style={styles.logo}>Trans<Text style={styles.logoRed}>Region</Text></Text>
 
-                <View style={styles.profileCard}>
-                    <View style={styles.avatarContainer}>
-                        <Text style={styles.avatarText}>AK</Text>
+                <View style={styles.searchCard}>
+                    <SearchInput label="FROM" value={fromStation} onPress={() => { setSelectingField('from'); setModalVisible(true); }} />
+                    <TouchableOpacity style={styles.swapIconContainer} onPress={swapStations}>
+                        <Ionicons name="swap-vertical" size={20} color="#e60000" />
+                    </TouchableOpacity>
+                    <SearchInput label="TO" value={toStation} onPress={() => { setSelectingField('to'); setModalVisible(true); }} />
+
+                    <View style={styles.row}>
+                        <SearchInput label="DATE" value={formattedDate} flex={1} marginRight={8} onPress={() => setDateModalVisible(true)} />
+                        <SearchInput label="PASSENGERS" value={getPassengersSummary()} flex={1} onPress={() => setPassengerModalVisible(true)} />
                     </View>
-                    <View style={styles.userInfo}>
-                        <Text style={styles.userName}>Anna Kowalska</Text>
-                        <Text style={styles.userEmail}>anna.kowalska@example.com</Text>
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>Standard Passenger</Text>
+
+                    <TouchableOpacity style={styles.searchButton} onPress={handleSearchRoutes}>
+                        <Text style={styles.searchButtonText}>
+                            {isSearching ? 'Searching...' : 'Search Routes'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                
+                {hasSearched && (
+                    <View style={styles.resultsSection}>
+                        <View style={styles.resultsHeader}>
+                            <Text style={styles.resultsTitle}>Available Departures</Text>
+                            <View style={styles.optionsBadge}>
+                                <Text style={styles.optionsText}>{departures.length} options</Text>
+                            </View>
                         </View>
+
+                        {isSearching ? (
+                            <Text style={styles.loadingText}>Loading routes...</Text>
+                        ) : (
+                            departures.map(dep => <DepartureCard key={dep.id} departure={dep} />)
+                        )}
                     </View>
-                </View>
-
-                <LoyaltyCard data={loyaltyData} isLoading={isLoadingLoyalty} />
-
-                <Text style={styles.sectionTitle}>Account</Text>
-                <View style={styles.menuContainer}>
-                    <ProfileMenuItem icon="person-outline" title="Personal Information" onPress={() => openSettings('personal')} />
-                    <ProfileMenuItem icon="card-outline" title="Payment Methods" onPress={() => openSettings('payment')} />
-                    <ProfileMenuItem icon="notifications-outline" title="Notifications" onPress={() => openSettings('notifications')} />
-                </View>
-
-                <Text style={styles.sectionTitle}>Preferences</Text>
-                <View style={styles.menuContainer}>
-                    <ProfileMenuItem icon="language-outline" title="Language" onPress={() => openSettings('language')} />
-                    <ProfileMenuItem icon="help-circle-outline" title="Help & Support" onPress={() => openSettings('help')} />
-                    <ProfileMenuItem icon="document-text-outline" title="Terms of Service" onPress={() => openSettings('terms')} />
-                </View>
-
-                <View style={[styles.menuContainer, { marginTop: 20 }]}>
-                    <ProfileMenuItem icon="log-out-outline" title="Log Out" isDestructive={true} onPress={handleLogout} />
-                </View>
+                )}
             </ScrollView>
 
-            <ProfileSettingsModal 
-                visible={settingsModalVisible} 
-                onClose={() => setSettingsModalVisible(false)} 
-                activeSection={activeSection} 
-            />
+            {/* MODALS */}
+            {/* Station Modal */}
+            <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
+                <SafeAreaView style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Select Station</Text>
+                        <TouchableOpacity onPress={() => setModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
+                    </View>
+                    <FlatList
+                        data={stations}
+                        keyExtractor={(item) => item}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity style={styles.listItem} onPress={() => handleStationSelect(item)}>
+                                <Ionicons name="location-outline" size={20} color="#888" />
+                                <Text style={styles.listItemText}>{item}</Text>
+                            </TouchableOpacity>
+                        )}
+                        ListEmptyComponent={<Text style={styles.loadingText}>Loading stations...</Text>}
+                    />
+                </SafeAreaView>
+            </Modal>
+
+            {/* Date Modal */}
+            <Modal visible={dateModalVisible} animationType="slide" presentationStyle="pageSheet">
+                <SafeAreaView style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Select Date</Text>
+                        <TouchableOpacity onPress={() => setDateModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
+                    </View>
+                    <FlatList
+                        data={availableDates}
+                        keyExtractor={(item) => item.toISOString()}
+                        renderItem={({ item, index }) => (
+                            <TouchableOpacity style={styles.listItem} onPress={() => handleDateSelect(item)}>
+                                <View style={[styles.iconBg, { backgroundColor: index === 0 ? '#e60000' : '#f3f4f6' }]}>
+                                    <Ionicons name="calendar" size={16} color={index === 0 ? '#fff' : '#888'} />
+                                </View>
+                                <Text style={styles.listItemText}>
+                                    {index === 0 ? 'Today, ' : index === 1 ? 'Tomorrow, ' : ''}
+                                    {item.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', weekday: 'short' })}
+                                </Text>
+                                {selectedDate.toDateString() === item.toDateString() && (
+                                    <Ionicons name="checkmark" size={24} color="#10b981" style={{ marginLeft: 'auto' }} />
+                                )}
+                            </TouchableOpacity>
+                        )}
+                    />
+                </SafeAreaView>
+            </Modal>
+
+            {/* Passenger Modal */}
+            <Modal visible={passengerModalVisible} animationType="slide" presentationStyle="pageSheet">
+                <SafeAreaView style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Select Passengers</Text>
+                        <TouchableOpacity onPress={() => setPassengerModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
+                    </View>
+                    <View style={styles.counterList}>
+                        {/* Adults */}
+                        <View style={styles.counterRow}>
+                            <View><Text style={styles.counterLabel}>Adult</Text><Text style={styles.counterSub}>Standard ticket</Text></View>
+                            <View style={styles.counterControls}>
+                                <TouchableOpacity onPress={() => updateCount('adult', -1)} style={styles.countBtn}><Ionicons name="remove" size={20} color="#111" /></TouchableOpacity>
+                                <Text style={styles.countText}>{passengerCounts.adult}</Text>
+                                <TouchableOpacity onPress={() => updateCount('adult', 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
+                            </View>
+                        </View>
+                        {/* Students */}
+                        <View style={styles.counterRow}>
+                            <View><Text style={styles.counterLabel}>Student</Text><Text style={styles.counterSub}>Valid student ID required (-51%)</Text></View>
+                            <View style={styles.counterControls}>
+                                <TouchableOpacity onPress={() => updateCount('student', -1)} style={styles.countBtn}><Ionicons name="remove" size={20} color="#111" /></TouchableOpacity>
+                                <Text style={styles.countText}>{passengerCounts.student}</Text>
+                                <TouchableOpacity onPress={() => updateCount('student', 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
+                            </View>
+                        </View>
+                        {/* Reduced */}
+                        <View style={styles.counterRow}>
+                            <View><Text style={styles.counterLabel}>Reduced</Text><Text style={styles.counterSub}>Children, Seniors (-37%)</Text></View>
+                            <View style={styles.counterControls}>
+                                <TouchableOpacity onPress={() => updateCount('reduced', -1)} style={styles.countBtn}><Ionicons name="remove" size={20} color="#111" /></TouchableOpacity>
+                                <Text style={styles.countText}>{passengerCounts.reduced}</Text>
+                                <TouchableOpacity onPress={() => updateCount('reduced', 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                    <TouchableOpacity style={styles.doneButton} onPress={() => setPassengerModalVisible(false)}>
+                        <Text style={styles.doneButtonText}>Confirm</Text>
+                    </TouchableOpacity>
+                </SafeAreaView>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -167,39 +313,59 @@ export default function PassengerProfile() {
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#f4f5f7' },
     container: { padding: 20 },
-    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#111', marginBottom: 20 },
-    
-    // User Card
-    profileCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, flexDirection: 'row', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, marginBottom: 24 },
-    avatarContainer: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#fee2e2', justifyContent: 'center', alignItems: 'center', marginRight: 20 },
-    avatarText: { fontSize: 24, fontWeight: 'bold', color: '#e60000' },
-    userInfo: { flex: 1 },
-    userName: { fontSize: 20, fontWeight: 'bold', color: '#111', marginBottom: 4 },
-    userEmail: { fontSize: 14, color: '#6b7280', marginBottom: 8 },
-    badge: { alignSelf: 'flex-start', backgroundColor: '#f3f4f6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-    badgeText: { fontSize: 12, fontWeight: 'bold', color: '#4b5563' },
+    logo: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
+    logoRed: { color: '#e60000' },
+    searchCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, elevation: 4 },
+    row: { flexDirection: 'row' },
+    swapIconContainer: { alignItems: 'center', marginVertical: -10, zIndex: 1, backgroundColor: '#fff', width: 30, height: 30, borderRadius: 15, alignSelf: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#eee' },
+    searchButton: { backgroundColor: '#e60000', borderRadius: 16, padding: 18, alignItems: 'center', marginTop: 10 },
+    searchButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
 
-    // Loyalty
-    loyaltyCard: { backgroundColor: '#181824', borderRadius: 28, padding: 24, marginBottom: 30, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
-    loyaltyCardLoading: { justifyContent: 'center', alignItems: 'center', minHeight: 140 },
-    loadingText: { color: '#9ca3af', fontSize: 16 },
-    loyaltyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    loyaltyTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-    loyaltyTitleText: { color: '#9ca3af', fontSize: 12, fontWeight: '700', letterSpacing: 1.2, marginLeft: 6 },
-    pointsValue: { color: '#ffffff', fontSize: 40, fontWeight: '900', letterSpacing: -1 },
-    pointsSuffix: { color: '#9ca3af', fontSize: 18, fontWeight: '600', letterSpacing: 0 },
-    trendButton: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#2a2a36', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#3b3b4a' },
-    tierInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-    tierText: { color: '#9ca3af', fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-    nextTierText: { color: '#facc15', fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-    progressBarBackground: { height: 6, backgroundColor: '#374151', borderRadius: 3, width: '100%', overflow: 'hidden' },
-    progressBarFill: { height: '100%', backgroundColor: '#f97316', borderRadius: 3 },
+    // Modals
+    modalContainer: { flex: 1, backgroundColor: '#fff' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderColor: '#eee' },
+    modalTitle: { fontSize: 20, fontWeight: 'bold' },
+    listItem: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderColor: '#f9f9f9' },
+    listItemText: { fontSize: 16, marginLeft: 15, color: '#111', fontWeight: '500' },
+    iconBg: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    loadingText: { textAlign: 'center', marginTop: 20, color: '#888' },
 
-    // Menu
-    sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#888', marginBottom: 10, marginLeft: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
-    menuContainer: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 10, marginBottom: 24, elevation: 2, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 5 },
-    menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 15, paddingHorizontal: 20 },
-    menuItemLeft: { flexDirection: 'row', alignItems: 'center' },
-    menuItemText: { fontSize: 16, fontWeight: '600', color: '#111', marginLeft: 15 },
-    destructiveText: { color: '#e60000' }
+    // Counters
+    counterList: { padding: 20 },
+    counterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 20, borderBottomWidth: 1, borderColor: '#f4f4f4' },
+    counterLabel: { fontSize: 18, fontWeight: 'bold', color: '#111' },
+    counterSub: { fontSize: 12, color: '#888' },
+    counterControls: { flexDirection: 'row', alignItems: 'center' },
+    countBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
+    countText: { fontSize: 18, fontWeight: 'bold', marginHorizontal: 15, minWidth: 20, textAlign: 'center' },
+    doneButton: { backgroundColor: '#e60000', margin: 20, padding: 18, borderRadius: 16, alignItems: 'center', marginTop: 'auto' },
+    doneButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+
+    // Departures
+    resultsSection: { marginTop: 30, paddingBottom: 40 },
+    resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
+    resultsTitle: { fontSize: 22, fontWeight: '900', color: '#111' },
+    optionsBadge: { backgroundColor: '#eef0f3', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16 },
+    optionsText: { fontSize: 14, color: '#555', fontWeight: '600' },
+    departureCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 15, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5 },
+    routeContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    timeBlock: { flex: 1 },
+    timeText: { fontSize: 24, fontWeight: 'bold', color: '#111', marginBottom: 4 },
+    stationText: { fontSize: 13, color: '#888', fontWeight: '500' },
+    durationBlock: { flex: 1.5, alignItems: 'center', marginHorizontal: 10 },
+    durationText: { fontSize: 11, color: '#aaa', fontWeight: 'bold', marginBottom: 5, letterSpacing: 0.5 },
+    durationLineWrapper: { flexDirection: 'row', alignItems: 'center', width: '100%' },
+    durationDotGray: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ccc' },
+    durationLine: { flex: 1, height: 2, backgroundColor: '#eee' },
+    durationDotRed: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#e60000' },
+    departureFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderColor: '#f8f8f8', paddingTop: 15 },
+    seatsBadge: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
+    seatsBadgeGreen: { backgroundColor: '#e6f7ec' },
+    seatsBadgeOrange: { backgroundColor: '#fdf0d5' },
+    seatsText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+    seatsTextGreen: { color: '#10b981' },
+    seatsTextOrange: { color: '#f59e0b' },
+    priceContainer: { flexDirection: 'row', alignItems: 'center' },
+    priceText: { fontSize: 20, fontWeight: '900', color: '#e60000', marginRight: 15 },
+    actionIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fcecec', justifyContent: 'center', alignItems: 'center' }
 });

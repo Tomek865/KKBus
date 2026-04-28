@@ -35,6 +35,12 @@ export default function PassengerLayout() {
     options={{
         href: null, // To ukrywa ten plik z paska nawigacji!
     }}
+            />
+            <Tabs.Screen
+    name="ActiveTicketModal"
+    options={{
+        href: null, // To ukrywa ten plik z paska nawigacji!
+    }}
 />
         </Tabs>
     );
