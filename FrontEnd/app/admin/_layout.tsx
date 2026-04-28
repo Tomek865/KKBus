@@ -27,8 +27,8 @@ export default function AdminLayout() {
                 {/* Menu Boczne (Sidebar) */}
                 <View style={styles.sidebar}>
                     <View style={styles.logoContainer}>
-                        <View style={styles.logoIcon}><Text style={styles.logoIconText}>T</Text></View>
-                        <Text style={styles.logoText}>Trans<Text style={{ color: '#e60000' }}>Region</Text></Text>
+                        <View style={styles.logoIcon}><Text style={styles.logoIconText}>K</Text></View>
+                        <Text style={styles.logoText}>KK<Text style={{ color: '#e60000' }}>BUS</Text></Text>
                     </View>
 
                     <View style={styles.menuSection}>

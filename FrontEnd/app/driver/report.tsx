@@ -18,7 +18,7 @@ export default function DriverSegmentReport() {
         }
         setIsSubmitting(true);
         try {
-            console.log(`API: Boarded ${boarded}, Alighted ${alighted}`); //fetch
+            console.log(`API: Boarded ${boarded}, Alighted ${alighted}`);
             await new Promise(resolve => setTimeout(resolve, 1200));
             Alert.alert("Report Sent", "Passenger count has been updated.");
             setBoarded(''); setAlighted('');

@@ -18,7 +18,7 @@ export default function DriverEndShift() {
         }
         setIsSubmitting(true);
         try {
-            console.log(`API: Refueling - ${volume}L, ${cost}PLN`); //fetch
+            console.log(`API: Refueling - ${volume}L, ${cost}PLN`);
             await new Promise(resolve => setTimeout(resolve, 1500));
             Alert.alert("Success", "Shift data saved!");
             setVolume(''); setCost('');
@@ -30,10 +30,7 @@ export default function DriverEndShift() {
     };
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container}>
                 <View style={styles.card}>
                     <View style={styles.header}>
@@ -74,11 +71,7 @@ export default function DriverEndShift() {
                         </View>
                     </View>
 
-                    <TouchableOpacity
-                        style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]}
-                        onPress={completeShift}
-                        disabled={isSubmitting}
-                    >
+                    <TouchableOpacity style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]} onPress={completeShift}>
                         {isSubmitting ? <ActivityIndicator color="#fff" /> : (
                             <>
                                 <Ionicons name="checkmark-done" size={24} color="#fff" style={{ marginRight: 10 }} />
@@ -94,7 +87,7 @@ export default function DriverEndShift() {
 
 const styles = StyleSheet.create({
     container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 15 },
-    card: { backgroundColor: '#fff', borderRadius: 28, padding: 25, width: '100%', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+    card: { backgroundColor: '#fff', borderRadius: 28, padding: 25, width: '100%', elevation: 8 },
     header: { flexDirection: 'row', alignItems: 'center', marginBottom: 35 },
     iconContainer: { backgroundColor: '#111827', width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
     title: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
