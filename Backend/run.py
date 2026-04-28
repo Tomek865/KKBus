@@ -1,11 +1,7 @@
-from flask import Flask
-from app.klient.rezerwacje import klient_rezerwacje_bp
+from app import create_app
 
-app = Flask(__name__)
-
-# Rejestrujemy nasz Blueprint z odpowiednim prefixem
-app.register_blueprint(klient_rezerwacje_bp, url_prefix="/api/klient/rezerwacje")
+app = create_app()
 
 if __name__ == "__main__":
-    # Odpalamy serwer na porcie 5000 w trybie debug (żeby widzieć błędy od razu)
-    app.run(debug=True, port=5000)
+    # Tryb debug jest świetny do developmentu, w produkcji ustawiamy na False
+    app.run(host="0.0.0.0", port=5000, debug=True)
