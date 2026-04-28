@@ -59,32 +59,43 @@ export default function PassengerTickets() {
             <ScrollView contentContainerStyle={styles.container}>
                 <Text style={styles.headerTitle}>My Tickets</Text>
 
-                <Text style={styles.sectionTitle}>Upcoming Journeys</Text>
-                <TicketCard
-                    depTime="14:20" arrTime="15:45"
-                    depStation="Krakow MDA" arrStation="Katowice Dworzec"
-                    duration="1H 25M" seats={1} price={24}
-                />
+                {isLoading ? (
+                    <ActivityIndicator size="large" color="#e60000" style={{ marginTop: 40 }} />
+                ) : (
+                    <>
+                        <Text style={styles.sectionTitle}>Upcoming Journeys</Text>
+                        {upcomingTickets.length === 0 ? (
+                            <Text style={styles.emptyText}>No upcoming tickets</Text>
+                        ) : (
+                            upcomingTickets.map(ticket => (
+                                <TicketCard
+                                    key={ticket.id}
+                                    depTime={ticket.depTime} arrTime={ticket.arrTime}
+                                    depStation={ticket.depStation} arrStation={ticket.arrStation}
+                                    duration={ticket.duration} seats={ticket.seats} price={ticket.price}
+                                />
+                            ))
+                        )}
 
-                <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Travel History</Text>
-                <View style={{ opacity: 0.6 }}>
-                    {pastTickets.length === 0 ? (
-                        <Text style={styles.emptyText}>No past journeys</Text>
-                    ) : (
-                        pastTickets.map(ticket => (
-                            <TicketCard
-                                key={ticket.id}
-                                depTime={ticket.depTime} arrTime={ticket.arrTime}
-                                depStation={ticket.depStation} arrStation={ticket.arrStation}
-                                duration={ticket.duration} seats={ticket.seats} price={ticket.price}
-                            />
-                        ))
-                    )}
-                </View>
-            </>
+                        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Travel History</Text>
+                        <View style={{ opacity: 0.6 }}>
+                            {pastTickets.length === 0 ? (
+                                <Text style={styles.emptyText}>No past journeys</Text>
+                            ) : (
+                                pastTickets.map(ticket => (
+                                    <TicketCard
+                                        key={ticket.id}
+                                        depTime={ticket.depTime} arrTime={ticket.arrTime}
+                                        depStation={ticket.depStation} arrStation={ticket.arrStation}
+                                        duration={ticket.duration} seats={ticket.seats} price={ticket.price}
+                                    />
+                                ))
+                            )}
+                        </View>
+                    </>
                 )}
-        </ScrollView>
-        </SafeAreaView >
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
