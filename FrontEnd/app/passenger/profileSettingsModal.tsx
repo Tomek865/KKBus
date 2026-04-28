@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+// ==========================================
+// TYPES
+// ==========================================
 export type ActiveSection = 'personal' | 'payment' | 'notifications' | 'language' | 'help' | 'terms' | null;
 
 interface ProfileSettingsModalProps {
@@ -10,21 +13,40 @@ interface ProfileSettingsModalProps {
     activeSection: ActiveSection;
 }
 
+// ==========================================
+// MAIN COMPONENT
+// ==========================================
 export default function ProfileSettingsModal({ visible, onClose, activeSection }: ProfileSettingsModalProps) {
-    // --- STANY ---
+    // --- STATES ---
     const [pushEnabled, setPushEnabled] = useState(true);
     const [emailEnabled, setEmailEnabled] = useState(false);
     const [selectedLang, setSelectedLang] = useState('English (UK)');
-    
-    // Nowy stan do zarządzania widokiem płatności (lista vs formularz)
     const [paymentView, setPaymentView] = useState<'list' | 'edit'>('list');
 
-    // Resetowanie widoku płatności przy każdym otwarciu modala
+    // Reset payment view on open
     useEffect(() => {
-        if (visible) {
-            setPaymentView('list');
-        }
+        if (visible) setPaymentView('list');
     }, [visible]);
+
+    // ==========================================
+    // HELPERS & API CALLS
+    // ==========================================
+    const handleSavePersonalInfo = () => {
+        // TODO: BACKEND MUTATION - Wysłanie zaktualizowanych danych profilowych (POST/PUT)
+        // Przykład: await fetch('/api/user/update', { method: 'POST', body: JSON.stringify(formData) });
+        onClose();
+    };
+
+    const handleSaveCard = () => {
+        // TODO: BACKEND MUTATION - Dodanie nowej karty kredytowej (często poprzez Stripe / zewnętrznego operatora)
+        setPaymentView('list');
+    };
+
+    const handleToggleNotification = (type: 'push' | 'email', val: boolean) => {
+        // TODO: BACKEND MUTATION - Aktualizacja preferencji powiadomień na serwerze 
+        if(type === 'push') setPushEnabled(val);
+        if(type === 'email') setEmailEnabled(val);
+    };
 
     const getTitle = () => {
         switch (activeSection) {
@@ -55,14 +77,13 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             <Text style={styles.label}>Phone Number</Text>
                             <TextInput style={styles.input} defaultValue="+48 123 456 789" keyboardType="phone-pad" />
                         </View>
-                        <TouchableOpacity style={styles.saveButton} onPress={onClose}>
+                        <TouchableOpacity style={styles.saveButton} onPress={handleSavePersonalInfo}>
                             <Text style={styles.saveButtonText}>Save Changes</Text>
                         </TouchableOpacity>
                     </View>
                 );
 
             case 'payment':
-                // WIDOK FORMULARZA (DODAWANIE/EDYCJA)
                 if (paymentView === 'edit') {
                     return (
                         <View style={styles.sectionContainer}>
@@ -70,7 +91,6 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                                 <Ionicons name="arrow-back" size={20} color="#6b7280" />
                                 <Text style={styles.backButtonText}>Back to saved cards</Text>
                             </TouchableOpacity>
-
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Cardholder Name</Text>
                                 <TextInput style={styles.input} placeholder="Anna Kowalska" />
@@ -79,7 +99,6 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                                 <Text style={styles.label}>Card Number</Text>
                                 <TextInput style={styles.input} placeholder="0000 0000 0000 0000" keyboardType="numeric" maxLength={19} />
                             </View>
-                            
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                                     <Text style={styles.label}>Expiry Date</Text>
@@ -90,15 +109,12 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                                     <TextInput style={styles.input} placeholder="123" keyboardType="numeric" maxLength={4} secureTextEntry />
                                 </View>
                             </View>
-
-                            <TouchableOpacity style={styles.saveButton} onPress={() => setPaymentView('list')}>
+                            <TouchableOpacity style={styles.saveButton} onPress={handleSaveCard}>
                                 <Text style={styles.saveButtonText}>Save Card</Text>
                             </TouchableOpacity>
                         </View>
                     );
                 }
-
-                // WIDOK LISTY (DOMYŚLNY)
                 return (
                     <View style={styles.sectionContainer}>
                         <TouchableOpacity style={styles.cardItem} onPress={() => setPaymentView('edit')}>
@@ -111,7 +127,6 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             </View>
                             <Ionicons name="checkmark-circle" size={24} color="#10b981" />
                         </TouchableOpacity>
-
                         <TouchableOpacity style={styles.addCardButton} onPress={() => setPaymentView('edit')}>
                             <Ionicons name="add" size={20} color="#e60000" />
                             <Text style={styles.addCardText}>Add New Card</Text>
@@ -119,7 +134,6 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                     </View>
                 );
 
-            // ... reszta sekcji (notifications, language, help, terms) pozostaje bez zmian
             case 'notifications':
                 return (
                     <View style={styles.sectionContainer}>
@@ -128,17 +142,18 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                                 <Text style={styles.switchTitle}>Push Notifications</Text>
                                 <Text style={styles.switchSub}>Ticket updates, delays</Text>
                             </View>
-                            <Switch value={pushEnabled} onValueChange={setPushEnabled} trackColor={{ false: '#d1d5db', true: '#fca5a5' }} thumbColor={pushEnabled ? '#e60000' : '#f4f3f4'} />
+                            <Switch value={pushEnabled} onValueChange={(v) => handleToggleNotification('push', v)} trackColor={{ false: '#d1d5db', true: '#fca5a5' }} thumbColor={pushEnabled ? '#e60000' : '#f4f3f4'} />
                         </View>
                         <View style={styles.switchRow}>
                             <View>
                                 <Text style={styles.switchTitle}>Email Offers</Text>
                                 <Text style={styles.switchSub}>Promotions and news</Text>
                             </View>
-                            <Switch value={emailEnabled} onValueChange={setEmailEnabled} trackColor={{ false: '#d1d5db', true: '#fca5a5' }} thumbColor={emailEnabled ? '#e60000' : '#f4f3f4'} />
+                            <Switch value={emailEnabled} onValueChange={(v) => handleToggleNotification('email', v)} trackColor={{ false: '#d1d5db', true: '#fca5a5' }} thumbColor={emailEnabled ? '#e60000' : '#f4f3f4'} />
                         </View>
                     </View>
                 );
+
             case 'language':
                 const languages = ['English (UK)', 'English (US)', 'Polski', 'Deutsch', 'Español'];
                 return (
@@ -151,6 +166,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         ))}
                     </View>
                 );
+
             case 'help':
                 return (
                     <View style={styles.sectionContainer}>
@@ -168,6 +184,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         </TouchableOpacity>
                     </View>
                 );
+
             case 'terms':
                 return (
                     <View style={styles.sectionContainer}>
@@ -177,11 +194,14 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         <Text style={styles.termsText}>Tickets purchased through the TransRegion app are subject to the specific carriers refund policy. Standard tickets can usually be refunded up to 24 hours before departure.</Text>
                     </View>
                 );
-            default:
-                return null;
+
+            default: return null;
         }
     };
 
+    // ==========================================
+    // RENDER
+    // ==========================================
     return (
         <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <SafeAreaView style={styles.modalContainer}>
@@ -199,6 +219,9 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     );
 }
 
+// ==========================================
+// STYLES
+// ==========================================
 const styles = StyleSheet.create({
     modalContainer: { flex: 1, backgroundColor: '#f4f5f7' },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' },
@@ -207,17 +230,16 @@ const styles = StyleSheet.create({
     closeButtonText: { fontSize: 16, fontWeight: 'bold', color: '#e60000' },
     scrollContent: { padding: 20 },
     sectionContainer: { backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 5 },
-    
     row: { flexDirection: 'row' },
     
-    // Formularze
+    // Forms
     inputGroup: { marginBottom: 20 },
     label: { fontSize: 13, fontWeight: 'bold', color: '#6b7280', marginBottom: 8, textTransform: 'uppercase' },
     input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 15, fontSize: 16, color: '#111' },
     saveButton: { backgroundColor: '#e60000', borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 10 },
     saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 
-    // Płatności
+    // Payments
     backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderColor: '#f3f4f6' },
     backButtonText: { color: '#6b7280', fontSize: 14, fontWeight: '600', marginLeft: 8 },
     cardItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 16, marginBottom: 15, borderWidth: 1, borderColor: '#e5e7eb' },
@@ -228,7 +250,7 @@ const styles = StyleSheet.create({
     addCardButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, borderRadius: 16, backgroundColor: '#fcecec' },
     addCardText: { color: '#e60000', fontWeight: 'bold', fontSize: 16, marginLeft: 8 },
 
-    // Reszta bez zmian...
+    // Others
     switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#f3f4f6' },
     switchTitle: { fontSize: 16, fontWeight: 'bold', color: '#111' },
     switchSub: { fontSize: 13, color: '#6b7280', marginTop: 4 },

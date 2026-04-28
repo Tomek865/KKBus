@@ -30,6 +30,12 @@ export default function PassengerLayout() {
                     tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={24} color={color} />,
                 }}
             />
+            <Tabs.Screen
+    name="profileSettingsModal"
+    options={{
+        href: null, // To ukrywa ten plik z paska nawigacji!
+    }}
+/>
         </Tabs>
     );
 }
