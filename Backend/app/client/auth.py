@@ -12,17 +12,17 @@ client_auth_bp = Blueprint("client_auth", __name__)
 def register():
     data = request.get_json()
 
-    # Prosta walidacja czy przyszły wymagane dane
+    # Prosta walidacja czy przyszły wymagane dane (klucze po angielsku)
     if (
         not data
         or not data.get("email")
-        or not data.get("haslo")
-        or not data.get("imie")
-        or not data.get("nazwisko")
+        or not data.get("password")
+        or not data.get("first_name")
+        or not data.get("last_name")
     ):
-        return jsonify({"error": "Brakujące dane w formularzu"}), 400
+        return jsonify({"error": "Missing form data"}), 400
 
-    hashed_password = generate_password_hash(data["haslo"])
+    hashed_password = generate_password_hash(data["password"])
 
     conn = get_db_connection()
     try:
@@ -30,25 +30,25 @@ def register():
 
         # Sprawdzamy, czy email już istnieje
         cur.execute(
-            "SELECT id_clienta FROM Klient WHERE email = %s", (data["email"],))
+            "SELECT client_id FROM Client WHERE email = %s", (data["email"],))
         if cur.fetchone():
             return jsonify(
-                {"error": "Użytkownik o tym adresie e-mail już istnieje!"}
+                {"error": "User with this email already exists!"}
             ), 409
 
         # Zapis do bazy danych
         query = """
-            INSERT INTO client (imie, nazwisko, email, haslo, numer_telefonu)
-            VALUES (%s, %s, %s, %s, %s) RETURNING id_clienta;
+            INSERT INTO Client (first_name, last_name, email, password, phone_number)
+            VALUES (%s, %s, %s, %s, %s) RETURNING client_id;
         """
         cur.execute(
             query,
             (
-                data["imie"],
-                data["nazwisko"],
+                data["first_name"],
+                data["last_name"],
                 data["email"],
                 hashed_password,
-                data.get("numer_telefonu"),
+                data.get("phone_number"),
             ),
         )
 
@@ -57,12 +57,12 @@ def register():
         cur.close()
 
         return jsonify(
-            {"message": "Rejestracja zakończona sukcesem!", "id_clienta": new_id}
+            {"message": "Registration successful!", "client_id": new_id}
         ), 201
 
     except Exception as e:
-        print(f"Błąd DB: {e}")
-        return jsonify({"error": "Wystąpił błąd serwera"}), 500
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
     finally:
         if conn:
             conn.close()
@@ -72,26 +72,26 @@ def register():
 def login():
     data = request.get_json()
 
-    if not data or not data.get("email") or not data.get("haslo"):
-        return jsonify({"error": "Brak adresu e-mail lub hasła"}), 400
+    if not data or not data.get("email") or not data.get("password"):
+        return jsonify({"error": "Missing email or password"}), 400
 
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(
-            "SELECT id_clienta, haslo, imie, nazwisko FROM Klient WHERE email = %s",
+            "SELECT client_id, password, first_name, last_name FROM Client WHERE email = %s",
             (data["email"],),
         )
         user = cur.fetchone()
         cur.close()
 
         # Sprawdzamy hasło i generujemy Token JWT
-        if user and check_password_hash(user["haslo"], data["haslo"]):
+        if user and check_password_hash(user["password"], data["password"]):
             token = jwt.encode(
                 {
-                    "id_clienta": user["id_klienta"],
+                    "client_id": user["client_id"], # Zmienione z id_klienta
                     "email": data["email"],
-                    "imie": user["imie"],
+                    "first_name": user["first_name"], # Zmienione z imie
                     "exp": datetime.datetime.now(datetime.timezone.utc)
                     + datetime.timedelta(hours=24),
                 },
@@ -101,17 +101,17 @@ def login():
 
             return jsonify(
                 {
-                    "message": "Zalogowano pomyślnie",
+                    "message": "Logged in successfully",
                     "token": token,
-                    "client": {"imie": user["imie"], "nazwisko": user["nazwisko"]},
+                    "client": {"first_name": user["first_name"], "last_name": user["last_name"]},
                 }
             ), 200
         else:
-            return jsonify({"error": "Nieprawidłowy e-mail lub hasło"}), 401
+            return jsonify({"error": "Invalid email or password"}), 401
 
     except Exception as e:
-        print(f"Błąd DB: {e}")
-        return jsonify({"error": "Wystąpił błąd serwera"}), 500
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
     finally:
         if conn:
             conn.close()

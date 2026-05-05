@@ -11,8 +11,8 @@ admin_auth_bp = Blueprint('admin_auth', __name__)
 def login():
     data = request.get_json()
     
-    if not data or not data.get('email') or not data.get('haslo'):
-        return jsonify({"error": "Brak adresu e-mail lub hasła"}), 400
+    if not data or not data.get('email') or not data.get('password'):
+        return jsonify({"error": "Missing email or password"}), 400
 
     conn = get_db_connection()
     try:
@@ -20,39 +20,39 @@ def login():
         
         # Szukamy aktywnych pracowników, którzy mają uprawnienia do panelu
         query = """
-            SELECT id_pracownika, haslo, imie, nazwisko, rola 
-            FROM Pracownik 
-            WHERE email = %s AND rola IN ('Wlasciciel', 'Sekretariat') AND czy_aktywny = TRUE
+            SELECT employee_id, password, first_name, last_name, role 
+            FROM Employee 
+            WHERE email = %s AND role IN ('Owner', 'Secretariat') AND is_active = TRUE
         """
         cur.execute(query, (data['email'],))
         admin_user = cur.fetchone()
         cur.close()
 
         # Weryfikacja hasła i generowanie tokena JWT
-        if admin_user and check_password_hash(admin_user['haslo'], data['haslo']):
+        if admin_user and check_password_hash(admin_user['password'], data['password']):
             token = jwt.encode({
-                'id_pracownika': admin_user['id_pracownika'],
+                'employee_id': admin_user['employee_id'],
                 'email': data['email'],
-                'rola': admin_user['rola'],
+                'role': admin_user['role'],
                 # Token na krócej lub dłużej, standardowo np. 12 godzin pracy biurowej
                 'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=12)
             }, current_app.config['SECRET_KEY'], algorithm='HS256')
 
             return jsonify({
-                "message": "Zalogowano pomyślnie do panelu administracyjnego.", 
+                "message": "Logged in successfully to the admin panel.", 
                 "token": token,
                 "admin_info": {
-                    "imie": admin_user['imie'], 
-                    "nazwisko": admin_user['nazwisko'],
-                    "rola": admin_user['rola'] # Przydatne we frontendzie do ukrywania opcji (np. tylko Właściciel widzi przychody)
+                    "first_name": admin_user['first_name'], 
+                    "last_name": admin_user['last_name'],
+                    "role": admin_user['role'] 
                 }
             }), 200
         else:
-            return jsonify({"error": "Nieprawidłowe dane logowania lub brak uprawnień."}), 401
+            return jsonify({"error": "Invalid credentials or missing permissions."}), 401
 
     except Exception as e:
-        print(f"Błąd DB: {e}")
-        return jsonify({"error": "Wystąpił błąd serwera"}), 500
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
     finally:
         if conn:
             conn.close()

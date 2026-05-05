@@ -11,44 +11,45 @@ driver_auth_bp = Blueprint('driver_auth', __name__)
 def login():
     data = request.get_json()
     
-    if not data or not data.get('email') or not data.get('haslo'):
-        return jsonify({"error": "Brak adresu e-mail lub hasła"}), 400
+    # Frontend musi teraz wysyłać 'password' zamiast 'haslo'
+    if not data or not data.get('email') or not data.get('password'):
+        return jsonify({"error": "Missing email or password"}), 400
 
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Szukamy tylko aktywnych pracowników z rolą 'Kierowca'
+        # Szukamy tylko aktywnych pracowników z rolą 'Driver' (zamiast 'Kierowca')
         query = """
-            SELECT id_pracownika, haslo, imie, nazwisko, rola 
-            FROM Pracownik 
-            WHERE email = %s AND rola = 'Kierowca' AND czy_aktywny = TRUE
+            SELECT employee_id, password, first_name, last_name, role 
+            FROM Employee 
+            WHERE email = %s AND role = 'Driver' AND is_active = TRUE
         """
         cur.execute(query, (data['email'],))
         driver = cur.fetchone()
         cur.close()
 
         # Weryfikacja hasła i generowanie tokena JWT
-        if driver and check_password_hash(driver['haslo'], data['haslo']):
+        if driver and check_password_hash(driver['password'], data['password']):
             token = jwt.encode({
-                'id_pracownika': driver['id_pracownika'],
+                'employee_id': driver['employee_id'], # Zmienione z id_pracownika
                 'email': data['email'],
-                'rola': driver['rola'],
+                'role': driver['role'], # Zmienione z rola
                 # Token ważny 12 godzin (typowy czas trwania zmiany)
                 'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=12)
             }, current_app.config['SECRET_KEY'], algorithm='HS256')
 
             return jsonify({
-                "message": "Zalogowano pomyślnie na konto kierowcy.", 
+                "message": "Logged in successfully as a driver.", 
                 "token": token,
-                "kierowca": {"imie": driver['imie'], "nazwisko": driver['nazwisko']}
+                "driver": {"first_name": driver['first_name'], "last_name": driver['last_name']}
             }), 200
         else:
-            return jsonify({"error": "Nieprawidłowe dane logowania lub konto jest nieaktywne."}), 401
+            return jsonify({"error": "Invalid credentials or account is inactive."}), 401
 
     except Exception as e:
-        print(f"Błąd DB: {e}")
-        return jsonify({"error": "Wystąpił błąd serwera"}), 500
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
     finally:
         if conn:
             conn.close()

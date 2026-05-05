@@ -3,27 +3,27 @@ from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from app.utils import token_required
 
-client_profil_bp = Blueprint("klient_profil", __name__)
-
+# Zmiana nazwy blueprinta
+client_profil_bp = Blueprint("client_profile", __name__)
 
 @client_profil_bp.route("/user/loyalty", methods=["GET"])
 @token_required
 def get_loyalty(current_user_id):
-    # Pobieranie punktów lojalnościowych zalogowanego użytkownika
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(
-            "SELECT punkty_lojalnosciowe FROM client WHERE id_klienta = %s",
+            "SELECT loyalty_points FROM Client WHERE client_id = %s",
             (current_user_id,),
         )
         loyalty_data = cur.fetchone()
         cur.close()
 
         if not loyalty_data:
-            return jsonify({"error": "Nie znaleziono użytkownika"}), 404
+            return jsonify({"error": "User not found"}), 404
 
-        return jsonify({"punkty": loyalty_data["punkty_lojalnosciowe"]}), 200
+        # Wymuszamy na frontendzie czytanie klucza 'points'
+        return jsonify({"points": loyalty_data["loyalty_points"]}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -37,27 +37,28 @@ def update_profile(current_user_id):
     data = request.get_json()
 
     if not data:
-        return jsonify({"error": "Brak danych do aktualizacji"}), 400
+        return jsonify({"error": "No data provided for update"}), 400
 
-    imie = data.get("imie")
-    nazwisko = data.get("nazwisko")
-    telefon = data.get("telefon")
+    # Frontend musi teraz wysyłać angielskie klucze
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+    phone_number = data.get("phone_number")
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         query = """
-            UPDATE client 
-            SET imie = COALESCE(%s, imie), 
-                nazwisko = COALESCE(%s, nazwisko), 
-                numer_telefonu = COALESCE(%s, numer_telefonu)
-            WHERE id_clienta = %s
+            UPDATE Client 
+            SET first_name = COALESCE(%s, first_name), 
+                last_name = COALESCE(%s, last_name), 
+                phone_number = COALESCE(%s, phone_number)
+            WHERE client_id = %s
         """
-        cur.execute(query, (imie, nazwisko, telefon, current_user_id))
+        cur.execute(query, (first_name, last_name, phone_number, current_user_id))
         conn.commit()
         cur.close()
 
-        return jsonify({"message": "Zaktualizowano profil pomyślnie"}), 200
+        return jsonify({"message": "Profile updated successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -68,22 +69,22 @@ def update_profile(current_user_id):
 @client_profil_bp.route("/user/tickets", methods=["GET"])
 @token_required
 def get_tickets(current_user_id):
-    # Pobieranie zapisanych biletów użytkownika
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        # Całkowicie wyrzucone polskie aliasy "AS"
         query = """
             SELECT 
-                r.numer_rezerwacji,
-                r.data_rezerwacji,
+                r.reservation_number,
+                r.reservation_date,
                 r.status,
-                t.nazwa AS trasa,
-                TO_CHAR(k.data_wyjazdu, 'YYYY-MM-DD HH24:MI') as data_wyjazdu
-            FROM Rezerwacja r
-            JOIN Kurs k ON r.id_kursu = k.id_kursu
-            JOIN Trasa t ON k.id_trasy = t.id_trasy
-            WHERE r.id_clienta = %s
-            ORDER BY k.data_wyjazdu DESC
+                t.name AS route,
+                TO_CHAR(tr.departure_time, 'YYYY-MM-DD HH24:MI') AS departure_time
+            FROM Reservation r
+            JOIN Trip tr ON r.trip_id = tr.trip_id
+            JOIN Route t ON tr.route_id = t.route_id
+            WHERE r.client_id = %s
+            ORDER BY tr.departure_time DESC
         """
         cur.execute(query, (current_user_id,))
         tickets = cur.fetchall()

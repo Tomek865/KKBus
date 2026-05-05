@@ -1,28 +1,29 @@
 from flask import Blueprint, jsonify
 from db import get_db_connection
-from app.utils import token_required
+from app.utils import token_required # Jeśli masz driver_required, warto go tu użyć zamiast token_required!
 
 driver_tickets_bp = Blueprint('driver_tickets', __name__)
 
 @driver_tickets_bp.route('/<int:ticket_id>/validate', methods=['POST'])
 @token_required
 def validate_ticket(current_user_id, ticket_id):
-    # Aktualizujemy status rezerwacji/biletu na 'Zrealizowana' (boarded)
+    # Update the reservation/ticket status to 'Boarded'
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         
-        # Zakładamy, że zmieniamy status w tabeli Rezerwacja
-        query = "UPDATE Rezerwacja SET status = 'Zrealizowana' WHERE id_rezerwacji = %s"
+        # We change the status in the Reservation table
+        # Wcześniej było id_rezerwacji, teraz używamy reservation_id
+        query = "UPDATE Reservation SET status = 'Boarded' WHERE reservation_id = %s"
         cur.execute(query, (ticket_id,))
         
         if cur.rowcount == 0:
-            return jsonify({"error": "Nie znaleziono biletu."}), 404
+            return jsonify({"error": "Ticket not found."}), 404
             
         conn.commit()
         cur.close()
 
-        return jsonify({"message": f"Bilet {ticket_id} zwalidowany poprawnie."}), 200
+        return jsonify({"message": f"Ticket {ticket_id} validated successfully."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:

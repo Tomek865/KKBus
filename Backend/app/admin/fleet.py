@@ -15,16 +15,16 @@ def get_fleet_assignments(current_admin_id):
         # Wyciągamy dane o kursie ze złączeniem tras, pojazdów i pracowników
         query = """
             SELECT 
-                k.id_kursu AS id, 
-                p.nr_rejestracyjny AS "busId", 
-                t.nazwa AS route, 
-                k.status, 
-                pr.imie || ' ' || LEFT(pr.nazwisko, 1) || '.' AS driver
-            FROM Kurs k
-            JOIN Pojazd p ON k.id_pojazdu = p.id_pojazdu
-            JOIN Trasa t ON k.id_trasy = t.id_trasy
-            JOIN Pracownik pr ON k.id_pracownika = pr.id_pracownika
-            ORDER BY k.data_wyjazdu DESC;
+                tr.trip_id AS id, 
+                v.registration_number AS "busId", 
+                rt.name AS route, 
+                tr.status, 
+                e.first_name || ' ' || LEFT(e.last_name, 1) || '.' AS driver
+            FROM Trip tr
+            JOIN Vehicle v ON tr.vehicle_id = v.vehicle_id
+            JOIN Route rt ON tr.route_id = rt.route_id
+            JOIN Employee e ON tr.employee_id = e.employee_id
+            ORDER BY tr.departure_time DESC;
         """
         cur.execute(query)
         fleet_data = cur.fetchall()
@@ -44,19 +44,16 @@ def delete_fleet_assignment(current_admin_id, assignment_id):
     try:
         cur = conn.cursor()
         
-        # Opcja A: Twarde usunięcie
-        # cur.execute("DELETE FROM Kurs WHERE id_kursu = %s", (assignment_id,))
-        
-        # Opcja B: Miękkie usunięcie (Zalecane w transporcie)
-        cur.execute("UPDATE Kurs SET status = 'Anulowany' WHERE id_kursu = %s", (assignment_id,))
+        # Opcja B: Miękkie usunięcie (Zalecane w transporcie) - Przetłumaczone na status 'Cancelled'
+        cur.execute("UPDATE Trip SET status = 'Cancelled' WHERE trip_id = %s", (assignment_id,))
         
         if cur.rowcount == 0:
-            return jsonify({"error": "Nie znaleziono kursu"}), 404
+            return jsonify({"error": "Trip not found"}), 404
             
         conn.commit()
         cur.close()
 
-        return jsonify({"message": "Pomyślnie usunięto przypisanie z floty"}), 200
+        return jsonify({"message": "Fleet assignment removed successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:

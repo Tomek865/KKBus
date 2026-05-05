@@ -13,21 +13,21 @@ def get_stats(current_admin_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         # Obliczamy Przychody (suma sprzedanych biletów)
-        cur.execute("SELECT COALESCE(SUM(cena_koncowa), 0) AS przychod FROM Bilet;")
-        revenue = cur.fetchone()['przychod']
+        cur.execute("SELECT COALESCE(SUM(final_price), 0) AS revenue FROM Ticket;")
+        revenue = cur.fetchone()['revenue']
         
         # Obliczamy pojazdy (Aktywne / Wszystkie)
-        cur.execute("SELECT COUNT(*) AS total, SUM(CASE WHEN czy_aktywny = TRUE THEN 1 ELSE 0 END) AS active FROM Pojazd;")
+        cur.execute("SELECT COUNT(*) AS total, SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) AS active FROM Vehicle;")
         buses_data = cur.fetchone()
         buses = f"{buses_data['active'] or 0} / {buses_data['total'] or 0}"
         
         # Obliczamy sumę zarezerwowanych miejsc (pasażerowie)
-        cur.execute("SELECT COALESCE(SUM(liczba_miejsc), 0) AS pasazerowie FROM Rezerwacja WHERE status != 'Anulowana';")
-        passengers = cur.fetchone()['pasazerowie']
+        cur.execute("SELECT COALESCE(SUM(seat_count), 0) AS passengers FROM Reservation WHERE status != 'Cancelled';")
+        passengers = cur.fetchone()['passengers']
         
         # Liczba tras
-        cur.execute("SELECT COUNT(*) AS trasy FROM Trasa;")
-        routes = cur.fetchone()['trasy']
+        cur.execute("SELECT COUNT(*) AS routes FROM Route;")
+        routes = cur.fetchone()['routes']
         
         cur.close()
 
@@ -52,23 +52,23 @@ def get_users(current_admin_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Łączymy Klientów i Pracowników w jedną listę (UNION)
+        # Łączymy Klientów i Pracowników w jedną listę (UNION). Zmieniłem K_ na C_ (Client) i P_ na E_ (Employee)
         query = """
             SELECT 
-                'K_' || id_klienta AS id, 
-                imie || ' ' || nazwisko AS name, 
+                'C_' || client_id AS id, 
+                first_name || ' ' || last_name AS name, 
                 email, 
                 'Passenger' AS role, 
-                ilosc_niezrealizowanych_rezerwacji AS trips 
-            FROM Klient
+                unfulfilled_reservations_count AS trips 
+            FROM Client
             UNION ALL
             SELECT 
-                'P_' || id_pracownika AS id, 
-                imie || ' ' || nazwisko AS name, 
+                'E_' || employee_id AS id, 
+                first_name || ' ' || last_name AS name, 
                 email, 
-                rola AS role, 
+                role AS role, 
                 0 AS trips 
-            FROM Pracownik
+            FROM Employee
             ORDER BY name ASC;
         """
         cur.execute(query)

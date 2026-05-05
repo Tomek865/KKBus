@@ -11,54 +11,55 @@ universal_auth_bp = Blueprint('universal_auth', __name__)
 def login():
     data = request.get_json()
     
-    if not data or not data.get('email') or not data.get('haslo'):
-        return jsonify({"error": "Brak adresu e-mail lub hasła"}), 400
+    # ZMIANA: Szukamy klucza 'password' zamiast 'haslo'
+    if not data or not data.get('email') or not data.get('password'):
+        return jsonify({"error": "Missing email or password"}), 400
 
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         email = data['email']
-        haslo_podane = data['haslo']
+        password_provided = data['password']
 
-        # 1. Najpierw sprawdzamy, czy to KLIENT
+        # 1. Najpierw sprawdzamy, czy to KLIENT (tabela Client)
         cur.execute("SELECT client_id, password, first_name, last_name FROM Client WHERE email = %s", (email,))
-        klient = cur.fetchone()
+        client = cur.fetchone()
 
-        if klient and check_password_hash(klient['haslo'], haslo_podane):
+        if client and check_password_hash(client['password'], password_provided):
             token = jwt.encode({
-                'id_uzytkownika': klient['id_klienta'],
-                'rola': 'Klient',
+                'client_id': client['client_id'], 
+                'role': 'Client',
                 'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=24)
             }, current_app.config['SECRET_KEY'], algorithm='HS256')
 
             return jsonify({
                 "token": token,
-                "rola": "Klient",
-                "dane": {"imie": klient['imie'], "nazwisko": klient['nazwisko']}
+                "role": "Client",
+                "data": {"first_name": client['first_name'], "last_name": client['last_name']}
             }), 200
 
-        # 2. Jeśli to nie Klient, sprawdzamy, czy to PRACOWNIK (Kierowca, Sekretariat, Wlasciciel)
+        # 2. Jeśli to nie Klient, sprawdzamy, czy to PRACOWNIK (tabela Employee)
         cur.execute("SELECT employee_id, password, first_name, last_name, role FROM Employee WHERE email = %s AND is_active = TRUE", (email,))
-        pracownik = cur.fetchone()
+        employee = cur.fetchone()
 
-        if pracownik and check_password_hash(pracownik['haslo'], haslo_podane):
+        if employee and check_password_hash(employee['password'], password_provided):
             token = jwt.encode({
-                'id_uzytkownika': pracownik['id_pracownika'],
-                'rola': pracownik['rola'],
+                'employee_id': employee['employee_id'],
+                'role': employee['role'],
                 'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=12)
             }, current_app.config['SECRET_KEY'], algorithm='HS256')
 
             return jsonify({
                 "token": token,
-                "rola": pracownik['rola'], # Tutaj wyślemy 'Kierowca', 'Wlasciciel' lub 'Sekretariat'
-                "dane": {"imie": pracownik['imie'], "nazwisko": pracownik['nazwisko']}
+                "role": employee['role'], 
+                "data": {"first_name": employee['first_name'], "last_name": employee['last_name']}
             }), 200
 
-        # 3. Jeśli nie znaleziono ani tu, ani tu (lub hasło błędne)
-        return jsonify({"error": "Nieprawidłowy e-mail lub hasło"}), 401
+        # 3. Błędne dane
+        return jsonify({"error": "Invalid email or password"}), 401
 
     except Exception as e:
-        print(f"Błąd DB: {e}")
-        return jsonify({"error": "Wystąpił błąd serwera"}), 500
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
     finally:
         if conn: conn.close()
