@@ -1,131 +1,134 @@
-CREATE TABLE Klient (
-    id_klienta SERIAL PRIMARY KEY,
-    imie VARCHAR(50) NOT NULL,
-    nazwisko VARCHAR(50) NOT NULL,
+-- odpalenie Get-Content init.sql | docker exec -i kkbus_postgres psql -U kkbus_admin -d kkbus_db
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+
+CREATE TABLE Client (
+    client_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    haslo VARCHAR(255) NOT NULL,
-    numer_telefonu VARCHAR(20),
-    data_urodzenia DATE,
-    punkty_lojalnosciowe INTEGER DEFAULT 0,
-    czy_student BOOLEAN DEFAULT FALSE,
-    ilosc_niezrealizowanych_rezerwacji INTEGER DEFAULT 0,
-    data_utworzenia TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    password VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20),
+    birth_date DATE,
+    loyalty_points INTEGER DEFAULT 0,
+    is_student BOOLEAN DEFAULT FALSE,
+    unfulfilled_reservations_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE Pracownik (
-    id_pracownika SERIAL PRIMARY KEY,
-    imie VARCHAR(50) NOT NULL,
-    nazwisko VARCHAR(50) NOT NULL,
+CREATE TABLE Employee (
+    employee_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    haslo VARCHAR(255) NOT NULL,
-    rola VARCHAR(50) NOT NULL, -- Kierowca, Sekretariat, Wlasciciel
-    nr_prawa_jazdy VARCHAR(50),
-    waznosc_badan_lekarskich DATE,
-    baza_przypisania VARCHAR(50), -- np. Kraków, Katowice
-    czy_aktywny BOOLEAN DEFAULT TRUE
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL, -- Driver, Secretariat, Owner
+    driving_license_number VARCHAR(50),
+    medical_exam_validity DATE,
+    assigned_base VARCHAR(50), -- e.g., Krakow, Katowice
+    is_active BOOLEAN DEFAULT TRUE
 );
 
-CREATE TABLE Pojazd (
-    id_pojazdu SERIAL PRIMARY KEY,
+CREATE TABLE Vehicle (
+    vehicle_id SERIAL PRIMARY KEY,
     vin VARCHAR(17) UNIQUE NOT NULL,
-    nr_rejestracyjny VARCHAR(20) NOT NULL,
-    marka VARCHAR(50) NOT NULL,
+    registration_number VARCHAR(20) NOT NULL,
+    brand VARCHAR(50) NOT NULL,
     model VARCHAR(50) NOT NULL,
-    stan VARCHAR(50), 
-    miejsce_parkowania VARCHAR(100),
-    pojemnosc_miejsc INTEGER NOT NULL,
-    czy_aktywny BOOLEAN DEFAULT TRUE
-);
-
-CREATE TABLE Trasa (
-    id_trasy SERIAL PRIMARY KEY,
-    nazwa VARCHAR(100) NOT NULL
-);
-
-CREATE TABLE Przystanek (
-    id_przystanku SERIAL PRIMARY KEY,
-    nazwa VARCHAR(100) NOT NULL,
-    wspolrzedne_gps VARCHAR(50),
-    dokladny_adres VARCHAR(255)
-);
-
-CREATE TABLE Trasa_Przystanek (
-    id_trasy INTEGER NOT NULL REFERENCES Trasa(id_trasy) ON DELETE CASCADE,
-    id_przystanku INTEGER NOT NULL REFERENCES Przystanek(id_przystanku) ON DELETE CASCADE,
-    kolejnosc_na_trasie INTEGER NOT NULL,
-    PRIMARY KEY (id_trasy, id_przystanku)
-);
-
-CREATE TABLE Odcinek_Cenowy (
-    id_odcinka SERIAL PRIMARY KEY,
-    id_trasy INTEGER NOT NULL REFERENCES Trasa(id_trasy),
-    id_przystanek_poczatkowy INTEGER NOT NULL REFERENCES Przystanek(id_przystanku),
-    id_przystanek_koncowy INTEGER NOT NULL REFERENCES Przystanek(id_przystanku),
-    cena_normalna FLOAT NOT NULL
-);
-
-CREATE TABLE Tankowanie (
-    id_tankowania SERIAL PRIMARY KEY,
-    id_pojazdu INTEGER NOT NULL REFERENCES Pojazd(id_pojazdu),
-    id_pracownika INTEGER NOT NULL REFERENCES Pracownik(id_pracownika), -- Kierowca tankujący
-    data_tankowania TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ilosc_litrow FLOAT NOT NULL,
-    cena_za_litr FLOAT NOT NULL,
-    koszt_calkowity FLOAT NOT NULL
-);
-
-CREATE TABLE Kurs (
-    id_kursu SERIAL PRIMARY KEY,
-    id_trasy INTEGER NOT NULL REFERENCES Trasa(id_trasy),
-    id_pojazdu INTEGER NOT NULL REFERENCES Pojazd(id_pojazdu),
-    id_pracownika INTEGER NOT NULL REFERENCES Pracownik(id_pracownika),
-    data_wyjazdu TIMESTAMP NOT NULL,
-    data_przyjazdu TIMESTAMP,
-    status VARCHAR(50) 
-);
-
-CREATE TABLE RaportKursu (
-    id_raportu SERIAL PRIMARY KEY,
-    id_kursu INTEGER UNIQUE NOT NULL REFERENCES Kurs(id_kursu) ON DELETE CASCADE
-    -- Koszty paliwa i ogólna liczba pasażerów usunięte zgodnie z recenzją
-);
-
-CREATE TABLE Raport_Odcinek (
-    id_raportu_odcinka SERIAL PRIMARY KEY,
-    id_raportu INTEGER NOT NULL REFERENCES RaportKursu(id_raportu) ON DELETE CASCADE,
-    id_odcinka INTEGER NOT NULL REFERENCES Odcinek_Cenowy(id_odcinka),
-    ilosc_wsiadajacych INTEGER DEFAULT 0,
-    ilosc_wysiadajacych INTEGER DEFAULT 0
-);
-
-CREATE TABLE Rezerwacja (
-    id_rezerwacji SERIAL PRIMARY KEY,
-    id_klienta INTEGER NOT NULL REFERENCES Klient(id_klienta),
-    id_kursu INTEGER NOT NULL REFERENCES Kurs(id_kursu),
-    numer_rezerwacji VARCHAR(50) UNIQUE NOT NULL,
-    data_rezerwacji TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    liczba_miejsc INTEGER NOT NULL,
     status VARCHAR(50), 
-    status_platnosci VARCHAR(50) DEFAULT 'Nieoplacona' -- Kluczowe dla wymuszenia płatności online
+    parking_location VARCHAR(100),
+    seating_capacity INTEGER NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE
 );
 
-CREATE TABLE Bilet (
-    id_biletu SERIAL PRIMARY KEY,
-    id_rezerwacji INTEGER NOT NULL REFERENCES Rezerwacja(id_rezerwacji) ON DELETE CASCADE,
-    id_odcinka INTEGER NOT NULL REFERENCES Odcinek_Cenowy(id_odcinka),
-    cena_koncowa FLOAT NOT NULL,
-    rodzaj_znizki VARCHAR(50)
+CREATE TABLE Route (
+    route_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE Nagroda (
-    id_nagrody SERIAL PRIMARY KEY,
-    nazwa VARCHAR(100) NOT NULL,
-    wymagane_punkty INTEGER NOT NULL
+CREATE TABLE Station (
+    station_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    gps_coordinates VARCHAR(50),
+    exact_address VARCHAR(255)
 );
 
-CREATE TABLE Klient_Nagroda (
-    id_klienta INTEGER NOT NULL REFERENCES Klient(id_klienta) ON DELETE CASCADE,
-    id_nagrody INTEGER NOT NULL REFERENCES Nagroda(id_nagrody) ON DELETE CASCADE,
-    data_wymiany TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id_klienta, id_nagrody, data_wymiany)
+CREATE TABLE Route_Station (
+    route_id INTEGER NOT NULL REFERENCES Route(route_id) ON DELETE CASCADE,
+    station_id INTEGER NOT NULL REFERENCES Station(station_id) ON DELETE CASCADE,
+    order_on_route INTEGER NOT NULL,
+    PRIMARY KEY (route_id, station_id)
+);
+
+CREATE TABLE Fare_Segment (
+    segment_id SERIAL PRIMARY KEY,
+    route_id INTEGER NOT NULL REFERENCES Route(route_id),
+    start_station_id INTEGER NOT NULL REFERENCES Station(station_id),
+    end_station_id INTEGER NOT NULL REFERENCES Station(station_id),
+    standard_price FLOAT NOT NULL
+);
+
+CREATE TABLE Refueling (
+    refueling_id SERIAL PRIMARY KEY,
+    vehicle_id INTEGER NOT NULL REFERENCES Vehicle(vehicle_id),
+    employee_id INTEGER NOT NULL REFERENCES Employee(employee_id), -- Driver refueling
+    refueling_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    liters_volume FLOAT NOT NULL,
+    price_per_liter FLOAT NOT NULL,
+    total_cost FLOAT NOT NULL
+);
+
+CREATE TABLE Trip (
+    trip_id SERIAL PRIMARY KEY,
+    route_id INTEGER NOT NULL REFERENCES Route(route_id),
+    vehicle_id INTEGER NOT NULL REFERENCES Vehicle(vehicle_id),
+    employee_id INTEGER NOT NULL REFERENCES Employee(employee_id),
+    departure_time TIMESTAMP NOT NULL,
+    arrival_time TIMESTAMP,
+    status VARCHAR(50) -- e.g., Planned, In Progress, Completed, Cancelled
+);
+
+CREATE TABLE Trip_Report (
+    report_id SERIAL PRIMARY KEY,
+    trip_id INTEGER UNIQUE NOT NULL REFERENCES Trip(trip_id) ON DELETE CASCADE
+);
+
+CREATE TABLE Segment_Report (
+    segment_report_id SERIAL PRIMARY KEY,
+    report_id INTEGER NOT NULL REFERENCES Trip_Report(report_id) ON DELETE CASCADE,
+    segment_id INTEGER NOT NULL REFERENCES Fare_Segment(segment_id),
+    boarded_passengers INTEGER DEFAULT 0,
+    alighted_passengers INTEGER DEFAULT 0
+);
+
+CREATE TABLE Reservation (
+    reservation_id SERIAL PRIMARY KEY,
+    client_id INTEGER NOT NULL REFERENCES Client(client_id),
+    trip_id INTEGER NOT NULL REFERENCES Trip(trip_id),
+    reservation_number VARCHAR(50) UNIQUE NOT NULL,
+    reservation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    seat_count INTEGER NOT NULL,
+    status VARCHAR(50), 
+    payment_status VARCHAR(50) DEFAULT 'Unpaid' 
+);
+
+CREATE TABLE Ticket (
+    ticket_id SERIAL PRIMARY KEY,
+    reservation_id INTEGER NOT NULL REFERENCES Reservation(reservation_id) ON DELETE CASCADE,
+    segment_id INTEGER NOT NULL REFERENCES Fare_Segment(segment_id),
+    final_price FLOAT NOT NULL,
+    discount_type VARCHAR(50)
+);
+
+CREATE TABLE Reward (
+    reward_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    required_points INTEGER NOT NULL
+);
+
+CREATE TABLE Client_Reward (
+    client_id INTEGER NOT NULL REFERENCES Client(client_id) ON DELETE CASCADE,
+    reward_id INTEGER NOT NULL REFERENCES Reward(reward_id) ON DELETE CASCADE,
+    exchange_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, reward_id, exchange_date)
 );

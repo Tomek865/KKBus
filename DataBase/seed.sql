@@ -1,75 +1,69 @@
--- 1. Aktualizacja schematu (dodanie odległości i czasu do odcinków)
-ALTER TABLE Odcinek_Cenowy 
-ADD COLUMN odleglosc_km INTEGER,
-ADD COLUMN czas_przejazdu_min INTEGER;
+-- odpalenie Get-Content seed.sql | docker exec -i kkbus_postgres psql -U kkbus_admin -d kkbus_db
+-- 1. CZYSZCZENIE BAZY (Zabezpieczenie przed duplikatami przy wielokrotnym odpalaniu pliku)
+TRUNCATE TABLE Client, Employee, Vehicle, Route, Station, Route_Station, Fare_Segment, Refueling, Trip, Trip_Report, Segment_Report, Reservation, Ticket, Reward, Client_Reward RESTART IDENTITY CASCADE;
 
--- 2. Dodanie zasobów (Kierowca i Pojazd)
-INSERT INTO Pracownik (imie, nazwisko, email, haslo, rola, nr_prawa_jazdy, czy_aktywny) 
-VALUES ('Jan', 'Kowalski', 'jan.kowalski@kkbus.pl', 'haslo123', 'Kierowca', 'PRAWO12345', TRUE);
+-- 2. STACJE (Stations)
+INSERT INTO Station (name, gps_coordinates, exact_address) VALUES 
+('Kraków', '50.0647, 19.9450', 'MDA Kraków, ul. Bosacka 18'),
+('Katowice', '50.2649, 19.0238', 'Dworzec Sądowa, ul. Sądowa 5'),
+('Wrocław', '51.0978, 17.0385', 'Dworzec Wrocław, ul. Sucha 1');
 
-INSERT INTO Pojazd (vin, nr_rejestracyjny, marka, model, stan, pojemnosc_miejsc, czy_aktywny) 
-VALUES ('VIN12345678901234', 'KR 12345', 'Mercedes', 'Sprinter', 'Dostepny', 20, TRUE);
+-- 3. TRASY (Routes)
+INSERT INTO Route (name) VALUES 
+('Kraków - Katowice'),
+('Kraków - Wrocław');
 
--- 3. Definicja Tras (Tam i z powrotem)
-INSERT INTO Trasa (nazwa) VALUES ('Kraków -> Katowice'); -- ID 1
-INSERT INTO Trasa (nazwa) VALUES ('Katowice -> Kraków'); -- ID 2
+-- 4. PRZYPISANIE STACJI DO TRAS (Route_Station)
+-- Trasa 1: Kraków (1) -> Katowice (2)
+INSERT INTO Route_Station (route_id, station_id, order_on_route) VALUES 
+(1, 1, 1),
+(1, 2, 2);
 
--- 4. Dodanie 10 przystanków
-INSERT INTO Przystanek (nazwa, dokladny_adres) VALUES 
-('Kraków, MDA', 'ul. Bosacka 18, Kraków'),          -- ID 1
-('Kraków, Rondo Ofiar Katynia', 'Rondo Ofiar Katynia, Kraków'), -- ID 2
-('Zabierzów', 'ul. Krakowska, Zabierzów'),          -- ID 3
-('Krzeszowice', 'ul. Kościuszki, Krzeszowice'),     -- ID 4
-('Trzebinia', 'ul. Dworcowa, Trzebinia'),           -- ID 5
-('Chrzanów', 'ul. Zielona, Chrzanów'),              -- ID 6
-('Jaworzno', 'ul. Grunwaldzka, Jaworzno'),          -- ID 7
-('Mysłowice', 'ul. Katowicka, Mysłowice'),          -- ID 8
-('Katowice, Zawodzie', 'ul. 1 Maja, Katowice'),     -- ID 9
-('Katowice, Dworzec', 'ul. Piotra Skargi, Katowice'); -- ID 10
+-- Trasa 2: Kraków (1) -> Katowice (2) -> Wrocław (3)
+INSERT INTO Route_Station (route_id, station_id, order_on_route) VALUES 
+(2, 1, 1),
+(2, 2, 2),
+(2, 3, 3);
 
--- 5. Powiązanie przystanków z trasami (kolejność)
--- Trasa 1: Kraków -> Katowice
-INSERT INTO Trasa_Przystanek (id_trasy, id_przystanku, kolejnosc_na_trasie) VALUES
-(1, 1, 1), (1, 2, 2), (1, 3, 3), (1, 4, 4), (1, 5, 5), 
-(1, 6, 6), (1, 7, 7), (1, 8, 8), (1, 9, 9), (1, 10, 10);
+-- 5. ODCINKI CENOWE (Fare_Segment)
+INSERT INTO Fare_Segment (route_id, start_station_id, end_station_id, standard_price) VALUES 
+(1, 1, 2, 15.00), -- Kraków -> Katowice
+(2, 1, 2, 15.00), -- Kraków -> Katowice (na dłuższej trasie)
+(2, 2, 3, 25.00), -- Katowice -> Wrocław
+(2, 1, 3, 35.00); -- Kraków -> Wrocław
 
--- Trasa 2: Katowice -> Kraków (odwrotna kolejność)
-INSERT INTO Trasa_Przystanek (id_trasy, id_przystanku, kolejnosc_na_trasie) VALUES
-(2, 10, 1), (2, 9, 2), (2, 8, 3), (2, 7, 4), (2, 6, 5), 
-(2, 5, 6), (2, 4, 7), (2, 3, 8), (2, 2, 9), (2, 1, 10);
+-- 6. POJAZDY (Vehicles)
+INSERT INTO Vehicle (vin, registration_number, brand, model, status, parking_location, seating_capacity, is_active) VALUES 
+('WBA1234567890ABCD', 'KR 12345', 'Mercedes-Benz', 'Sprinter', 'Available', 'Baza Kraków', 20, TRUE),
+('WBA0987654321WXYZ', 'KR 54321', 'Volkswagen', 'Crafter', 'Available', 'Baza Kraków', 18, TRUE);
 
--- 6. Definicja odcinków (odległość, czas, cena) pomiędzy KOLEJNYMI przystankami
--- Dla trasy Kraków -> Katowice
-INSERT INTO Odcinek_Cenowy (id_trasy, id_przystanek_poczatkowy, id_przystanek_koncowy, cena_normalna, odleglosc_km, czas_przejazdu_min) VALUES
-(1, 1, 2, 4.0, 6, 15),
-(1, 2, 3, 4.0, 8, 10),
-(1, 3, 4, 5.0, 12, 15),
-(1, 4, 5, 5.0, 14, 20),
-(1, 5, 6, 4.0, 8, 10),
-(1, 6, 7, 5.0, 15, 20),
-(1, 7, 8, 4.0, 10, 15),
-(1, 8, 9, 4.0, 8, 10),
-(1, 9, 10, 3.0, 3, 5);
+-- 7. PRACOWNICY (Employees) 
+-- Uwaga: Hasło dla wszystkich to: haslo123 (wygenerowane dla pbkdf2:sha256)
+INSERT INTO Employee (first_name, last_name, email, password, role, is_active) VALUES 
+('Jan', 'Kowalski', 'kierowca@example.com', 'scrypt:32768:8:1$fG2rA8wL3pT6bY9$3e1174c86d88c4b18c645e9987cf6e5e0c52bbbd098a5e5a2db39d73d6ebbd780c11f71a084ebc810c9c73797c0f1e0de8a9eb3a771966a3106d3e8e8a93bc48', 'Driver', TRUE),
+('Anna', 'Nowak', 'admin@example.com', 'scrypt:32768:8:1$fG2rA8wL3pT6bY9$3e1174c86d88c4b18c645e9987cf6e5e0c52bbbd098a5e5a2db39d73d6ebbd780c11f71a084ebc810c9c73797c0f1e0de8a9eb3a771966a3106d3e8e8a93bc48', 'Owner', TRUE);
 
--- Dla trasy Katowice -> Kraków (odwrotnie)
-INSERT INTO Odcinek_Cenowy (id_trasy, id_przystanek_poczatkowy, id_przystanek_koncowy, cena_normalna, odleglosc_km, czas_przejazdu_min) VALUES
-(2, 10, 9, 3.0, 3, 5),
-(2, 9, 8, 4.0, 8, 10),
-(2, 8, 7, 4.0, 10, 15),
-(2, 7, 6, 5.0, 15, 20),
-(2, 6, 5, 4.0, 8, 10),
-(2, 5, 4, 5.0, 14, 20),
-(2, 4, 3, 5.0, 12, 15),
-(2, 3, 2, 4.0, 8, 10),
-(2, 2, 1, 4.0, 6, 15);
+-- 8. KLIENCI (Clients)
+-- Hasło: haslo123
+INSERT INTO Client (first_name, last_name, email, password, loyalty_points) VALUES 
+('Michał', 'Pasażer', 'klient@example.com', 'scrypt:32768:8:1$fG2rA8wL3pT6bY9$3e1174c86d88c4b18c645e9987cf6e5e0c52bbbd098a5e5a2db39d73d6ebbd780c11f71a084ebc810c9c73797c0f1e0de8a9eb3a771966a3106d3e8e8a93bc48', 100);
 
--- 7. Zaplanowanie 4 kursów na konkretny dzień (np. 2026-05-10)
--- 2 kursy Kraków -> Katowice (Trasa 1)
-INSERT INTO Kurs (id_trasy, id_pojazdu, id_pracownika, data_wyjazdu, data_przyjazdu, status) VALUES
-(1, 1, 1, '2026-05-10 08:00:00', '2026-05-10 10:00:00', 'Planowany'),
-(1, 1, 1, '2026-05-10 16:00:00', '2026-05-10 18:00:00', 'Planowany');
+-- 9. KURSY (Trips)
+-- Ustawiamy kurs na Kraków-Katowice (route_id: 1), bus: 1, kierowca: 1 na jutro rano
+INSERT INTO Trip (route_id, vehicle_id, employee_id, departure_time, arrival_time, status) VALUES 
+(1, 1, 1, CURRENT_DATE + INTERVAL '1 day 08:00:00', CURRENT_DATE + INTERVAL '1 day 09:30:00', 'Planned');
 
--- 2 kursy Katowice -> Kraków (Trasa 2)
-INSERT INTO Kurs (id_trasy, id_pojazdu, id_pracownika, data_wyjazdu, data_przyjazdu, status) VALUES
-(2, 1, 1, '2026-05-10 12:00:00', '2026-05-10 14:00:00', 'Planowany'),
-(2, 1, 1, '2026-05-10 20:00:00', '2026-05-10 22:00:00', 'Planowany');
+-- 10. REZERWACJE (Reservations)
+-- Pasażer kupuje 1 bilet na powyższy kurs
+INSERT INTO Reservation (client_id, trip_id, reservation_number, reservation_date, seat_count, status, payment_status) VALUES 
+(1, 1, 'RES-1-1234567890', CURRENT_TIMESTAMP, 1, 'Zrealizowana', 'Opłacona');
+
+-- 11. BILETY (Tickets)
+-- Bilet do rezerwacji
+INSERT INTO Ticket (reservation_id, segment_id, final_price, discount_type) VALUES 
+(1, 1, 15.00, 'Brak');
+
+-- 12. KOSZTY OPERACYJNE (Refueling)
+-- Dla testów panelu admina dorzucamy testowe tankowanie
+INSERT INTO Refueling (vehicle_id, employee_id, refueling_date, liters_volume, price_per_liter, total_cost) VALUES 
+(1, 1, CURRENT_TIMESTAMP, 50.0, 6.50, 325.00);
