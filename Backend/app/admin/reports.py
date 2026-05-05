@@ -14,12 +14,10 @@ def get_financial_reports(current_admin_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Pobieramy obecny rok i miesiąc do filtrowania (MTD)
         now = datetime.datetime.now()
         current_month = now.month
         current_year = now.year
 
-        # 1. Przychody ze sprzedaży biletów w tym miesiącu (Gross Revenue)
         query_revenue = """
             SELECT COALESCE(SUM(final_price), 0) AS revenue 
             FROM Ticket t
@@ -29,8 +27,6 @@ def get_financial_reports(current_admin_id):
         cur.execute(query_revenue, (current_month, current_year))
         gross_revenue = cur.fetchone()["revenue"]
 
-        # 2. Koszty operacyjne (Paliwo) w tym miesiącu (Operating Costs)
-        # Zakładamy, że w tabeli Tankowanie mamy kolumnę z datą operacji
         query_costs = """
             SELECT COALESCE(SUM(total_cost), 0) AS costs 
             FROM Refueling 
@@ -41,10 +37,8 @@ def get_financial_reports(current_admin_id):
 
         cur.close()
 
-        # Obliczamy zysk netto
         net_profit = gross_revenue - operating_costs
 
-        # Zwracamy dokładnie to, czego oczekuje Twój React Native
         return jsonify(
             {
                 # Można uformować walutę we frontendzie

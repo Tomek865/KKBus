@@ -18,7 +18,6 @@ def login():
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Szukamy aktywnych pracowników, którzy mają uprawnienia do panelu
         query = """
             SELECT employee_id, password, first_name, last_name, role 
             FROM Employee 
@@ -28,13 +27,11 @@ def login():
         admin_user = cur.fetchone()
         cur.close()
 
-        # Weryfikacja hasła i generowanie tokena JWT
         if admin_user and check_password_hash(admin_user['password'], data['password']):
             token = jwt.encode({
                 'employee_id': admin_user['employee_id'],
                 'email': data['email'],
                 'role': admin_user['role'],
-                # Token na krócej lub dłużej, standardowo np. 12 godzin pracy biurowej
                 'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=12)
             }, current_app.config['SECRET_KEY'], algorithm='HS256')
 

@@ -12,26 +12,21 @@ def get_stats(current_admin_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Obliczamy Przychody (suma sprzedanych biletów)
         cur.execute("SELECT COALESCE(SUM(final_price), 0) AS revenue FROM Ticket;")
         revenue = cur.fetchone()['revenue']
         
-        # Obliczamy pojazdy (Aktywne / Wszystkie)
         cur.execute("SELECT COUNT(*) AS total, SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) AS active FROM Vehicle;")
         buses_data = cur.fetchone()
         buses = f"{buses_data['active'] or 0} / {buses_data['total'] or 0}"
         
-        # Obliczamy sumę zarezerwowanych miejsc (pasażerowie)
         cur.execute("SELECT COALESCE(SUM(seat_count), 0) AS passengers FROM Reservation WHERE status != 'Cancelled';")
         passengers = cur.fetchone()['passengers']
         
-        # Liczba tras
         cur.execute("SELECT COUNT(*) AS routes FROM Route;")
         routes = cur.fetchone()['routes']
         
         cur.close()
 
-        # Zwracamy w formacie, jakiego oczekuje React
         return jsonify({
             "revenue": f"{revenue:,.2f} PLN",
             "buses": buses,
@@ -52,7 +47,6 @@ def get_users(current_admin_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Łączymy Klientów i Pracowników w jedną listę (UNION). Zmieniłem K_ na C_ (Client) i P_ na E_ (Employee)
         query = """
             SELECT 
                 'C_' || client_id AS id, 

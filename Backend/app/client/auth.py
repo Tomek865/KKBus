@@ -12,7 +12,6 @@ client_auth_bp = Blueprint("client_auth", __name__)
 def register():
     data = request.get_json()
 
-    # Prosta walidacja czy przyszły wymagane dane (klucze po angielsku)
     if (
         not data
         or not data.get("email")
@@ -28,7 +27,6 @@ def register():
     try:
         cur = conn.cursor()
 
-        # Sprawdzamy, czy email już istnieje
         cur.execute(
             "SELECT client_id FROM Client WHERE email = %s", (data["email"],))
         if cur.fetchone():
@@ -36,7 +34,6 @@ def register():
                 {"error": "User with this email already exists!"}
             ), 409
 
-        # Zapis do bazy danych
         query = """
             INSERT INTO Client (first_name, last_name, email, password, phone_number)
             VALUES (%s, %s, %s, %s, %s) RETURNING client_id;
@@ -85,13 +82,12 @@ def login():
         user = cur.fetchone()
         cur.close()
 
-        # Sprawdzamy hasło i generujemy Token JWT
         if user and check_password_hash(user["password"], data["password"]):
             token = jwt.encode(
                 {
-                    "client_id": user["client_id"], # Zmienione z id_klienta
+                    "client_id": user["client_id"],
                     "email": data["email"],
-                    "first_name": user["first_name"], # Zmienione z imie
+                    "first_name": user["first_name"],
                     "exp": datetime.datetime.now(datetime.timezone.utc)
                     + datetime.timedelta(hours=24),
                 },

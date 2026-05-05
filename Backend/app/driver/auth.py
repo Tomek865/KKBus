@@ -11,7 +11,6 @@ driver_auth_bp = Blueprint('driver_auth', __name__)
 def login():
     data = request.get_json()
     
-    # Frontend musi teraz wysyłać 'password' zamiast 'haslo'
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({"error": "Missing email or password"}), 400
 
@@ -19,7 +18,6 @@ def login():
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Szukamy tylko aktywnych pracowników z rolą 'Driver' (zamiast 'Kierowca')
         query = """
             SELECT employee_id, password, first_name, last_name, role 
             FROM Employee 
@@ -29,13 +27,11 @@ def login():
         driver = cur.fetchone()
         cur.close()
 
-        # Weryfikacja hasła i generowanie tokena JWT
         if driver and check_password_hash(driver['password'], data['password']):
             token = jwt.encode({
-                'employee_id': driver['employee_id'], # Zmienione z id_pracownika
+                'employee_id': driver['employee_id'],
                 'email': data['email'],
-                'role': driver['role'], # Zmienione z rola
-                # Token ważny 12 godzin (typowy czas trwania zmiany)
+                'role': driver['role'],
                 'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=12)
             }, current_app.config['SECRET_KEY'], algorithm='HS256')
 

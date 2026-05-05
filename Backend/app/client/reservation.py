@@ -4,7 +4,6 @@ from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 import time
 
-# Zmieniona nazwa blueprinta na angielską
 client_reservation_bp = Blueprint("client_reservations", __name__)
 
 
@@ -26,7 +25,6 @@ def get_stations():
 
 @client_reservation_bp.route("/routes", methods=["GET"])
 def search_routes():
-    # Frontend parameters
     from_station = request.args.get("from")
     to_station = request.args.get("to")
     date = request.args.get("date")
@@ -38,7 +36,6 @@ def search_routes():
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Advanced SQL query mapped to English tables and columns
         query = """
             SELECT 
                 tr.trip_id, 
@@ -83,7 +80,6 @@ def search_routes():
 def create_reservation(current_user_id):
     data = request.get_json()
 
-    # Wymagamy teraz angielskich kluczy z frontendu
     trip_id = data.get("trip_id")
     seat_count = data.get("seat_count", 1)
 
@@ -94,7 +90,6 @@ def create_reservation(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 1. Check bus capacity and occupied seats
         query_capacity = """
             SELECT v.seating_capacity, 
                    COALESCE((SELECT SUM(seat_count) FROM Reservation WHERE trip_id = %s AND status != 'Cancelled'), 0) AS occupied_seats
@@ -117,7 +112,6 @@ def create_reservation(current_user_id):
                 }
             ), 409
 
-        # 2. Create reservation with a unique number
         reservation_number = f"RES-{current_user_id}-{int(time.time())}"
 
         query_insert = """

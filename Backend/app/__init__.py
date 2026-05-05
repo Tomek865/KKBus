@@ -13,10 +13,8 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key_123')
     
-    # Konfiguracja CORS
     CORS(app)
     
-    # Rejestracja głównych modułów z nowymi prefixami
     app.register_blueprint(client_bp, url_prefix='/api/client')
     app.register_blueprint(driver_bp, url_prefix='/api/driver')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')

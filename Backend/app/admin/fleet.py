@@ -12,7 +12,6 @@ def get_fleet_assignments(current_admin_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Wyciągamy dane o kursie ze złączeniem tras, pojazdów i pracowników
         query = """
             SELECT 
                 tr.trip_id AS id, 
@@ -39,12 +38,10 @@ def get_fleet_assignments(current_admin_id):
 @admin_fleet_bp.route('/<int:assignment_id>', methods=['DELETE'])
 @admin_required
 def delete_fleet_assignment(current_admin_id, assignment_id):
-    # Usuwanie (lub anulowanie) zaplanowanego kursu
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         
-        # Opcja B: Miękkie usunięcie (Zalecane w transporcie) - Przetłumaczone na status 'Cancelled'
         cur.execute("UPDATE Trip SET status = 'Cancelled' WHERE trip_id = %s", (assignment_id,))
         
         if cur.rowcount == 0:

@@ -3,7 +3,6 @@ from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from app.utils import token_required
 
-# Zmiana nazwy blueprinta
 client_profil_bp = Blueprint("client_profile", __name__)
 
 @client_profil_bp.route("/user/loyalty", methods=["GET"])
@@ -22,7 +21,6 @@ def get_loyalty(current_user_id):
         if not loyalty_data:
             return jsonify({"error": "User not found"}), 404
 
-        # Wymuszamy na frontendzie czytanie klucza 'points'
         return jsonify({"points": loyalty_data["loyalty_points"]}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -39,7 +37,6 @@ def update_profile(current_user_id):
     if not data:
         return jsonify({"error": "No data provided for update"}), 400
 
-    # Frontend musi teraz wysyłać angielskie klucze
     first_name = data.get("first_name")
     last_name = data.get("last_name")
     phone_number = data.get("phone_number")
@@ -72,7 +69,6 @@ def get_tickets(current_user_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        # Całkowicie wyrzucone polskie aliasy "AS"
         query = """
             SELECT 
                 r.reservation_number,

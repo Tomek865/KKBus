@@ -20,7 +20,6 @@ def token_required(f):
         try:
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
             
-            # Pobieramy ID w zależności od tego, kto się zalogował
             current_user_id = data.get('client_id') or data.get('employee_id')
             
             if not current_user_id:
@@ -52,8 +51,7 @@ def admin_required(f):
         try:
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
             
-            # Sprawdzamy nową angielską nazwę roli (np. z auth_universal.py)
-            role = data.get('role') or data.get('rola') # Fallback w razie starego tokena podczas testów
+            role = data.get('role') or data.get('rola')
             
             if role not in ['Owner', 'Secretariat']:
                 return jsonify({'error': 'Access denied. Administrator privileges required.'}), 403
