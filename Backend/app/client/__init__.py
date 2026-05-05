@@ -1,10 +1,10 @@
 from flask import Blueprint
-from .rezerwacje import klient_rezerwacje_bp
-from .auth import klient_auth_bp
-from .profil import klient_profil_bp  # <--- NOWY IMPORT
+from .reservation import client_reservation_bp
+from .auth import client_auth_bp
+from .profil import client_profil_bp
 
-klient_bp = Blueprint('klient', __name__, url_prefix='/api/klient')
+client_bp = Blueprint("client", __name__, url_prefix="/api/client")
 
-klient_bp.register_blueprint(klient_rezerwacje_bp) # usunąłem prefix żeby łapało /stations bezpośrednio
-klient_bp.register_blueprint(klient_auth_bp, url_prefix='/auth')
-klient_bp.register_blueprint(klient_profil_bp)     # łapie /user/loyalty itp.
+client_bp.register_blueprint(client_reservation_bp)
+client_bp.register_blueprint(client_auth_bp, url_prefix="/auth")
+client_bp.register_blueprint(client_profil_bp)

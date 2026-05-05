@@ -21,9 +21,10 @@ def get_financial_reports(current_admin_id):
 
         # 1. Przychody ze sprzedaży biletów w tym miesiącu (Gross Revenue)
         query_revenue = """
-            SELECT COALESCE(SUM(cena_koncowa), 0) AS revenue 
-            FROM Bilet 
-            WHERE EXTRACT(MONTH FROM data_zakupu) = %s AND EXTRACT(YEAR FROM data_zakupu) = %s;
+            SELECT COALESCE(SUM(final_price), 0) AS revenue 
+            FROM Ticket t
+            JOIN Reservation res ON t.reservation_id = res.reservation_id
+            WHERE EXTRACT(MONTH FROM res.reservation_date) = %s AND EXTRACT(YEAR FROM res.reservation_date) = %s;
         """
         cur.execute(query_revenue, (current_month, current_year))
         gross_revenue = cur.fetchone()["revenue"]
@@ -31,9 +32,9 @@ def get_financial_reports(current_admin_id):
         # 2. Koszty operacyjne (Paliwo) w tym miesiącu (Operating Costs)
         # Zakładamy, że w tabeli Tankowanie mamy kolumnę z datą operacji
         query_costs = """
-            SELECT COALESCE(SUM(koszt_calkowity), 0) AS costs 
-            FROM Tankowanie 
-            WHERE EXTRACT(MONTH FROM data_tankowania) = %s AND EXTRACT(YEAR FROM data_tankowania) = %s;
+            SELECT COALESCE(SUM(total_cost), 0) AS costs 
+            FROM Refueling 
+            WHERE EXTRACT(MONTH FROM refueling_date) = %s AND EXTRACT(YEAR FROM refueling_date) = %s;
         """
         cur.execute(query_costs, (current_month, current_year))
         operating_costs = cur.fetchone()["costs"]

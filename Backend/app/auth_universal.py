@@ -21,7 +21,7 @@ def login():
         haslo_podane = data['haslo']
 
         # 1. Najpierw sprawdzamy, czy to KLIENT
-        cur.execute("SELECT id_klienta, haslo, imie, nazwisko FROM Klient WHERE email = %s", (email,))
+        cur.execute("SELECT client_id, password, first_name, last_name FROM Client WHERE email = %s", (email,))
         klient = cur.fetchone()
 
         if klient and check_password_hash(klient['haslo'], haslo_podane):
@@ -38,7 +38,7 @@ def login():
             }), 200
 
         # 2. Jeśli to nie Klient, sprawdzamy, czy to PRACOWNIK (Kierowca, Sekretariat, Wlasciciel)
-        cur.execute("SELECT id_pracownika, haslo, imie, nazwisko, rola FROM Pracownik WHERE email = %s AND czy_aktywny = TRUE", (email,))
+        cur.execute("SELECT employee_id, password, first_name, last_name, role FROM Employee WHERE email = %s AND is_active = TRUE", (email,))
         pracownik = cur.fetchone()
 
         if pracownik and check_password_hash(pracownik['haslo'], haslo_podane):

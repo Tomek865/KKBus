@@ -47,33 +47,30 @@ def search_routes():
         # Łączymy trasę z przystankami dwukrotnie: raz dla stacji początkowej (tp_from), raz dla końcowej (tp_to)
         # Warunek tp_from.kolejnosc < tp_to.kolejnosc gwarantuje poprawny kierunek jazdy!
         query = """
-            SELECT
-                k.id_kursu,
-                t.nazwa AS trasa,
-                TO_CHAR(k.data_wyjazdu, 'HH24:MI') AS godzina_odjazdu,
-                TO_CHAR(k.data_przyjazdu, 'HH24:MI') AS godzina_przyjazdu,
-                p.pojemnosc_miejsc,
-                k.status
-            FROM Kurs k
-            JOIN Trasa t ON k.id_trasy = t.id_trasy
-            JOIN Pojazd p ON k.id_pojazdu = p.id_pojazdu
-
-            -- Dołączenie stacji początkowej
-            JOIN Trasa_Przystanek tp_from ON t.id_trasy = tp_from.id_trasy
-            JOIN Przystanek p_from ON tp_from.id_przystanku = p_from.id_przystanku
-
-            -- Dołączenie stacji końcowej
-            JOIN Trasa_Przystanek tp_to ON t.id_trasy = tp_to.id_trasy
-            JOIN Przystanek p_to ON tp_to.id_przystanku = p_to.id_przystanku
-
-            WHERE DATE(k.data_wyjazdu) = %s
-              AND k.status = 'Planowany'
-              AND p_from.nazwa = %s
-              AND p_to.nazwa = %s
-              AND tp_from.kolejnosc < tp_to.kolejnosc
-            ORDER BY k.data_wyjazdu ASC;
+            SELECT 
+                tr.trip_id AS id_kursu, 
+                r.name AS trasa, 
+                TO_CHAR(tr.departure_time, 'HH24:MI') AS godzina_odjazdu,
+                TO_CHAR(tr.arrival_time, 'HH24:MI') AS godzina_przyjazdu,
+                v.seating_capacity AS pojemnosc_miejsc,
+                tr.status
+            FROM Trip tr
+            JOIN Route r ON tr.route_id = r.route_id
+            JOIN Vehicle v ON tr.vehicle_id = v.vehicle_id
+            
+            JOIN Route_Station rs_from ON r.route_id = rs_from.route_id
+            JOIN Station s_from ON rs_from.station_id = s_from.station_id
+            
+            JOIN Route_Station rs_to ON r.route_id = rs_to.route_id
+            JOIN Station s_to ON rs_to.station_id = s_to.station_id
+            
+            WHERE DATE(tr.departure_time) = %s 
+              AND tr.status = 'Planned'
+              AND s_from.name = %s 
+              AND s_to.name = %s
+              AND rs_from.order_on_route < rs_to.order_on_route
+            ORDER BY tr.departure_time ASC;
         """
-
         # Wstrzykujemy wszystkie trzy zmienne do zapytania
         cur.execute(query, (date, from_station, to_station))
         departures = cur.fetchall()
