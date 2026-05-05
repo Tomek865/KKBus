@@ -32,18 +32,17 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     // HELPERS & API CALLS
     // ==========================================
     const handleSavePersonalInfo = () => {
-        // TODO: BACKEND MUTATION - Wysłanie zaktualizowanych danych profilowych (POST/PUT)
-        // Przykład: await fetch('/api/user/update', { method: 'POST', body: JSON.stringify(formData) });
+        // TODO: BACKEND MUTATION - Wysłanie zaktualizowanych danych profilowych
         onClose();
     };
 
     const handleSaveCard = () => {
-        // TODO: BACKEND MUTATION - Dodanie nowej karty kredytowej (często poprzez Stripe / zewnętrznego operatora)
+        // TODO: BACKEND MUTATION - Dodanie nowej karty kredytowej
         setPaymentView('list');
     };
 
     const handleToggleNotification = (type: 'push' | 'email', val: boolean) => {
-        // TODO: BACKEND MUTATION - Aktualizacja preferencji powiadomień na serwerze 
+        // TODO: BACKEND MUTATION - Aktualizacja preferencji powiadomień
         if(type === 'push') setPushEnabled(val);
         if(type === 'email') setEmailEnabled(val);
     };
@@ -189,9 +188,10 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                 return (
                     <View style={styles.sectionContainer}>
                         <Text style={styles.termsTitle}>1. Introduction</Text>
-                        <Text style={styles.termsText}>Welcome to TransRegion. By using our application, you agree to be bound by these terms of service. Please read them carefully.</Text>
+                        {/* ZMIANA NAZWY APLIKACJI W REGULAMINIE */}
+                        <Text style={styles.termsText}>Welcome to KKBus. By using our application, you agree to be bound by these terms of service. Please read them carefully.</Text>
                         <Text style={styles.termsTitle}>2. Ticketing & Refunds</Text>
-                        <Text style={styles.termsText}>Tickets purchased through the TransRegion app are subject to the specific carriers refund policy. Standard tickets can usually be refunded up to 24 hours before departure.</Text>
+                        <Text style={styles.termsText}>Tickets purchased through the KKBus app are subject to the specific carriers refund policy. Standard tickets can usually be refunded up to 24 hours before departure.</Text>
                     </View>
                 );
 

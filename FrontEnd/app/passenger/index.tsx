@@ -105,7 +105,6 @@ export default function PassengerSearch() {
     useEffect(() => {
         const fetchStationsFromDB = async () => {
             // TODO: BACKEND FETCH - Pobieranie listy dostępnych stacji
-            // Przykład: const response = await fetch('/api/stations'); const data = await response.json(); setStations(data);
             setTimeout(() => {
                 setStations(['Krakow', 'Katowice', 'Warszawa', 'Wroclaw', 'Gdansk', 'Zakopane']);
             }, 500);
@@ -118,8 +117,7 @@ export default function PassengerSearch() {
         setHasSearched(true);
         setDepartures([]);
         
-        // TODO: BACKEND FETCH - Wyszukiwanie połączeń na podstawie parametrów (fromStation, toStation, selectedDate, passengerCounts)
-        // Przykład: const response = await fetch(`/api/routes?from=${fromStation}&to=${toStation}...`); setDepartures(data);
+        // TODO: BACKEND FETCH - Wyszukiwanie połączeń na podstawie parametrów
         setTimeout(() => {
             setDepartures(MOCK_DEPARTURES);
             setIsSearching(false);
@@ -173,7 +171,8 @@ export default function PassengerSearch() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.logo}>Trans<Text style={styles.logoRed}>Region</Text></Text>
+                {/* ZMIANA LOGO TUTAJ */}
+                <Text style={styles.logo}>KK<Text style={styles.logoRed}>Bus</Text></Text>
 
                 <View style={styles.searchCard}>
                     <SearchInput label="FROM" value={fromStation} onPress={() => { setSelectingField('from'); setModalVisible(true); }} />
@@ -270,7 +269,6 @@ export default function PassengerSearch() {
                         <TouchableOpacity onPress={() => setPassengerModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
                     </View>
                     <View style={styles.counterList}>
-                        {/* Adults */}
                         <View style={styles.counterRow}>
                             <View><Text style={styles.counterLabel}>Adult</Text><Text style={styles.counterSub}>Standard ticket</Text></View>
                             <View style={styles.counterControls}>
@@ -279,7 +277,6 @@ export default function PassengerSearch() {
                                 <TouchableOpacity onPress={() => updateCount('adult', 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
                             </View>
                         </View>
-                        {/* Students */}
                         <View style={styles.counterRow}>
                             <View><Text style={styles.counterLabel}>Student</Text><Text style={styles.counterSub}>Valid student ID required (-51%)</Text></View>
                             <View style={styles.counterControls}>
@@ -288,7 +285,6 @@ export default function PassengerSearch() {
                                 <TouchableOpacity onPress={() => updateCount('student', 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
                             </View>
                         </View>
-                        {/* Reduced */}
                         <View style={styles.counterRow}>
                             <View><Text style={styles.counterLabel}>Reduced</Text><Text style={styles.counterSub}>Children, Seniors (-37%)</Text></View>
                             <View style={styles.counterControls}>

@@ -37,7 +37,7 @@ interface ActiveTicketModalProps {
 // ==========================================
 const MOCK_BUS: BusDetails = {
     busNumber: "A240 / Line 4",
-    operator: "TransRegion Express",
+    operator: "KKBus Express", // ZMIANA OPERATORA
     amenities: ['wifi', 'snow', 'flash', 'leaf']
 };
 
@@ -62,20 +62,17 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
         if (visible && ticket) {
             setIsLoading(true);
             
-            // TODO: BACKEND FETCH - Pobieranie szczegółów konkretnej trasy/autobusu na podstawie ID biletu
-            // Przykład: const res = await fetch(`/api/journey-details/${ticket.id}`);
-            
+            // TODO: BACKEND FETCH
             const fetchJourneyDetails = async () => {
                 setTimeout(() => {
                     setBusDetails(MOCK_BUS);
                     setRouteDetails(MOCK_ROUTE);
                     setIsLoading(false);
-                }, 700); // 0.7s ładowania
+                }, 700);
             };
             
             fetchJourneyDetails();
         } else {
-            // Resetuj stan, gdy modal jest zamykany
             setBusDetails(null);
             setRouteDetails([]);
         }
