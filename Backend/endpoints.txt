@@ -1,0 +1,193 @@
+======================================================
+DOKUMENTACJA API KKBUS (Frontend <-> Backend)
+Baza URL: http://127.0.0.1:5000/api
+======================================================
+
+UWAGA: Wszystkie endpointy z oznaczeniem [WYMAGA TOKENA] 
+muszą mieć w nagłówku żądania (Headers):
+Authorization: Bearer <tutaj_token_jwt_z_logowania>
+
+======================================================
+1. AUTORYZACJA (Wspólna dla wszystkich)
+======================================================
+
+[POST] /auth/login
+Cel: Logowanie klienta lub pracownika.
+Wysyłamy (Body JSON):
+{
+    "email": "jan@example.com",
+    "password": "moje_haslo123"
+}
+Odbieramy (200 OK):
+{
+    "token": "eyJhbGci...",
+    "role": "Client" | "Driver" | "Owner" | "Secretariat",
+    "data": {
+        "first_name": "Jan",
+        "last_name": "Kowalski"
+    }
+}
+
+======================================================
+2. KLIENT (Pasażer)
+======================================================
+
+[GET] /client/stations
+Cel: Pobranie listy stacji do wyszukiwarki.
+Odbieramy (200 OK):
+[
+    {"id": 1, "name": "Kraków", "exact_address": "Dworzec MDA..."},
+    {"id": 2, "name": "Warszawa", "exact_address": "Dworzec Zachodni..."}
+]
+
+[GET] /client/routes?date=YYYY-MM-DD&from=MiastoA&to=MiastoB
+Cel: Wyszukiwarka kursów na dany dzień.
+Odbieramy (200 OK):
+[
+    {
+        "trip_id": 1,
+        "route_name": "Kraków - Warszawa",
+        "departure_time": "08:00",
+        "arrival_time": "12:30",
+        "seating_capacity": 50,
+        "status": "Planned"
+    }
+]
+
+[POST] /client/reservations/ 
+[WYMAGA TOKENA]
+Cel: Kupno/Rezerwacja biletu.
+Wysyłamy (Body JSON):
+{
+    "trip_id": 1,
+    "seat_count": 2
+}
+Odbieramy (201 Created):
+{
+    "message": "Reservation created successfully.",
+    "reservation_number": "RES-1-1715000000",
+    "reservation_id": 45
+}
+
+[GET] /client/user/loyalty 
+[WYMAGA TOKENA]
+Cel: Punkty lojalnościowe w profilu.
+Odbieramy (200 OK):
+{
+    "points": 150
+}
+
+[GET] /client/user/tickets 
+[WYMAGA TOKENA]
+Cel: Historia biletów klienta.
+Odbieramy (200 OK):
+[
+    {
+        "reservation_number": "RES-1-123",
+        "reservation_date": "2026-05-01",
+        "status": "Paid",
+        "route": "Kraków - Warszawa",
+        "departure_time": "2026-05-10 08:00"
+    }
+]
+
+[POST] /client/user/update 
+[WYMAGA TOKENA]
+Cel: Aktualizacja danych w profilu.
+Wysyłamy (Body JSON):
+{
+    "first_name": "NoweImie",
+    "last_name": "NoweNazwisko",
+    "phone_number": "123456789"
+}
+
+======================================================
+3. KIEROWCA
+======================================================
+
+[POST] /driver/tickets/<id_rezerwacji>/validate
+[WYMAGA TOKENA (Kierowca)]
+Cel: Zeskanowanie (skasowanie) biletu pasażera przy wejściu.
+Odbieramy (200 OK):
+{
+    "message": "Ticket 45 validated successfully."
+}
+
+[POST] /driver/reports
+[WYMAGA TOKENA (Kierowca)]
+Cel: Raportowanie wsiadających/wysiadających na przystanku.
+Wysyłamy (Body JSON):
+{
+    "trip_id": 1,
+    "segment_id": 2,
+    "boarded": 5,
+    "alighted": 1
+}
+
+[POST] /driver/shift/end
+[WYMAGA TOKENA (Kierowca)]
+Cel: Raport z tankowania na koniec zmiany.
+Wysyłamy (Body JSON):
+{
+    "volume": 120.5,
+    "cost": 850.0,
+    "vehicle_id": 3
+}
+
+======================================================
+4. PANEL ADMINA (Właściciel / Sekretariat)
+======================================================
+
+[GET] /admin/stats
+[WYMAGA TOKENA (Admin)]
+Cel: Główne kafelki na pulpicie administratora.
+Odbieramy (200 OK):
+{
+    "revenue": "15,430.00 PLN",
+    "buses": "8 / 10",
+    "passengers": "1,204",
+    "routes": "12"
+}
+
+[GET] /admin/users
+[WYMAGA TOKENA (Admin)]
+Cel: Lista wszystkich użytkowników (Klienci + Pracownicy).
+Odbieramy (200 OK):
+[
+    {
+        "id": "C_1", 
+        "name": "Jan Kowalski", 
+        "email": "jan@example.com", 
+        "role": "Passenger", 
+        "trips": 5
+    },
+    {
+        "id": "E_2", 
+        "name": "Anna Nowak", 
+        "email": "anna@example.com", 
+        "role": "Driver", 
+        "trips": 0
+    }
+]
+
+[GET] /admin/fleet/
+[WYMAGA TOKENA (Admin)]
+Cel: Lista zaplanowanych kursów.
+Odbieramy (200 OK):
+[
+    {
+        "id": 1,
+        "busId": "KR 12345",
+        "route": "Kraków - Warszawa",
+        "status": "Planned",
+        "driver": "Marek K."
+    }
+]
+
+[DELETE] /admin/fleet/<id_kursu>
+[WYMAGA TOKENA (Admin)]
+Cel: Anulowanie przypisanego kursu.
+Odbieramy (200 OK):
+{
+    "message": "Fleet assignment removed successfully"
+}
