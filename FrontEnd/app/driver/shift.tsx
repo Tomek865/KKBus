@@ -11,60 +11,74 @@ export default function DriverEndShift() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [focusedField, setFocusedField] = useState<'volume' | 'cost' | null>(null);
 
+    // Funkcja filtrująca: pozwala tylko na cyfry i jedną kropkę
+    const handleNumericInput = (text: string, setter: (val: string) => void) => {
+        // Zamiana przecinka na kropkę (wygoda dla polskich użytkowników)
+        const normalizedText = text.replace(',', '.');
+        // Regex: Usuwa wszystko co nie jest cyfrą lub kropką
+        const cleaned = normalizedText.replace(/[^0-9.]/g, '');
+
+        // Zabezpieczenie przed wpisaniem więcej niż jednej kropki
+        if (cleaned.split('.').length > 2) return;
+
+        setter(cleaned);
+    };
+
     const completeShift = async () => {
-        if (!volume || !cost) {
-            Alert.alert("Error", "Please fill in all data.");
+        // Walidacja przed wysyłką
+        if (!volume || isNaN(Number(volume)) || !cost || isNaN(Number(cost))) {
+            Alert.alert("Błąd danych", "Wprowadź poprawne wartości liczbowe dla paliwa i kosztów.");
             return;
         }
+
         setIsSubmitting(true);
         try {
-            console.log(`API: Refueling - ${volume}L, ${cost}PLN`); //fetch
+            // // fetch - Tutaj wyślesz dane o tankowaniu do bazy danych
+            console.log(`API: Refueling - ${volume}L, ${cost}PLN`);
+
             await new Promise(resolve => setTimeout(resolve, 1500));
-            Alert.alert("Success", "Shift data saved!");
+            Alert.alert("Sukces", "Dane o tankowaniu zostały zapisane. Do zobaczenia!");
             setVolume(''); setCost('');
         } catch (error) {
-            Alert.alert("Error", "Failed to save.");
+            Alert.alert("Błąd", "Nie udało się zapisać danych.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container}>
                 <View style={styles.card}>
                     <View style={styles.header}>
                         <View style={styles.iconContainer}><Ionicons name="water" size={24} color="#fff" /></View>
                         <View>
-                            <Text style={styles.title}>End of Shift</Text>
-                            <Text style={styles.subtitle}>BUS #402 REFUELING</Text>
+                            <Text style={styles.title}>Koniec Zmiany</Text>
+                            <Text style={styles.subtitle}>AUTOBUS #402 • TANKOWANIE</Text>
                         </View>
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>VOLUME FUELED</Text>
+                        <Text style={styles.label}>ILOŚĆ PALIWA (L)</Text>
                         <View style={[styles.inputWrapper, focusedField === 'volume' && styles.activeWrapper]}>
                             <TextInput
                                 style={styles.textInput}
                                 value={volume}
-                                onChangeText={setVolume}
+                                onChangeText={(t) => handleNumericInput(t, setVolume)}
                                 placeholder="0.00"
-                                keyboardType="decimal-pad"
+                                keyboardType="decimal-pad" // Wymusza klawiaturę numeryczną z kropką
                                 onFocus={() => setFocusedField('volume')}
                                 onBlur={() => setFocusedField(null)}
                             />
-                            <Text style={styles.unitText}>Liters</Text>
+                            <Text style={styles.unitText}>Litrów</Text>
                         </View>
 
-                        <Text style={[styles.label, { marginTop: 20 }]}>TOTAL COST</Text>
+                        <Text style={[styles.label, { marginTop: 20 }]}>ŁĄCZNY KOSZT (PLN)</Text>
                         <View style={[styles.inputWrapper, focusedField === 'cost' && styles.activeWrapper]}>
                             <TextInput
                                 style={styles.textInput}
                                 value={cost}
-                                onChangeText={setCost}
+                                onChangeText={(t) => handleNumericInput(t, setCost)}
                                 placeholder="0.00"
                                 keyboardType="decimal-pad"
                                 onFocus={() => setFocusedField('cost')}
@@ -77,12 +91,11 @@ export default function DriverEndShift() {
                     <TouchableOpacity
                         style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]}
                         onPress={completeShift}
-                        disabled={isSubmitting}
                     >
                         {isSubmitting ? <ActivityIndicator color="#fff" /> : (
                             <>
                                 <Ionicons name="checkmark-done" size={24} color="#fff" style={{ marginRight: 10 }} />
-                                <Text style={styles.submitBtnText}>COMPLETE SHIFT</Text>
+                                <Text style={styles.submitBtnText}>ZAKOŃCZ ZMIANĘ</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -94,7 +107,7 @@ export default function DriverEndShift() {
 
 const styles = StyleSheet.create({
     container: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 15 },
-    card: { backgroundColor: '#fff', borderRadius: 28, padding: 25, width: '100%', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+    card: { backgroundColor: '#fff', borderRadius: 28, padding: 25, width: '100%', elevation: 8 },
     header: { flexDirection: 'row', alignItems: 'center', marginBottom: 35 },
     iconContainer: { backgroundColor: '#111827', width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
     title: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
@@ -106,5 +119,5 @@ const styles = StyleSheet.create({
     textInput: { flex: 1, fontSize: 28, fontWeight: 'bold', color: '#111827' },
     unitText: { fontSize: 14, fontWeight: 'bold', color: '#9ca3af', marginLeft: 10 },
     submitBtn: { backgroundColor: '#e60000', padding: 22, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 }
+    submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
 });

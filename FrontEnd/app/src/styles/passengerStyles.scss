@@ -1,0 +1,1129 @@
+// ==========================================
+// VARIABLES
+// ==========================================
+$color-primary: #e60000;
+$color-primary-dark: #d32f2f;
+$color-bg-main: #f4f5f7;
+$color-bg-dark: #181824;
+$color-white: #ffffff;
+$color-text-main: #111111;
+$color-text-dark: #111827;
+$color-text-muted: #6b7280;
+$color-text-light: #9ca3af;
+$color-border: #e5e7eb;
+$color-success: #10b981;
+$color-warning: #f59e0b;
+
+// ==========================================
+// SHARED / UNIFIED
+// ==========================================
+.safeArea {
+    flex: 1;
+    background-color: $color-bg-main;
+}
+
+.container {
+    padding: 20px;
+}
+
+.scrollContent {
+    padding: 20px;
+}
+
+.row {
+    flex-direction: row;
+}
+
+.sectionTitle {
+    font-size: 14px;
+    font-weight: bold;
+    color: #888;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.loadingText {
+    text-align: center;
+    margin-top: 20px;
+    color: #888;
+}
+
+// ==========================================
+// BUTTONS
+// ==========================================
+.primaryBtn {
+    background-color: $color-primary;
+    border-radius: 16px;
+    padding: 18px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.primaryBtnText {
+    color: $color-white;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+// ==========================================
+// MODALS (Shared)
+// ==========================================
+.modalContainer {
+    flex: 1;
+    background-color: $color-white;
+}
+
+.modalContainerAlt {
+    flex: 1;
+    background-color: $color-bg-main;
+}
+
+.modalHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: $color-white;
+    border-bottom-width: 1px;
+    border-color: $color-border;
+}
+
+.modalTitle {
+    font-size: 20px;
+    font-weight: bold;
+    color: $color-text-main;
+}
+
+.closeBtnIcon {
+    padding: 8px;
+    background-color: #f3f4f6;
+    border-radius: 20px;
+}
+
+.closeBtnTextWrapper {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background-color: #fcecec;
+    border-radius: 16px;
+    justify-content: center;
+    align-items: center;
+}
+
+.closeBtnText {
+    font-size: 16px;
+    font-weight: bold;
+    color: $color-primary;
+}
+
+// ==========================================
+// INDEX.TSX (Search)
+// ==========================================
+.logo {
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.logoRed {
+    color: $color-primary;
+}
+
+.searchCard {
+    background-color: $color-white;
+    border-radius: 24px;
+    padding: 20px;
+    elevation: 4;
+}
+
+.swapIconContainer {
+    align-items: center;
+    margin-top: -10px;
+    margin-bottom: -10px;
+    z-index: 1;
+    background-color: $color-white;
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    align-self: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: #eee;
+}
+
+.listItem {
+    flex-direction: row;
+    align-items: center;
+    padding: 20px;
+    border-bottom-width: 1px;
+    border-color: #f9f9f9;
+}
+
+.listItemText {
+    font-size: 16px;
+    margin-left: 15px;
+    color: $color-text-main;
+    font-weight: 500;
+}
+
+.iconBg {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    justify-content: center;
+    align-items: center;
+}
+
+.counterList {
+    padding: 20px;
+}
+
+.counterRow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-bottom-width: 1px;
+    border-color: #f4f4f4;
+}
+
+.counterLabel {
+    font-size: 18px;
+    font-weight: bold;
+    color: $color-text-main;
+}
+
+.counterSub {
+    font-size: 12px;
+    color: #888;
+}
+
+.counterControls {
+    flex-direction: row;
+    align-items: center;
+}
+
+.countBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background-color: #f0f0f0;
+    justify-content: center;
+    align-items: center;
+}
+
+.countText {
+    font-size: 18px;
+    font-weight: bold;
+    margin-left: 15px;
+    margin-right: 15px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.resultsSection {
+    margin-top: 30px;
+    padding-bottom: 40px;
+}
+
+.resultsHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.resultsTitle {
+    font-size: 22px;
+    font-weight: 900;
+    color: $color-text-main;
+}
+
+.optionsBadge {
+    background-color: #eef0f3;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 16px;
+}
+
+.optionsText {
+    font-size: 14px;
+    color: #555;
+    font-weight: 600;
+}
+
+.departureCard {
+    background-color: $color-white;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 15px;
+    elevation: 2;
+    shadow-color: #000;
+    shadow-offset: 0px 2px;
+    shadow-opacity: 0.05;
+    shadow-radius: 5px;
+}
+
+.routeContainer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.timeBlock {
+    flex: 1;
+}
+
+.timeText {
+    font-size: 24px;
+    font-weight: bold;
+    color: $color-text-main;
+    margin-bottom: 4px;
+}
+
+.stationText {
+    font-size: 13px;
+    color: #888;
+    font-weight: 500;
+}
+
+.durationBlock {
+    flex: 1.5;
+    align-items: center;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.durationText {
+    font-size: 11px;
+    color: #aaa;
+    font-weight: bold;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+}
+
+.durationLineWrapper {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+}
+
+.durationDotGray {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background-color: #ccc;
+}
+
+.durationLine {
+    flex: 1;
+    height: 2px;
+    background-color: #eee;
+}
+
+.durationDotRed {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: $color-primary;
+}
+
+.departureFooter {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    border-top-width: 1px;
+    border-color: #f8f8f8;
+    padding-top: 15px;
+}
+
+.seatsBadge {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 8px;
+}
+
+.seatsBadgeGreen {
+    background-color: #e6f7ec;
+}
+
+.seatsBadgeOrange {
+    background-color: #fdf0d5;
+}
+
+.seatsText {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.seatsTextGreen {
+    color: $color-success;
+}
+
+.seatsTextOrange {
+    color: $color-warning;
+}
+
+.priceContainer {
+    flex-direction: row;
+    align-items: center;
+}
+
+.priceText {
+    font-size: 20px;
+    font-weight: 900;
+    color: $color-primary;
+    margin-right: 15px;
+}
+
+.actionIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    background-color: #fcecec;
+    justify-content: center;
+    align-items: center;
+}
+
+// ==========================================
+// TICKETS.TSX
+// ==========================================
+.activeHeader {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.activeTitle {
+    font-size: 24px;
+    font-weight: 900;
+    color: $color-text-dark;
+    margin-left: 10px;
+    letter-spacing: -0.5px;
+}
+
+.activeSection {
+    margin-bottom: 40px;
+}
+
+.ticketWrapper {
+    background-color: $color-white;
+    border-radius: 24px;
+    overflow: hidden;
+    elevation: 10;
+    shadow-color: #000;
+    shadow-opacity: 0.08;
+    shadow-radius: 15px;
+    shadow-offset: 0px 10px;
+}
+
+.ticketTop {
+    background-color: $color-primary-dark;
+    padding: 24px;
+}
+
+.ticketTopRow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 5px;
+}
+
+.ticketRoute,
+.ticketSeatLabel {
+    color: #ffcccc;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.ticketTime {
+    color: $color-white;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}
+
+.seatBadge {
+    background-color: $color-white;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-radius: 12px;
+}
+
+.seatBadgeText {
+    color: $color-primary-dark;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.ticketBottom {
+    background-color: $color-white;
+    align-items: center;
+    padding-top: 30px;
+    padding-bottom: 24px;
+}
+
+.qrPlaceholderContainer {
+    padding: 20px;
+    border-width: 1px;
+    border-color: #f3f4f6;
+    border-radius: 32px;
+    margin-bottom: 25px;
+    background-color: #fafafa;
+}
+
+.scanText {
+    color: $color-text-light;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.dividerContainer {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    margin-top: 25px;
+    margin-bottom: 25px;
+    position: relative;
+}
+
+.cutoutLeft {
+    position: absolute;
+    left: -15px;
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    background-color: $color-bg-main;
+    z-index: 2;
+}
+
+.dashedLine {
+    flex: 1;
+    height: 1px;
+    border-width: 1px;
+    border-color: $color-border;
+    border-style: dashed;
+    margin-left: 25px;
+    margin-right: 25px;
+}
+
+.cutoutRight {
+    position: absolute;
+    right: -15px;
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    background-color: $color-bg-main;
+    z-index: 2;
+}
+
+.ticketActions {
+    flex-direction: row;
+    width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
+    justify-content: space-between;
+}
+
+.viewDetailsBtn {
+    flex: 1;
+    background-color: $color-text-dark;
+    padding-top: 18px;
+    padding-bottom: 18px;
+    border-radius: 16px;
+    align-items: center;
+    margin-right: 15px;
+}
+
+.viewDetailsText {
+    color: $color-white;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.closeTicketBtn {
+    width: 60px;
+    height: 60px;
+    background-color: #fef2f2;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+}
+
+// ==========================================
+// PROFILE.TSX
+// ==========================================
+.headerTitle {
+    font-size: 28px;
+    font-weight: bold;
+    color: $color-text-main;
+    margin-bottom: 20px;
+}
+
+.profileCard {
+    background-color: $color-white;
+    border-radius: 24px;
+    padding: 20px;
+    flex-direction: row;
+    align-items: center;
+    elevation: 4;
+    shadow-color: #000;
+    shadow-opacity: 0.05;
+    shadow-radius: 10px;
+    margin-bottom: 24px;
+}
+
+.avatarContainer {
+    width: 70px;
+    height: 70px;
+    border-radius: 35px;
+    background-color: #fee2e2;
+    justify-content: center;
+    align-items: center;
+    margin-right: 20px;
+}
+
+.avatarText {
+    font-size: 24px;
+    font-weight: bold;
+    color: $color-primary;
+}
+
+.userInfo {
+    flex: 1;
+}
+
+.userName {
+    font-size: 20px;
+    font-weight: bold;
+    color: $color-text-main;
+    margin-bottom: 4px;
+}
+
+.userEmail {
+    font-size: 14px;
+    color: $color-text-muted;
+    margin-bottom: 8px;
+}
+
+.badge {
+    align-self: flex-start;
+    background-color: #f3f4f6;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 12px;
+}
+
+.badgeText {
+    font-size: 12px;
+    font-weight: bold;
+    color: #4b5563;
+}
+
+.loyaltyCard {
+    background-color: $color-bg-dark;
+    border-radius: 28px;
+    padding: 24px;
+    margin-bottom: 30px;
+    elevation: 6;
+    shadow-color: #000;
+    shadow-opacity: 0.15;
+    shadow-radius: 12px;
+    shadow-offset: 0px 4px;
+}
+
+.loyaltyCardLoading {
+    justify-content: center;
+    align-items: center;
+    min-height: 140px;
+}
+
+.loyaltyHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.loyaltyTitleRow {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.loyaltyTitleText {
+    color: $color-text-light;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    margin-left: 6px;
+}
+
+.pointsValue {
+    color: $color-white;
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: -1px;
+}
+
+.pointsSuffix {
+    color: $color-text-light;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0px;
+}
+
+.trendButton {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background-color: #2a2a36;
+    justify-content: center;
+    align-items: center;
+    border-width: 1px;
+    border-color: #3b3b4a;
+}
+
+.tierInfoRow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.tierText {
+    color: $color-text-light;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.nextTierText {
+    color: #facc15;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.progressBarBackground {
+    height: 6px;
+    background-color: #374151;
+    border-radius: 3px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.progressBarFill {
+    height: 100%;
+    background-color: #f97316;
+    border-radius: 3px;
+}
+
+.menuContainer {
+    background-color: $color-white;
+    border-radius: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+    elevation: 2;
+    shadow-color: #000;
+    shadow-opacity: 0.03;
+    shadow-radius: 5px;
+}
+
+.menuItem {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.menuItemLeft {
+    flex-direction: row;
+    align-items: center;
+}
+
+.menuItemText {
+    font-size: 16px;
+    font-weight: 600;
+    color: $color-text-main;
+    margin-left: 15px;
+}
+
+.destructiveText {
+    color: $color-primary;
+}
+
+// ==========================================
+// PROFILE SETTINGS MODAL
+// ==========================================
+.settingsSection {
+    background-color: $color-white;
+    border-radius: 20px;
+    padding: 20px;
+    elevation: 2;
+    shadow-color: #000;
+    shadow-opacity: 0.03;
+    shadow-radius: 5px;
+}
+
+.inputGroup {
+    margin-bottom: 20px;
+}
+
+.inputLabel {
+    font-size: 13px;
+    font-weight: bold;
+    color: $color-text-muted;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.textInput {
+    background-color: #f9fafb;
+    border-width: 1px;
+    border-color: $color-border;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 16px;
+    color: $color-text-main;
+}
+
+.backButton {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom-width: 1px;
+    border-color: #f3f4f6;
+}
+
+.backButtonText {
+    color: $color-text-muted;
+    font-size: 14px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.cardItem {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background-color: $color-white;
+    padding: 15px;
+    border-radius: 16px;
+    margin-bottom: 15px;
+    border-width: 1px;
+    border-color: $color-border;
+}
+
+.cardLeft {
+    flex-direction: row;
+    align-items: center;
+}
+
+.cardDetails {
+    margin-left: 15px;
+}
+
+.cardTitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: $color-text-main;
+}
+
+.cardExpiry {
+    font-size: 13px;
+    color: $color-text-muted;
+    margin-top: 2px;
+}
+
+.addCardButton {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    border-radius: 16px;
+    background-color: #fcecec;
+}
+
+.addCardText {
+    color: $color-primary;
+    font-weight: bold;
+    font-size: 16px;
+    margin-left: 8px;
+}
+
+.switchRow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    border-bottom-width: 1px;
+    border-color: #f3f4f6;
+}
+
+.switchTitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: $color-text-main;
+}
+
+.switchSub {
+    font-size: 13px;
+    color: $color-text-muted;
+    margin-top: 4px;
+}
+
+.actionRow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    border-bottom-width: 1px;
+    border-color: #f3f4f6;
+}
+
+.actionRowLeft {
+    flex-direction: row;
+    align-items: center;
+}
+
+.actionRowText {
+    font-size: 16px;
+    color: $color-text-main;
+    margin-left: 12px;
+}
+
+.termsTitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: $color-text-main;
+    margin-top: 15px;
+    margin-bottom: 8px;
+}
+
+.termsText {
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 22px;
+}
+
+// ==========================================
+// ACTIVE TICKET MODAL
+// ==========================================
+.loadingContainer {
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+}
+
+.detailCard {
+    background-color: $color-white;
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 20px;
+    elevation: 2;
+    shadow-color: #000;
+    shadow-opacity: 0.05;
+    shadow-radius: 10px;
+}
+
+.cardHeader {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.busIconContainer {
+    width: 50px;
+    height: 50px;
+    border-radius: 15px;
+    background-color: #fcecec;
+    justify-content: center;
+    align-items: center;
+    margin-right: 15px;
+}
+
+.operatorText {
+    font-size: 14px;
+    color: $color-text-muted;
+    font-weight: 600;
+}
+
+.busNumberText {
+    font-size: 20px;
+    font-weight: bold;
+    color: $color-text-main;
+}
+
+.amenitiesRow {
+    flex-direction: row;
+    align-items: center;
+    border-top-width: 1px;
+    border-color: #f3f4f6;
+    padding-top: 15px;
+}
+
+.amenityIcon {
+    margin-right: 10px;
+    background-color: #f9fafb;
+    padding: 6px;
+    border-radius: 8px;
+}
+
+.amenityLabel {
+    font-size: 12px;
+    color: $color-text-light;
+    font-weight: 600;
+}
+
+.infoGrid {
+    flex-direction: row;
+    background-color: $color-text-dark;
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.infoBox {
+    flex: 1;
+    align-items: center;
+    border-right-width: 1px;
+    border-color: #374151;
+}
+
+.infoLabel {
+    font-size: 10px;
+    color: $color-text-light;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.infoValue {
+    font-size: 18px;
+    color: $color-white;
+    font-weight: bold;
+}
+
+.timelineCard {
+    background-color: $color-white;
+    border-radius: 24px;
+    padding: 24px;
+    elevation: 2;
+    shadow-color: #000;
+    shadow-opacity: 0.05;
+    shadow-radius: 10px;
+}
+
+.timelineItem {
+    flex-direction: row;
+    min-height: 70px;
+}
+
+.timelineLeft {
+    width: 50px;
+    align-items: flex-start;
+}
+
+.timelineTime {
+    font-size: 14px;
+    font-weight: bold;
+    color: $color-text-main;
+}
+
+.timelineCenter {
+    width: 30px;
+    align-items: center;
+}
+
+.timelineDot {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    z-index: 2;
+}
+
+.dotPassed {
+    background-color: $color-primary;
+}
+
+.dotFuture {
+    background-color: $color-border;
+}
+
+.timelineLine {
+    width: 2px;
+    position: absolute;
+    top: 12px;
+    bottom: 0px;
+}
+
+.linePassed {
+    background-color: $color-primary;
+}
+
+.lineFuture {
+    background-color: #f3f4f6;
+}
+
+.timelineRight {
+    flex: 1;
+    padding-left: 10px;
+    padding-bottom: 25px;
+}
+
+.timelineStation {
+    font-size: 16px;
+    font-weight: bold;
+    color: $color-text-main;
+    margin-bottom: 4px;
+}
+
+.textPassed {
+    color: $color-text-light;
+}
+
+.statusLabel {
+    font-size: 11px;
+    color: $color-primary;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.footerInfo {
+    flex-direction: row;
+    padding: 20px;
+    align-items: center;
+}
+
+.footerText {
+    flex: 1;
+    font-size: 12px;
+    color: $color-text-light;
+    margin-left: 10px;
+    line-height: 18px;
+}

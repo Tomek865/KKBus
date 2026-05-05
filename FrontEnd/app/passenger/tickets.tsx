@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, SafeAreaView, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { TicketCard } from '../../components/passenger/TicketCard';
+import ActiveTicketModal from './ActiveTicketModal'; 
+import { passengerStyles as styles } from '../src/styles/passengerStyles'; // Dopasuj ścieżkę do projektu!
 
-// ==========================================
-// TYPES & MOCKS (Zarys pod backend)
-// ==========================================
+
 interface TicketData {
     id: string;
+    ticketNumber: string;
+    seatNumber: string;
     depTime: string;
     arrTime: string;
     depStation: string;
@@ -18,94 +21,147 @@ interface TicketData {
 }
 
 const MOCK_TICKETS: TicketData[] = [
-    { id: 't1', depTime: "14:20", arrTime: "15:45", depStation: "Krakow MDA", arrStation: "Katowice Dworzec", duration: "1H 25M", seats: 1, price: 24, isPast: false },
-    { id: 't2', depTime: "08:15", arrTime: "09:40", depStation: "Katowice Dworzec", arrStation: "Krakow MDA", duration: "1H 25M", seats: 1, price: 24, isPast: true }
+    { id: 't1', ticketNumber: 'TR-8492-X91', seatNumber: '12A', depTime: "15:00", arrTime: "16:25", depStation: "Krakow", arrStation: "Katowice", duration: "1H 25M", seats: 1, price: 24, isPast: false },
+    { id: 't2', ticketNumber: 'TR-1029-Y44', seatNumber: '8C', depTime: "08:15", arrTime: "09:40", depStation: "Katowice Dworzec", arrStation: "Krakow MDA", duration: "1H 25M", seats: 1, price: 24, isPast: true }
 ];
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
 export default function PassengerTickets() {
-    // --- STATES ---
     const [tickets, setTickets] = useState<TicketData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
 
-    // ==========================================
-    // API / BACKEND CALLS
-    // ==========================================
+    // --- ANIMATIONS ---
+    const opacityAnim = useRef(new Animated.Value(1)).current;
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
     useEffect(() => {
-        const fetchTickets = async () => {
-            // TODO: BACKEND FETCH - Pobieranie zapisanych biletów użytkownika
-            // Przykład: const response = await fetch('/api/user/tickets'); const data = await response.json();
-            setTimeout(() => {
-                setTickets(MOCK_TICKETS);
-                setIsLoading(false);
-            }, 600);
-        };
-        fetchTickets();
+        setTimeout(() => {
+            setTickets(MOCK_TICKETS);
+            setIsLoading(false);
+        }, 600);
     }, []);
 
-    // ==========================================
-    // HELPERS
-    // ==========================================
-    const upcomingTickets = tickets.filter(t => !t.isPast);
+    const handleOpenDetails = (ticket: TicketData) => {
+        setSelectedTicket(ticket);
+        setModalVisible(true);
+    };
+
+    const handleArchiveTicket = (ticketId: string) => {
+        Animated.parallel([
+            Animated.timing(opacityAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true, 
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 0.9, 
+                duration: 300,
+                useNativeDriver: true,
+            })
+        ]).start(() => {
+            setTickets(prevTickets => 
+                prevTickets.map(ticket => 
+                    ticket.id === ticketId ? { ...ticket, isPast: true } : ticket
+                )
+            );
+            
+            opacityAnim.setValue(1);
+            scaleAnim.setValue(1);
+        });
+    };
+
+    const activeTicket = tickets.find(t => !t.isPast);
     const pastTickets = tickets.filter(t => t.isPast);
 
-    // ==========================================
-    // RENDER
-    // ==========================================
     return (
         <SafeAreaView style={styles.safeArea}>
-            <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.headerTitle}>My Tickets</Text>
-
+            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+                
                 {isLoading ? (
                     <ActivityIndicator size="large" color="#e60000" style={{ marginTop: 40 }} />
                 ) : (
                     <>
-                        <Text style={styles.sectionTitle}>Upcoming Journeys</Text>
-                        {upcomingTickets.length === 0 ? (
-                            <Text style={styles.emptyText}>No upcoming tickets</Text>
-                        ) : (
-                            upcomingTickets.map(ticket => (
-                                <TicketCard
-                                    key={ticket.id}
-                                    depTime={ticket.depTime} arrTime={ticket.arrTime}
-                                    depStation={ticket.depStation} arrStation={ticket.arrStation}
-                                    duration={ticket.duration} seats={ticket.seats} price={ticket.price}
-                                />
-                            ))
+                        {/* --- AKTYWNY BILET Z ANIMACJĄ --- */}
+                        {activeTicket && (
+                            <Animated.View style={[styles.activeSection, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}>
+                                <View style={styles.activeHeader}>
+                                    <Ionicons name="ticket-outline" size={26} color="#d32f2f" style={{ transform: [{ rotate: '-45deg' }] }} />
+                                    <Text style={styles.activeTitle}>Active Tickets</Text>
+                                </View>
+
+                                <View style={styles.ticketWrapper}>
+                                    <View style={styles.ticketTop}>
+                                        <View style={styles.ticketTopRow}>
+                                            <Text style={styles.ticketRoute}>
+                                                {activeTicket.depStation.toUpperCase()} {activeTicket.arrStation.toUpperCase()}
+                                            </Text>
+                                            <Text style={styles.ticketSeatLabel}>SEAT</Text>
+                                        </View>
+                                        <View style={styles.ticketTopRow}>
+                                            <Text style={styles.ticketTime}>Today, {activeTicket.depTime}</Text>
+                                            <View style={styles.seatBadge}>
+                                                <Text style={styles.seatBadgeText}>{activeTicket.seatNumber}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.ticketBottom}>
+                                        <View style={styles.qrPlaceholderContainer}>
+                                            <Ionicons name="qr-code-outline" size={120} color="#111827" />
+                                        </View>
+                                        
+                                        <Text style={styles.scanText}>SCAN WHEN BOARDING</Text>
+
+                                        <View style={styles.dividerContainer}>
+                                            <View style={styles.cutoutLeft} />
+                                            <View style={styles.dashedLine} />
+                                            <View style={styles.cutoutRight} />
+                                        </View>
+
+                                        <View style={styles.ticketActions}>
+                                            <TouchableOpacity 
+                                                style={styles.viewDetailsBtn}
+                                                onPress={() => handleOpenDetails(activeTicket)}
+                                            >
+                                                <Text style={styles.viewDetailsText}>View Details</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity 
+                                                style={styles.closeTicketBtn}
+                                                onPress={() => handleArchiveTicket(activeTicket.id)}
+                                            >
+                                                <Ionicons name="close" size={26} color="#d32f2f" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                </View>
+                            </Animated.View>
                         )}
 
-                        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Travel History</Text>
+                        {/* --- TRAVEL HISTORY --- */}
+                        <Text style={styles.sectionTitle}>Travel History</Text>
                         <View style={{ opacity: 0.6 }}>
-                            {pastTickets.length === 0 ? (
-                                <Text style={styles.emptyText}>No past journeys</Text>
-                            ) : (
-                                pastTickets.map(ticket => (
-                                    <TicketCard
-                                        key={ticket.id}
-                                        depTime={ticket.depTime} arrTime={ticket.arrTime}
-                                        depStation={ticket.depStation} arrStation={ticket.arrStation}
-                                        duration={ticket.duration} seats={ticket.seats} price={ticket.price}
-                                    />
-                                ))
-                            )}
+                            {pastTickets.map(ticket => (
+                                <TouchableOpacity 
+                                    key={ticket.id} 
+                                    style={{ marginBottom: 15 }}
+                                    onPress={() => handleOpenDetails(ticket)}
+                                >
+                                    <TicketCard {...ticket} />
+                                </TouchableOpacity>
+                            ))}
                         </View>
                     </>
                 )}
             </ScrollView>
+
+            {/* --- MODAL ZE SZCZEGÓŁAMI TRASY --- */}
+            <ActiveTicketModal 
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                ticket={selectedTicket}
+            />
+
         </SafeAreaView>
     );
 }
-
-// ==========================================
-// STYLES
-// ==========================================
-const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#f4f5f7' },
-    container: { padding: 20 },
-    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#111', marginBottom: 25 },
-    sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#888', marginBottom: 15, textTransform: 'uppercase' },
-    emptyText: { color: '#888', fontStyle: 'italic', marginBottom: 20 }
-});
