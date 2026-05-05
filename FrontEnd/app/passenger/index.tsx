@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, SafeAreaView, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SearchInput } from '../../components/passenger/SearchInput';
 import { passengerStyles as styles } from '../src/styles/passengerStyles'; // Dopasuj ścieżkę do projektu!
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export interface Departure {
     id: string; departureTime: string; arrivalTime: string; departureStation: string;
