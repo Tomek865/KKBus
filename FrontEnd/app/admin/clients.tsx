@@ -6,35 +6,43 @@ import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 export default function AdminClients() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [editModalVisible, setEditModalVisible] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<any>(null);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            // fetch - Pobieranie listy użytkowników
-            setTimeout(() => {
-                setUsers([
-                    { id: '1', name: 'Jan Kowalski', email: 'jan.k@gmail.com', role: 'Passenger', trips: 12 },
-                    { id: '2', name: 'Marek Zawadzki', email: 'm.zawadzki@transregion.pl', role: 'Driver', trips: 450 },
-                ]);
-                setLoading(false);
-            }, 800);
-        };
         fetchUsers();
     }, []);
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            // fetch - Pobieranie rzeczywistej listy użytkowników
+            const response = await fetch(`${IP_adress}/api/users`);
+            const data = await response.json();
+            setUsers(data);
+        } catch (error) {
+            console.error("Błąd pobierania użytkowników:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleDelete = (userId: string) => {
         Alert.alert("Delete User", "Are you sure?", [
             { text: "Cancel" },
             {
-                text: "Delete", style: "destructive", onPress: () => {
-                    // fetch - DELETE użytkownika
-                    setUsers(prev => prev.filter(u => u.id !== userId));
+                text: "Delete", style: "destructive", onPress: async () => {
+                    try {
+                        // fetch - Usunięcie użytkownika z bazy danych
+                        await fetch(`${IP_adress}/api/users/${userId}`, { method: 'DELETE' });
+                        setUsers(prev => prev.filter(u => u.id !== userId));
+                    } catch (error) {
+                        Alert.alert("Błąd", "Nie udało się usunąć użytkownika.");
+                    }
                 }
             }
         ]);
     };
+
+    if (loading) return <ActivityIndicator size="large" color={COLORS.red} style={{ marginTop: 50 }} />;
 
     return (
         <View style={{ flex: 1 }}>
