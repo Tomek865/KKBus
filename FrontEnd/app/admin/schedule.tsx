@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
+import { IP_adress } from '../../utiles';
 
 export default function AdminSchedule() {
     const [fleet, setFleet] = useState<any[]>([]);

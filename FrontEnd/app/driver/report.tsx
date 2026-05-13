@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { driverStyles as styles } from '../src/styles/driverStyles';
+import { IP_adress } from '../../utiles';
 
 export default function DriverSegmentReport() {
     const [boarded, setBoarded] = useState('');
@@ -16,14 +17,25 @@ export default function DriverSegmentReport() {
         }
 
         setIsSubmitting(true);
+        try {
+            // fetch - Wysłanie raportu do bazy danych
+            const response = await fetch(`${IP_adress}/driver/segment-report`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ boarded: parseInt(boarded), alighted: parseInt(alighted) })
+            });
 
-        // fetch - Wysyłanie raportu o liczbie pasażerów wsiadających/wysiadających na danym przystanku
-
-        setTimeout(() => {
-            Alert.alert("Sukces", "Raport wysłany do bazy danych.");
+            if (response.ok) {
+                Alert.alert("Sukces", "Raport wysłany pomyślnie.");
+                setBoarded(''); setAlighted('');
+            } else {
+                throw new Error();
+            }
+        } catch (error) {
+            Alert.alert("Błąd", "Nie udało się wysłać raportu.");
+        } finally {
             setIsSubmitting(false);
-            setBoarded(''); setAlighted('');
-        }, 1200);
+        }
     };
 
     return (
@@ -31,42 +43,15 @@ export default function DriverSegmentReport() {
             <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
                 <View style={styles.card}>
                     <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 25, color: '#111827' }}>Raport Odcinkowy</Text>
-
                     <View style={[styles.inputWrapper, focused === 'in' && styles.inputWrapperActive]}>
-                        <TextInput
-                            style={styles.textInput}
-                            value={boarded}
-                            onChangeText={setBoarded}
-                            keyboardType="number-pad"
-                            onFocus={() => setFocused('in')}
-                            onBlur={() => setFocused(null)}
-                            placeholder="0"
-                        />
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={{ marginRight: 10, fontWeight: 'bold', color: '#4b5563' }}>WSIADŁO</Text>
-                            <Ionicons name="arrow-down-circle" size={30} color={focused === 'in' ? '#e60000' : '#d1d5db'} />
-                        </View>
+                        <TextInput style={styles.textInput} value={boarded} onChangeText={setBoarded} keyboardType="number-pad" onFocus={() => setFocused('in')} onBlur={() => setFocused(null)} placeholder="0" />
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}><Text style={{ marginRight: 10, fontWeight: 'bold', color: '#4b5563' }}>WSIADŁO</Text><Ionicons name="arrow-down-circle" size={30} color={focused === 'in' ? '#e60000' : '#d1d5db'} /></View>
                     </View>
-
                     <View style={[styles.inputWrapper, focused === 'out' && styles.inputWrapperActive]}>
-                        <TextInput
-                            style={styles.textInput}
-                            value={alighted}
-                            onChangeText={setAlighted}
-                            keyboardType="number-pad"
-                            onFocus={() => setFocused('out')}
-                            onBlur={() => setFocused(null)}
-                            placeholder="0"
-                        />
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={{ marginRight: 10, fontWeight: 'bold', color: '#4b5563' }}>WYSIADŁO</Text>
-                            <Ionicons name="arrow-up-circle" size={30} color={focused === 'out' ? '#e60000' : '#d1d5db'} />
-                        </View>
+                        <TextInput style={styles.textInput} value={alighted} onChangeText={setAlighted} keyboardType="number-pad" onFocus={() => setFocused('out')} onBlur={() => setFocused(null)} placeholder="0" />
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}><Text style={{ marginRight: 10, fontWeight: 'bold', color: '#4b5563' }}>WYSIADŁO</Text><Ionicons name="arrow-up-circle" size={30} color={focused === 'out' ? '#e60000' : '#d1d5db'} /></View>
                     </View>
-
-                    <TouchableOpacity style={styles.submitBtn} onPress={submitReport}>
-                        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>WYŚLIJ RAPORT</Text>}
-                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.submitBtn} onPress={submitReport}>{isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>WYŚLIJ RAPORT</Text>}</TouchableOpacity>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>

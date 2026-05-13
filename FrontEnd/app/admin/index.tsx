@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
-
+import { IP_adress, authFetch } from '../../utiles';
 
 const StatCard = ({ title, value, icon, trend, trendColor, iconBg }: any) => (
   <View style={[styles.card, { flex: 1 }]}>
@@ -28,7 +28,8 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${IP_adress}/admin/stats`);
+        // Używamy authFetch zamiast zwykłego fetch
+        const res = await authFetch('/api/admin/stats');
         const data = await res.json();
         setStats(data);
       } catch (e) {

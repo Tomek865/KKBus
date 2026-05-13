@@ -1,53 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert, Button, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { driverStyles as styles } from '../src/styles/driverStyles';
+import { IP_adress } from '../../utiles';
 
 export default function DriverDashboard() {
-    const [stops, setStops] = useState([
-        { id: 1, name: 'Krakow MDA', time: '15:00', status: 'done' },
-        { id: 2, name: 'Chrzanow', time: '15:25', status: 'active' },
-        { id: 3, name: 'Jaworzno', time: '15:50', status: 'future' }
-    ]);
-    const [passengers, setPassengers] = useState([
-        { id: '1', seat: '12A', name: 'Jan Kowalski', ticket: 'JS-12A', type: 'STUDENT', status: 'boarded' },
-        { id: '2', seat: '14B', name: 'Anna Nowak', ticket: 'AN-14B', type: 'ADULT', status: 'pending' },
-        { id: '3', seat: '15C', name: 'Piotr Wiśniewski', ticket: 'PW-15C', type: 'REDUCED', status: 'pending' },
-    ]);
-
+    const [stops, setStops] = useState<any[]>([]);
+    const [passengers, setPassengers] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [scanned, setScanned] = useState(false);
     const [permission, requestPermission] = useCameraPermissions();
 
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // fetch - Pobieranie przystanków i pasażerów
+            const [stopsRes, passengersRes] = await Promise.all([
+                fetch(`${IP_adress}/driver/stops`),
+                fetch(`${IP_adress}/driver/passengers`)
+            ]);
+            setStops(await stopsRes.json());
+            setPassengers(await passengersRes.json());
+        } catch (e) {
+            Alert.alert("Błąd", "Nie udało się pobrać danych trasy.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleArriveAtStop = async () => {
-        setStops(prevStops => {
-            let foundActive = false;
-            return prevStops.map(stop => {
-                if (stop.status === 'active') {
-                    foundActive = true;
-                    return { ...stop, status: 'done' };
-                }
-                if (foundActive && stop.status === 'future') {
-                    foundActive = false;
-                    return { ...stop, status: 'active' };
-                }
-                return stop;
-            });
-        });
+        try {
+            // fetch - Aktualizacja statusu przystanku na serwerze
+            await fetch(`${IP_adress}/driver/update-stop`, { method: 'POST' });
+            fetchData(); // Odświeżenie danych po zmianie
+        } catch (e) {
+            Alert.alert("Błąd", "Nie udało się zaktualizować statusu przystanku.");
+        }
     };
 
     const validateTicket = async (ticketData: string) => {
-        const passenger = passengers.find(p => p.ticket === ticketData);
-        if (passenger) {
-            setPassengers(prev => prev.map(p => p.id === passenger.id ? { ...p, status: 'boarded' } : p));
-            Alert.alert("Sukces", `Zeskanowano: ${passenger.name}`);
-        } else {
-            Alert.alert("Błąd", "Nie znaleziono biletu.");
+        try {
+            // fetch - Weryfikacja biletu na serwerze
+            const response = await fetch(`${IP_adress}/driver/validate-ticket`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticket: ticketData })
+            });
+            const resData = await response.json();
+
+            if (response.ok) {
+                Alert.alert("Sukces", `Zeskanowano: ${resData.passengerName}`);
+                fetchData();
+            } else {
+                Alert.alert("Błąd", "Nieprawidłowy lub wykorzystany bilet.");
+            }
+        } catch (e) {
+            Alert.alert("Błąd", "Błąd połączenia z bazą biletów.");
+        } finally {
+            setIsScannerOpen(false);
+            setScanned(false);
         }
-        setIsScannerOpen(false);
-        setScanned(false);
     };
 
     const handleBarCodeScanned = ({ data }: { data: string }) => {
@@ -59,6 +78,8 @@ export default function DriverDashboard() {
     if (!permission?.granted) {
         return <View style={styles.container}><Button onPress={requestPermission} title="Zezwól na aparat" color="#e60000" /></View>;
     }
+
+    if (loading) return <ActivityIndicator size="large" color="#e60000" style={{ marginTop: 50 }} />;
 
     const displayedPassengers = activeTab === 'all' ? passengers : passengers.filter(p => p.status === 'pending');
 
@@ -87,18 +108,9 @@ export default function DriverDashboard() {
                         ) : (
                             <View style={styles.futureStopDot}><Text style={styles.futureStopNumber}>{index + 1}</Text></View>
                         )}
-
                         <View>
-                            <Text style={
-                                stop.status === 'done' ? styles.stopNameDone :
-                                    stop.status === 'active' ? styles.stopNameActive :
-                                        styles.stopNameFuture
-                            }>
-                                {stop.name}
-                            </Text>
-                            <Text style={stop.status === 'active' ? styles.stopTimeActive : styles.stopTime}>
-                                {stop.time}
-                            </Text>
+                            <Text style={stop.status === 'done' ? styles.stopNameDone : stop.status === 'active' ? styles.stopNameActive : styles.stopNameFuture}>{stop.name}</Text>
+                            <Text style={stop.status === 'active' ? styles.stopTimeActive : styles.stopTime}>{stop.time}</Text>
                         </View>
                     </View>
                 ))}
@@ -123,11 +135,7 @@ export default function DriverDashboard() {
                                 <Text style={styles.passengerName}>{p.name}</Text>
                                 <Text style={styles.passengerDetails}>TICKET {p.ticket} • {p.type}</Text>
                             </View>
-                            {p.status === 'boarded' ? (
-                                <Ionicons name="checkmark-circle" size={28} color="#10b981" />
-                            ) : (
-                                <TouchableOpacity style={styles.manualBtn} onPress={() => validateTicket(p.ticket)}><Text style={styles.manualBtnText}>MANUAL</Text></TouchableOpacity>
-                            )}
+                            {p.status === 'boarded' ? <Ionicons name="checkmark-circle" size={28} color="#10b981" /> : <TouchableOpacity style={styles.manualBtn} onPress={() => validateTicket(p.ticket)}><Text style={styles.manualBtnText}>MANUAL</Text></TouchableOpacity>}
                         </View>
                     ))}
                 </View>
