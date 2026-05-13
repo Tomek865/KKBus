@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, SafeAreaView, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TicketCard } from '../../components/passenger/TicketCard';
 import ActiveTicketModal from './ActiveTicketModal'; 
 import { passengerStyles as styles } from '../src/styles/passengerStyles'; // Dopasuj ścieżkę do projektu!
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface TicketData {
     id: string;
@@ -76,21 +76,19 @@ export default function PassengerTickets() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-                
-                {isLoading ? (
+                            {isLoading ? (
                     <ActivityIndicator size="large" color="#e60000" style={{ marginTop: 40 }} />
                 ) : (
                     <>
-                        {/* --- AKTYWNY BILET Z ANIMACJĄ --- */}
-                        {activeTicket && (
-                            <Animated.View style={[styles.activeSection, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}>
-                                <View style={styles.activeHeader}>
-                                    <Ionicons name="ticket-outline" size={26} color="#d32f2f" style={{ transform: [{ rotate: '-45deg' }] }} />
-                                    <Text style={styles.activeTitle}>Active Tickets</Text>
-                                </View>
+                        {/* --- SEKCJA AKTYWNYCH BILETÓW --- */}
+                        <View style={styles.activeSection}>
+                            <View style={styles.activeHeader}>
+                                <Ionicons name="ticket-outline" size={26} color="#d32f2f" style={{ transform: [{ rotate: '-45deg' }] }} />
+                                <Text style={styles.activeTitle}>Active Tickets</Text>
+                            </View>
 
-                                <View style={styles.ticketWrapper}>
+                            {activeTicket ? (
+                                <Animated.View style={[styles.ticketWrapper, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}>
                                     <View style={styles.ticketTop}>
                                         <View style={styles.ticketTopRow}>
                                             <Text style={styles.ticketRoute}>
@@ -134,9 +132,16 @@ export default function PassengerTickets() {
                                             </TouchableOpacity>
                                         </View>
                                     </View>
+                                </Animated.View>
+                            ) : (
+                                /* --- EMPTY STATE Z SCREENSHOTU --- */
+                                <View style={styles.emptyStateContainer}>
+                                    <Ionicons name="ticket" size={48} color="#d1d5db" />
+                                    <Text style={styles.emptyStateTitle}>No Active Tickets</Text>
+                                    <Text style={styles.emptyStateSub}>You have cancelled your upcoming trip or have no bookings.</Text>
                                 </View>
-                            </Animated.View>
-                        )}
+                            )}
+                        </View>
 
                         {/* --- TRAVEL HISTORY --- */}
                         <Text style={styles.sectionTitle}>Travel History</Text>
@@ -153,7 +158,6 @@ export default function PassengerTickets() {
                         </View>
                     </>
                 )}
-            </ScrollView>
 
             {/* --- MODAL ZE SZCZEGÓŁAMI TRASY --- */}
             <ActiveTicketModal 

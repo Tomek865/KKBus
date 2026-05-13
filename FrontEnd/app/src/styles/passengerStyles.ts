@@ -201,5 +201,12 @@ export const passengerStyles = StyleSheet.create({
     textPassed: { color: COLORS.textLight },
     statusLabel: { fontSize: 11, color: COLORS.primary, fontWeight: 'bold', textTransform: 'uppercase' },
     footerInfo: { flexDirection: 'row', padding: 20, alignItems: 'center' },
-    footerText: { flex: 1, fontSize: 12, color: COLORS.textLight, marginLeft: 10, lineHeight: 18 }
+    footerText: { flex: 1, fontSize: 12, color: COLORS.textLight, marginLeft: 10, lineHeight: 18 },
+        // ==========================================
+    // EMPTY STATE (No Tickets)
+    // ==========================================
+    emptyStateContainer: { backgroundColor: '#f9fafb', borderWidth: 2, borderColor: '#e5e7eb', borderStyle: 'dashed', borderRadius: 24, padding: 40, alignItems: 'center', justifyContent: 'center' },
+    emptyStateTitle: { fontSize: 20, fontWeight: 'bold', color: '#6b7280', marginTop: 15, marginBottom: 8 },
+    emptyStateSub: { fontSize: 14, color: '#9ca3af', textAlign: 'center', lineHeight: 20, paddingHorizontal: 10 },
+
 });
