@@ -3,6 +3,7 @@ import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-nat
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 
+
 const StatCard = ({ title, value, icon, trend, trendColor, iconBg }: any) => (
   <View style={[styles.card, { flex: 1 }]}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -26,11 +27,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
-      // fetch - Pobieranie statystyk z backendu
-      setTimeout(() => {
-        setStats({ revenue: "124,500 PLN", buses: "42 / 50", passengers: "14,290", routes: "156" });
+      try {
+        const res = await fetch(`${IP_adress}/admin/stats`);
+        const data = await res.json();
+        setStats(data);
+      } catch (e) {
+        console.error("Błąd pobierania statystyk:", e);
+      } finally {
         setLoading(false);
-      }, 800);
+      }
     };
     fetchStats();
   }, []);
@@ -50,20 +55,6 @@ export default function AdminDashboard() {
         <StatCard title="ACTIVE BUSES" value={stats?.buses} icon="bus-outline" trend="8 offline" trendColor={COLORS.red} iconBg={COLORS.redLight} />
         <StatCard title="TOTAL PASSENGERS" value={stats?.passengers} icon="people-outline" trend="+5.2%" trendColor={COLORS.green} iconBg={COLORS.blueLight} />
         <StatCard title="SCHEDULED ROUTES" value={stats?.routes} icon="calendar-outline" trend="98% on time" trendColor={COLORS.green} iconBg="#e0e7ff" />
-      </View>
-      <View style={{ flexDirection: 'row', gap: 20 }}>
-        <View style={[styles.card, { flex: 2 }]}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Revenue Trend</Text>
-          <View style={{ height: 250, backgroundColor: '#f9fafb', borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginTop: 10 }}>
-            <Ionicons name="bar-chart-outline" size={60} color="#e5e7eb" />
-          </View>
-        </View>
-        <View style={[styles.card, { flex: 1 }]}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Live Fleet Status</Text>
-          <View style={{ marginTop: 15, padding: 15, backgroundColor: '#fef2f2', borderRadius: 12 }}>
-            <Text style={{ color: COLORS.red, fontWeight: 'bold' }}>Bus #102 Delayed</Text>
-          </View>
-        </View>
       </View>
     </ScrollView>
   );
