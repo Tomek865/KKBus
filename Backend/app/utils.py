@@ -53,7 +53,7 @@ def admin_required(f):
             
             role = data.get('role') or data.get('rola')
             
-            if role not in ['Owner', 'Secretariat']:
+            if role not in ['Admin', 'Office']:
                 return jsonify({'error': 'Access denied. Administrator privileges required.'}), 403
                 
             current_admin_id = data.get('employee_id')

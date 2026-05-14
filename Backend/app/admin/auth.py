@@ -21,7 +21,7 @@ def login():
         query = """
             SELECT employee_id, password, first_name, last_name, role 
             FROM Employee 
-            WHERE email = %s AND role IN ('Owner', 'Secretariat') AND is_active = TRUE
+            WHERE email = %s AND role IN ('Admin', 'Office') AND is_active = TRUE
         """
         cur.execute(query, (data['email'],))
         admin_user = cur.fetchone()

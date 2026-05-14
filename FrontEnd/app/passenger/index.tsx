@@ -78,16 +78,48 @@ export default function PassengerSearch() {
     const [dateModalVisible, setDateModalVisible] = useState(false);
 
     useEffect(() => {
-        const fetchStationsFromDB = async () => {
-            setTimeout(() => setStations(['Krakow', 'Katowice', 'Warszawa', 'Wroclaw', 'Gdansk', 'Zakopane']), 500);
-        };
-        fetchStationsFromDB();
-    }, []);
-
-    const handleSearchRoutes = () => {
-        setIsSearching(true); setHasSearched(true); setDepartures([]);
-        setTimeout(() => { setDepartures(MOCK_DEPARTURES); setIsSearching(false); }, 1200); 
+    const fetchStationsFromDB = async () => {
+        try {
+            const res = await fetch('http://TWOJ_IP:5000/api/client/stations');
+            const data = await res.json();
+            // Backend zwraca listę obiektów, mapujemy na same nazwy stacji
+            setStations(data.map((s: any) => s.name));
+        } catch (err) {
+            console.error("Błąd pobierania stacji:", err);
+        }
     };
+    fetchStationsFromDB();
+}, []);
+
+    const handleSearchRoutes = async () => {
+    setIsSearching(true); 
+    setHasSearched(true); 
+    setDepartures([]);
+    
+    try {
+        const dateStr = selectedDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
+        const res = await fetch(`http://TWOJ_IP:5000/api/client/routes?from=${fromStation}&to=${toStation}&date=${dateStr}`);
+        const data = await res.json();
+        
+        // Mapowanie odpowiedzi backendu na interfejs Departure
+        const mappedDepartures = data.map((d: any) => ({
+            id: String(d.trip_id),
+            departureTime: d.departure_time,
+            arrivalTime: d.arrival_time,
+            departureStation: fromStation,
+            arrivalStation: toStation,
+            duration: 'N/A', // Możesz to doliczyć na froncie
+            seatsLeft: d.seating_capacity, // Backend w tym widoku nie zwraca jeszcze zajętych miejsc
+            price: 24 // Zmockowana cena, do dorobienia w DB
+        }));
+        setDepartures(mappedDepartures);
+    } catch (err) {
+        console.error("Błąd wyszukiwania tras:", err);
+    } finally {
+        setIsSearching(false);
+    }
+};
+
 
     const updateCount = (type: 'adult' | 'student' | 'reduced', delta: number) => {
         setPassengerCounts(prev => {

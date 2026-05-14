@@ -21,7 +21,7 @@ Wysyłamy (Body JSON):
 Odbieramy (200 OK):
 {
     "token": "eyJhbGci...",
-    "role": "Client" | "Driver" | "Owner" | "Secretariat",
+    "role": "Client" | "Driver" | "Admin" | "Office",
     "data": {
         "first_name": "Jan",
         "last_name": "Kowalski"

@@ -12,10 +12,33 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     const [emailEnabled, setEmailEnabled] = useState(false);
     const [selectedLang, setSelectedLang] = useState('English (UK)');
     const [paymentView, setPaymentView] = useState<'list' | 'edit'>('list');
+    const [firstName, setFirstName] = useState('Anna');
+    const [lastName, setLastName] = useState('Kowalska');
+    const [phone, setPhone] = useState('+48 123 456 789');
+    const [userEmail, setUserEmail] = useState('anna.kowalska@example.com');
+
 
     useEffect(() => { if (visible) setPaymentView('list'); }, [visible]);
 
-    const handleSavePersonalInfo = () => { onClose(); };
+    const handleSavePersonalInfo = async () => {
+    try {
+        await fetch('http://TWOJ_IP:5000/api/client/user/update', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer TWOJ_TOKEN_JWT'
+            },
+            body: JSON.stringify({
+                first_name: firstName,
+                last_name: lastName,
+                phone_number: phone
+            })
+        });
+        onClose();
+    } catch (err) {
+        console.error("Błąd aktualizacji profilu:", err);
+    }
+};
     const handleSaveCard = () => { setPaymentView('list'); };
     const handleToggleNotification = (type: 'push' | 'email', val: boolean) => {
         if(type === 'push') setPushEnabled(val); if(type === 'email') setEmailEnabled(val);
@@ -37,9 +60,9 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
         switch (activeSection) {
             case 'personal': return (
                 <View style={styles.settingsSection}>
-                    <View style={styles.inputGroup}><Text style={styles.inputLabel}>Full Name</Text><TextInput style={styles.textInput} defaultValue="Anna Kowalska" /></View>
-                    <View style={styles.inputGroup}><Text style={styles.inputLabel}>Email Address</Text><TextInput style={styles.textInput} defaultValue="anna.kowalska@example.com" /></View>
-                    <View style={styles.inputGroup}><Text style={styles.inputLabel}>Phone Number</Text><TextInput style={styles.textInput} defaultValue="+48 123 456 789" /></View>
+                    <View style={styles.inputGroup}><Text style={styles.inputLabel}>Full Name</Text><TextInput style={styles.textInput} value={`${firstName} ${lastName}`} onChangeText={setFirstName} /></View>
+                    <View style={styles.inputGroup}><Text style={styles.inputLabel}>Email Address</Text><TextInput style={styles.textInput} value={userEmail} onChangeText={setUserEmail}/></View>
+                    <View style={styles.inputGroup}><Text style={styles.inputLabel}>Phone Number</Text><TextInput style={styles.textInput} value={phone} onChangeText={setPhone} /></View>
                     <TouchableOpacity style={styles.primaryBtn} onPress={handleSavePersonalInfo}><Text style={styles.primaryBtnText}>Save Changes</Text></TouchableOpacity>
                 </View>
             );

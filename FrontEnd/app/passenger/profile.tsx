@@ -53,8 +53,30 @@ export default function PassengerProfile() {
     const [activeSection, setActiveSection] = useState<any>(null);
 
     useEffect(() => {
-        setTimeout(() => { setLoyaltyData(MOCK_LOYALTY_DATA); setIsLoadingLoyalty(false); }, 800);
-    }, []);
+    const fetchLoyalty = async () => {
+        try {
+            const res = await fetch(`http://${IP_address}/api/client/user/loyalty`, {
+                headers: { 'Authorization': 'Bearer TWOJ_TOKEN_JWT' }
+            });
+            const data = await res.json();
+            
+            if(data.points !== undefined) {
+                setLoyaltyData({
+                    points: data.points,
+                    currentTier: data.points > 2000 ? 'GOLD' : 'STANDARD', // Logika wyliczania rang
+                    nextTier: 'GOLD',
+                    nextTierPoints: 2000
+                });
+            }
+        } catch (err) {
+            console.error("Błąd pobierania pkt lojalnościowych:", err);
+        } finally {
+            setIsLoadingLoyalty(false);
+        }
+    };
+
+    fetchLoyalty();
+}, []);
 
     const openSettings = (section: any) => { setActiveSection(section); setSettingsModalVisible(true); };
     const handleLogout = () => { router.replace('/'); };
