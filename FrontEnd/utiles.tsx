@@ -1,4 +1,4 @@
-const IP_adress = "http://10.154.64.138:5000";
+const IP_adress = "http://192.168.100.47:5000";
 
 export { IP_adress };
 

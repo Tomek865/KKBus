@@ -39,9 +39,9 @@ export default function LoginScreen() {
             if (response.ok) {
                 const role = data.role?.toLowerCase();
                 if (data.token) {
-                    await SecureStore.setItemAsync('userToken', data.token);
+                    //await SecureStore.setItemAsync('userToken', data.token);
                 }
-                if (role === 'owner') {
+                if (role === 'admin') {
                     router.replace('/admin');
                 } else if (role === 'driver') {
                     router.replace('/driver');

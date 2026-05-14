@@ -40,13 +40,13 @@ INSERT INTO Vehicle (vin, registration_number, brand, model, status, parking_loc
 -- 7. PRACOWNICY (Employees) 
 -- Uwaga: Hasło dla wszystkich to: haslo123 (wygenerowane dla pbkdf2:sha256)
 INSERT INTO Employee (first_name, last_name, email, password, role, is_active) VALUES 
-('Jan', 'Kowalski', 'kierowca@example.com', 'scrypt:32768:8:1$fG2rA8wL3pT6bY9$3e1174c86d88c4b18c645e9987cf6e5e0c52bbbd098a5e5a2db39d73d6ebbd780c11f71a084ebc810c9c73797c0f1e0de8a9eb3a771966a3106d3e8e8a93bc48', 'Driver', TRUE),
-('Anna', 'Nowak', 'admin@example.com', 'scrypt:32768:8:1$fG2rA8wL3pT6bY9$3e1174c86d88c4b18c645e9987cf6e5e0c52bbbd098a5e5a2db39d73d6ebbd780c11f71a084ebc810c9c73797c0f1e0de8a9eb3a771966a3106d3e8e8a93bc48', 'Admin', TRUE);
+('Jan', 'Kowalski', 'kierowca@example.com', 'pbkdf2:sha256:600000$ZROY7nHNsJgGdO1c$9b3c1f3f7394900e250321bbe6952b2593d9f9325981b73ccb89caf86a8ef654', 'Driver', TRUE),
+('Anna', 'Nowak', 'admin@example.com', 'pbkdf2:sha256:600000$ZROY7nHNsJgGdO1c$9b3c1f3f7394900e250321bbe6952b2593d9f9325981b73ccb89caf86a8ef654', 'Admin', TRUE);
 
 -- 8. KLIENCI (Clients)
 -- Hasło: haslo123
 INSERT INTO Client (first_name, last_name, email, password, loyalty_points) VALUES 
-('Michał', 'Pasażer', 'klient@example.com', 'scrypt:32768:8:1$fG2rA8wL3pT6bY9$3e1174c86d88c4b18c645e9987cf6e5e0c52bbbd098a5e5a2db39d73d6ebbd780c11f71a084ebc810c9c73797c0f1e0de8a9eb3a771966a3106d3e8e8a93bc48', 100);
+('Michał', 'Pasażer', 'klient@example.com', 'pbkdf2:sha256:600000$ZROY7nHNsJgGdO1c$9b3c1f3f7394900e250321bbe6952b2593d9f9325981b73ccb89caf86a8ef654', 100);
 
 -- 9. KURSY (Trips)
 -- Ustawiamy kurs na Kraków-Katowice (route_id: 1), bus: 1, kierowca: 1 na jutro rano
