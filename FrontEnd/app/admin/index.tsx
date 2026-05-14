@@ -28,7 +28,6 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        // Używamy authFetch zamiast zwykłego fetch
         const res = await authFetch('/api/admin/stats');
         const data = await res.json();
         setStats(data);

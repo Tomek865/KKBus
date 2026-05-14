@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
@@ -39,7 +37,15 @@ export default function LoginScreen() {
             if (response.ok) {
                 const role = data.role?.toLowerCase();
                 if (data.token) {
-                    //await SecureStore.setItemAsync('userToken', data.token);
+                    try {
+                        if (Platform.OS === 'web') {
+                            localStorage.setItem('userToken', String(data.token));
+                        } else {
+                            await SecureStore.setItemAsync('userToken', String(data.token));
+                        }
+                    } catch (error) {
+                        console.error("error while tryinh to save user token: ", error);
+                    }
                 }
                 if (role === 'admin') {
                     router.replace('/admin');

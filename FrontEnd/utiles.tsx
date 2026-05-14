@@ -1,17 +1,28 @@
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+
 const IP_adress = "http://192.168.100.47:5000";
 
 export { IP_adress };
 
-import * as SecureStore from 'expo-secure-store';
-
-
 export const authFetch = async (endpoint: string, options: any = {}) => {
-    const token = await SecureStore.getItemAsync('userToken');
+    let token = null;
 
-    const headers = {
+    try {
+        if (Platform.OS === 'web') {
+            token = localStorage.getItem('userToken');
+        } else {
+            token = await SecureStore.getItemAsync('userToken');
+        }
+    } catch (error) {
+        console.error("Błąd podczas pobierania tokena:", error);
+    }
+
+    const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...options.headers,
     };
+
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -22,6 +33,7 @@ export const authFetch = async (endpoint: string, options: any = {}) => {
     });
 
     if (response.status === 401) {
+        console.warn("Token wygasł lub jest nieprawidłowy (401)");
     }
 
     return response;

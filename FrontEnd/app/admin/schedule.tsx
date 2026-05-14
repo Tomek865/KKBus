@@ -15,7 +15,7 @@ export default function AdminSchedule() {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${IP_adress}/api/fleet`);
+            const response = await fetch(`${IP_adress}/api/admin/fleet/`);
             const data = await response.json();
             setFleet(data);
         } catch (e) {
@@ -32,7 +32,7 @@ export default function AdminSchedule() {
                 text: "Delete", style: "destructive", onPress: async () => {
                     try {
                         // fetch - Usuwanie trasy zgodnie z Twoim komentarzem
-                        await fetch(`${IP_adress}/api/fleet/${id}`, { method: 'DELETE' });
+                        await fetch(`${IP_adress}/api/admin/fleet/${id}`, { method: 'DELETE' });
                         setFleet(prev => prev.filter(item => item.id !== id));
                     } catch (e) {
                         Alert.alert("Błąd", "Nie udało się usunąć trasy.");
@@ -45,7 +45,7 @@ export default function AdminSchedule() {
     const handleAddEntry = async (newEntry: any) => {
         try {
             // fetch - Dodawanie nowej trasy
-            const response = await fetch(`${IP_adress}/api/fleet`, {
+            const response = await fetch(`${IP_adress}/api/admin/fleet/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newEntry)
