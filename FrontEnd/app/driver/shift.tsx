@@ -17,21 +17,24 @@ export default function DriverEndShift() {
 
         setIsSubmitting(true);
         try {
-            // fetch - Wysyłanie danych o paliwie
-            const response = await authFetch(`/driver/shift/end`, {
+            // Dostosowano klucze obiektu do struktury: volume, cost, vehicle_id
+            const response = await authFetch('/api/driver/shift/end', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ volume: parseFloat(volume), cost: parseFloat(cost) })
+                body: JSON.stringify({
+                    volume: parseFloat(volume),
+                    cost: parseFloat(cost),
+                    vehicle_id: 1
+                })
             });
 
             if (response.ok) {
-                Alert.alert("Sukces", "Zmiana zakończona pomyślnie.");
+                Alert.alert("Sukces", "Zmiana zakończona. Dane zapisane.");
                 setVolume(''); setCost('');
             } else {
                 throw new Error();
             }
         } catch (error) {
-            Alert.alert("Błąd", "Błąd zapisu danych zmiany.");
+            Alert.alert("Błąd", "Nie udało się zapisać danych zmiany.");
         } finally {
             setIsSubmitting(false);
         }
@@ -42,15 +45,20 @@ export default function DriverEndShift() {
             <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
                 <View style={styles.card}>
                     <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 25, color: '#111827' }}>Koniec Zmiany</Text>
+
                     <View style={[styles.inputWrapper, focusedField === 'volume' && styles.inputWrapperActive]}>
                         <TextInput style={styles.textInput} value={volume} onChangeText={setVolume} keyboardType="decimal-pad" onFocus={() => setFocusedField('volume')} onBlur={() => setFocusedField(null)} placeholder="0.00" />
                         <Text style={{ fontWeight: 'bold', color: '#9ca3af' }}>LITRY</Text>
                     </View>
+
                     <View style={[styles.inputWrapper, focusedField === 'cost' && styles.inputWrapperActive]}>
                         <TextInput style={styles.textInput} value={cost} onChangeText={setCost} keyboardType="decimal-pad" onFocus={() => setFocusedField('cost')} onBlur={() => setFocusedField(null)} placeholder="0.00" />
                         <Text style={{ fontWeight: 'bold', color: '#9ca3af' }}>PLN</Text>
                     </View>
-                    <TouchableOpacity style={styles.submitBtn} onPress={handleComplete}>{isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>ZAKOŃCZ ZMIANĘ</Text>}</TouchableOpacity>
+
+                    <TouchableOpacity style={styles.submitBtn} onPress={handleComplete}>
+                        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>ZAKOŃCZ ZMIANĘ</Text>}
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
