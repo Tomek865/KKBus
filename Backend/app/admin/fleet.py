@@ -38,14 +38,14 @@ def get_fleet_assignments(current_admin_id):
             conn.close()
 
 
-@admin_fleet_bp.route("/<int:assignment_id>", methods=["DELETE"])
+@admin_fleet_bp.route("/<int:assignment_id>", methods=["PATCH"])
 @admin_required
-def delete_fleet_assignment(current_admin_id, assignment_id):
+def cancel_fleet_assignment(current_admin_id, assignment_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor()
 
-        cur.execute("DELETE FROM Trip WHERE trip_id = %s", (assignment_id,))
+        cur.execute("UPDATE Trip SET status = 'Cancelled' WHERE trip_id = %s", (assignment_id,))
 
         if cur.rowcount == 0:
             return jsonify({"error": "Trip not found"}), 404
@@ -53,7 +53,7 @@ def delete_fleet_assignment(current_admin_id, assignment_id):
         conn.commit()
         cur.close()
 
-        return jsonify({"message": "Fleet assignment removed successfully"}), 200
+        return jsonify({"message": "Trip cancelled successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:

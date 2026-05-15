@@ -13,6 +13,7 @@ CREATE TABLE Client (
     loyalty_points INTEGER DEFAULT 0,
     is_student BOOLEAN DEFAULT FALSE,
     unfulfilled_reservations_count INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

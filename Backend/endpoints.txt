@@ -230,19 +230,19 @@ Odbieramy (200 OK):
     }
 ]
 
-[DELETE] /admin/fleet/<id_kursu>
+[PATCH] /admin/fleet/<trip_id>
 [WYMAGA TOKENA (Admin)]
-Cel: Anulowanie przypisanego kursu.
+Cel: Anulowanie zaplanowanego kursu. Zmienia status kursu na 'Cancelled' zamiast usuwać go z bazy danych, zachowując historię.
 Odbieramy (200 OK):
 {
-    "message": "Fleet assignment removed successfully"
+    "message": "Trip cancelled successfully"
 }
 
-[DELETE] /admin/management/users/<user_id>
+[PATCH] /admin/management/users/<user_id>
 [WYMAGA TOKENA (Admin)]
-Cel: Trwałe usunięcie klienta (C_id) lub pracownika (E_id) z bazy danych.
+Cel: Dezaktywacja klienta (C_id) lub pracownika (E_id) (tzw. miękkie usunięcie). Konto zostaje zachowane w bazie, ale traci dostęp.
 Parametr w URL: <user_id> musi zawierać prefiks, np. "C_15" (Client) lub "E_3" (Employee).
 Odbieramy (200 OK):
 {
-    "message": "User deleted successfully"
+    "message": "User deactivated successfully"
 }
