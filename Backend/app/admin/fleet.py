@@ -3,15 +3,16 @@ from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from app.utils import admin_required
 
-admin_fleet_bp = Blueprint('admin_fleet', __name__)
+admin_fleet_bp = Blueprint("admin_fleet", __name__)
 
-@admin_fleet_bp.route('/', methods=['GET'])
+
+@admin_fleet_bp.route("/", methods=["GET"])
 @admin_required
 def get_fleet_assignments(current_admin_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
+
         query = """
             SELECT 
                 tr.trip_id AS id, 
@@ -33,20 +34,22 @@ def get_fleet_assignments(current_admin_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
 
-@admin_fleet_bp.route('/<int:assignment_id>', methods=['DELETE'])
+
+@admin_fleet_bp.route("/<int:assignment_id>", methods=["DELETE"])
 @admin_required
 def delete_fleet_assignment(current_admin_id, assignment_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor()
-        
-        cur.execute("UPDATE Trip SET status = 'Cancelled' WHERE trip_id = %s", (assignment_id,))
-        
+
+        cur.execute("DELETE FROM Trip WHERE trip_id = %s", (assignment_id,))
+
         if cur.rowcount == 0:
             return jsonify({"error": "Trip not found"}), 404
-            
+
         conn.commit()
         cur.close()
 
@@ -54,4 +57,5 @@ def delete_fleet_assignment(current_admin_id, assignment_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
