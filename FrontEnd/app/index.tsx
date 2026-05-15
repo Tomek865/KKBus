@@ -23,7 +23,6 @@ export default function LoginScreen() {
         setIsLoading(true);
 
         try {
-            // fetch - Logowanie do API TransRegion
             const response = await fetch(`${IP_adress}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -40,13 +39,22 @@ export default function LoginScreen() {
                     try {
                         if (Platform.OS === 'web') {
                             localStorage.setItem('userToken', String(data.token));
+                            // Zapis profilu do localStorage na potrzeby sesji webowej
+                            if (data.user) {
+                                localStorage.setItem('userData', JSON.stringify(data.user));
+                            }
                         } else {
                             await SecureStore.setItemAsync('userToken', String(data.token));
+                            // Zapis profilu do SecureStore na telefonie
+                            if (data.user) {
+                                await SecureStore.setItemAsync('userData', JSON.stringify(data.user));
+                            }
                         }
                     } catch (error) {
-                        console.error("error while tryinh to save user token: ", error);
+                        console.error("error while trying to save user session data: ", error);
                     }
                 }
+
                 if (role === 'admin') {
                     router.replace('/admin');
                 } else if (role === 'driver') {
@@ -84,7 +92,7 @@ export default function LoginScreen() {
                             <Ionicons name="mail-outline" size={20} color={focusedField === 'email' ? '#e60000' : '#9ca3af'} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Twój e-mail"
+                                placeholder=""
                                 value={email}
                                 onChangeText={setEmail}
                                 autoCapitalize="none"
@@ -100,7 +108,7 @@ export default function LoginScreen() {
                             <Ionicons name="lock-closed-outline" size={20} color={focusedField === 'password' ? '#e60000' : '#9ca3af'} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="••••••••"
+                                placeholder=""
                                 secureTextEntry
                                 value={password}
                                 onChangeText={setPassword}
@@ -117,6 +125,14 @@ export default function LoginScreen() {
                     >
                         {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Zaloguj się</Text>}
                     </TouchableOpacity>
+
+                    {/* NOWOŚĆ: Sekcja przekierowania do tworzenia konta klienta */}
+                    <View style={styles.registerContainer}>
+                        <Text style={styles.registerText}>Nie masz konta? </Text>
+                        <TouchableOpacity onPress={() => router.push('/register')}>
+                            <Text style={styles.registerLink}>Załóż konto klienta</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
                 <Text style={styles.footer}>KKbus v1.0</Text>
             </KeyboardAvoidingView>
@@ -140,5 +156,11 @@ const styles = StyleSheet.create({
     input: { flex: 1, fontSize: 15, color: '#111', marginLeft: 10 },
     loginBtn: { backgroundColor: '#111827', height: 60, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginTop: 15, elevation: 4 },
     loginBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+
+    // NOWE STYLE STWORZONE DLA ODNOŚNIKA REJESTRACJI
+    registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 25 },
+    registerText: { color: '#6b7280', fontSize: 14 },
+    registerLink: { color: '#e60000', fontSize: 14, fontWeight: 'bold' },
+
     footer: { position: 'absolute', bottom: 30, color: '#ccc', fontSize: 11, fontWeight: 'bold' }
 });
