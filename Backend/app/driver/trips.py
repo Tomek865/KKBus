@@ -3,9 +3,49 @@ from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from app.utils import driver_required
 
-driver_trips_bp = Blueprint('driver_trips', __name__)
+driver_trips_bp = Blueprint("driver_trips", __name__)
 
-@driver_trips_bp.route('/<int:trip_id>/stations', methods=['GET'])
+
+@driver_trips_bp.route("/", methods=["GET"])
+@driver_required
+def get_assigned_trips(current_driver_id):
+    """
+    Zwraca wszystkie kursy przypisane do zalogowanego kierowcy (harmonogram pracy).
+    """
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        query = """
+            SELECT 
+                tr.trip_id,
+                rt.name AS route_name,
+                TO_CHAR(tr.departure_time, 'YYYY-MM-DD HH24:MI') AS departure_time,
+                TO_CHAR(tr.arrival_time, 'YYYY-MM-DD HH24:MI') AS arrival_time,
+                v.registration_number AS bus_id,
+                tr.status
+            FROM Trip tr
+            JOIN Route rt ON tr.route_id = rt.route_id
+            JOIN Vehicle v ON tr.vehicle_id = v.vehicle_id
+            WHERE tr.employee_id = %s
+            ORDER BY tr.departure_time ASC;
+        """
+        cur.execute(query, (current_driver_id,))
+        trips = cur.fetchall()
+        cur.close()
+
+        # Zwracamy listę kursów (nawet jeśli jest pusta, to frontend sobie z tym poradzi)
+        return jsonify(trips), 200
+
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@driver_trips_bp.route("/<int:trip_id>/stations", methods=["GET"])
 @driver_required
 def get_trip_stations(current_driver_id, trip_id):
     """
@@ -14,7 +54,7 @@ def get_trip_stations(current_driver_id, trip_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
+
         # Pobieramy stacje, ale tylko jeśli ten kurs jest przypisany do zalogowanego kierowcy
         query = """
             SELECT 
@@ -41,10 +81,11 @@ def get_trip_stations(current_driver_id, trip_id):
         print(f"DB Error: {e}")
         return jsonify({"error": "Server error occurred"}), 500
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
 
 
-@driver_trips_bp.route('/<int:trip_id>/passengers', methods=['GET'])
+@driver_trips_bp.route("/<int:trip_id>/passengers", methods=["GET"])
 @driver_required
 def get_trip_passengers(current_driver_id, trip_id):
     """
@@ -53,7 +94,7 @@ def get_trip_passengers(current_driver_id, trip_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
+
         # Pobieramy dane z rezerwacji. Znów sprawdzamy, czy kurs należy do tego kierowcy.
         query = """
             SELECT 
@@ -84,4 +125,5 @@ def get_trip_passengers(current_driver_id, trip_id):
         print(f"DB Error: {e}")
         return jsonify({"error": "Server error occurred"}), 500
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
