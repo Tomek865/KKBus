@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { driverStyles as styles } from '../src/styles/driverStyles';
-import { IP_adress } from '../../utiles';
+import { authFetch, IP_adress } from '../../utils';
 
 export default function DriverEndShift() {
     const [volume, setVolume] = useState('');
@@ -18,7 +18,7 @@ export default function DriverEndShift() {
         setIsSubmitting(true);
         try {
             // fetch - Wysyłanie danych o paliwie
-            const response = await fetch(`${IP_adress}/driver/shift-end`, {
+            const response = await authFetch(`/driver/shift/end`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ volume: parseFloat(volume), cost: parseFloat(cost) })

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
-import { IP_adress, authFetch } from '../../utiles';
+import { IP_adress, authFetch } from '../../utils';
 
 const StatCard = ({ title, value, icon, trend, trendColor, iconBg }: any) => (
   <View style={[styles.card, { flex: 1 }]}>

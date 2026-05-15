@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Ale
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { driverStyles as styles } from '../src/styles/driverStyles';
-import { IP_adress } from '../../utiles';
+import { authFetch } from '../../utils';
 
 export default function DriverDashboard() {
     const [stops, setStops] = useState<any[]>([]);
@@ -21,10 +21,9 @@ export default function DriverDashboard() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // fetch - Pobieranie przystanków i pasażerów
             const [stopsRes, passengersRes] = await Promise.all([
-                fetch(`${IP_adress}/driver/stops`),
-                fetch(`${IP_adress}/driver/passengers`)
+                authFetch(`/driver/stops`),
+                authFetch(`/driver/passengers`)
             ]);
             setStops(await stopsRes.json());
             setPassengers(await passengersRes.json());
@@ -35,31 +34,24 @@ export default function DriverDashboard() {
         }
     };
 
-    const handleArriveAtStop = async () => {
-        try {
-            // fetch - Aktualizacja statusu przystanku na serwerze
-            await fetch(`${IP_adress}/driver/update-stop`, { method: 'POST' });
-            fetchData(); // Odświeżenie danych po zmianie
-        } catch (e) {
-            Alert.alert("Błąd", "Nie udało się zaktualizować statusu przystanku.");
-        }
+    const handleArriveAtStop = () => {
+        // Usunięto authFetch zgodnie z życzeniem
+        fetchData();
     };
 
     const validateTicket = async (ticketData: string) => {
         try {
-            // fetch - Weryfikacja biletu na serwerze
-            const response = await fetch(`${IP_adress}/driver/validate-ticket`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticket: ticketData })
+            // Zmiana na nowy endpoint: /driver/tickets/<id_rezerwacji>/validate
+            const response = await authFetch(`/driver/tickets/${ticketData}/validate`, {
+                method: 'POST'
             });
             const resData = await response.json();
 
             if (response.ok) {
-                Alert.alert("Sukces", `Zeskanowano: ${resData.passengerName}`);
+                Alert.alert("Sukces", resData.message || "Bilet został pomyślnie zweryfikowany.");
                 fetchData();
             } else {
-                Alert.alert("Błąd", "Nieprawidłowy lub wykorzystany bilet.");
+                Alert.alert("Błąd", resData.message || "Nieprawidłowy lub wykorzystany bilet.");
             }
         } catch (e) {
             Alert.alert("Błąd", "Błąd połączenia z bazą biletów.");

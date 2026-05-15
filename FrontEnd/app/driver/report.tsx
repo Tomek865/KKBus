@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { driverStyles as styles } from '../src/styles/driverStyles';
-import { IP_adress } from '../../utiles';
+import { authFetch, IP_adress } from '../../utils';
 
 export default function DriverSegmentReport() {
     const [boarded, setBoarded] = useState('');
@@ -19,7 +19,7 @@ export default function DriverSegmentReport() {
         setIsSubmitting(true);
         try {
             // fetch - Wysłanie raportu do bazy danych
-            const response = await fetch(`${IP_adress}/driver/segment-report`, {
+            const response = await authFetch(`/driver/reports`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ boarded: parseInt(boarded), alighted: parseInt(alighted) })

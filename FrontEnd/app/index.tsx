@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { IP_adress } from '../utiles';
+import { IP_adress } from '../utils';
 import * as SecureStore from 'expo-secure-store';
 
 export default function LoginScreen() {
