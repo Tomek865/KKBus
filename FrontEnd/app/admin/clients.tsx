@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
-import { IP_adress } from '../../utiles';
+import { authFetch, IP_adress } from '../../utils';
 
 export default function AdminClients() {
     const [users, setUsers] = useState<any[]>([]);
@@ -16,7 +16,7 @@ export default function AdminClients() {
         setLoading(true);
         try {
             // fetch - Pobieranie rzeczywistej listy użytkowników
-            const response = await fetch(`${IP_adress}/api/users`);
+            const response = await authFetch(`/api/admin/users`);
             const data = await response.json();
             setUsers(data);
         } catch (error) {
@@ -33,7 +33,7 @@ export default function AdminClients() {
                 text: "Delete", style: "destructive", onPress: async () => {
                     try {
                         // fetch - Usunięcie użytkownika z bazy danych
-                        await fetch(`${IP_adress}/api/users/${userId}`, { method: 'DELETE' });
+                        await authFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
                         setUsers(prev => prev.filter(u => u.id !== userId));
                     } catch (error) {
                         Alert.alert("Błąd", "Nie udało się usunąć użytkownika.");

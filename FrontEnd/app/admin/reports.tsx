@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
-import { IP_adress } from '../../utiles';
+import { authFetch, IP_adress } from '../../utils';
 
 export default function AdminReports() {
     const [reportData, setReportData] = useState<any>(null);
@@ -13,7 +13,7 @@ export default function AdminReports() {
             setLoading(true);
             try {
                 // fetch - Pobieranie zagregowanych raportów finansowych
-                const response = await fetch(`${IP_adress}/api/reports`);
+                const response = await authFetch(`/api/admin/reports/financial`);
                 const data = await response.json();
                 setReportData(data);
             } catch (error) {
