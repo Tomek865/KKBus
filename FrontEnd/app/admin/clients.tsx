@@ -7,6 +7,16 @@ import { authFetch, IP_adress } from '../../utils';
 export default function AdminClients() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [modalVisible, setModalVisible] = useState(false);
+
+    // Formularz nowego użytkownika
+    const [newUser, setNewUser] = useState({
+        name: '',
+        email: '',
+        role: 'Passenger',
+        isActive: true,
+        trips: 0
+    });
 
     useEffect(() => {
         fetchUsers();
@@ -25,44 +35,59 @@ export default function AdminClients() {
         }
     };
 
-    const handleDelete = (userId: string) => {
-        console.log("Delete user with ID:", userId);
-
-        const title = "Delete User";
-        const message = "Are you sure you want to permanently delete this user?";
-
-        // --- LOGIKA DLA WEB ---
-        if (Platform.OS === 'web') {
-            const confirmed = window.confirm(`${title}\n\n${message}`);
-            if (confirmed) {
-                runDeleteConfirm(userId);
-            }
+    const handleCreateUser = async () => {
+        if (!newUser.name || !newUser.email) {
+            showAlert("Błąd", "Proszę podać imię, nazwisko oraz adres e-mail.");
             return;
         }
 
-        // --- LOGIKA DLA MOBILE (iOS/Android) ---
+        try {
+            // fetch - Dodawanie użytkownika z tokenem (POST)
+            const response = await authFetch('/api/admin/users', {
+                method: 'POST',
+                body: JSON.stringify(newUser)
+            });
+            const created = await response.json();
+
+            if (response.ok) {
+                setUsers(prev => [...prev, created]);
+                setModalVisible(false);
+                setNewUser({ name: '', email: '', role: 'Client', isActive: true, trips: 0 });
+                showAlert("Sukces", "Konto zostało pomyślnie utworzone.");
+            } else {
+                showAlert("Błąd", created.message || "Nie udało się utworzyć konta.");
+            }
+        } catch (error) {
+            showAlert("Błąd", "Błąd połączenia z serwerem.");
+        }
+    };
+
+    const handleDelete = (userId: string) => {
+        const title = "Delete User";
+        const message = "Are you sure you want to permanently delete this user?";
+
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(`${title}\n\n${message}`);
+            if (confirmed) runDeleteConfirm(userId);
+            return;
+        }
+
         Alert.alert(title, message, [
             { text: "Cancel", style: "cancel" },
-            {
-                text: "Delete",
-                style: "destructive",
-                onPress: () => runDeleteConfirm(userId)
-            }
+            { text: "Delete", style: "destructive", onPress: () => runDeleteConfirm(userId) }
         ]);
     };
 
     const runDeleteConfirm = async (userId: string) => {
         try {
-            const response = await authFetch(`/api/admin/management/users/${userId}`, {
-                method: 'DELETE'
-            });
+            const response = await authFetch(`/api/admin/management/users/${userId}`, { method: 'PATCH' });
             const resData = await response.json();
 
             if (response.ok) {
-                setUsers(prev => prev.filter(u => u.id !== userId));
-                showAlert("Success", resData.message || "User deleted successfully.");
+                setUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: false } : u));
+                showAlert("Success", resData.message || "User deactivated successfully.");
             } else {
-                showAlert("Błąd", resData.message || "Nie udało się usunąć użytkownika.");
+                showAlert("Błąd", resData.message || "Nie udało się dezaktywować użytkownika.");
             }
         } catch (error) {
             showAlert("Błąd", "Nie udało się połączyć z serwerem.");
@@ -73,9 +98,7 @@ export default function AdminClients() {
         if (Platform.OS === 'web') {
             window.alert(`${title}: ${message}`);
         } else {
-            setTimeout(() => {
-                Alert.alert(title, message);
-            }, 100);
+            setTimeout(() => { Alert.alert(title, message); }, 100);
         }
     };
 
@@ -83,10 +106,17 @@ export default function AdminClients() {
 
     return (
         <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Client & Employee Accounts</Text>
-            <View style={[styles.card, { padding: 0, overflow: 'hidden', marginTop: 20 }]}>
+            <View style={styles.pageHeader}>
+                <Text style={styles.title}>Client & Employee Accounts</Text>
 
-                {/* 1. Zaktualizowany nagłówek tabeli (flexy dopasowane do proporcji kolumn) */}
+                {/* PRZYWRÓCONY PRZYCISK DODAWANIA UŻYTKOWNIKA */}
+                <TouchableOpacity style={styles.primaryBtn} onPress={() => setModalVisible(true)}>
+                    <Ionicons name="person-add" size={20} color="#fff" />
+                    <Text style={styles.primaryBtnText}>Add User</Text>
+                </TouchableOpacity>
+            </View>
+
+            <View style={[styles.card, { padding: 0, overflow: 'hidden', marginTop: 20 }]}>
                 <View style={styles.tableHeader}>
                     <Text style={[styles.headerCell, { flex: 1.5 }]}>USER DETAILS (ID)</Text>
                     <Text style={[styles.headerCell, { flex: 1 }]}>ROLE</Text>
@@ -98,7 +128,6 @@ export default function AdminClients() {
                 <ScrollView showsVerticalScrollIndicator={false}>
                     {users.map((user) => (
                         <View key={user.id} style={styles.tableRow}>
-                            {/* Szczegóły Użytkownika */}
                             <View style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center' }}>
                                 <View style={styles.profileAvatar}><Text style={{ fontWeight: 'bold' }}>{user.name[0]}</Text></View>
                                 <View>
@@ -107,14 +136,12 @@ export default function AdminClients() {
                                 </View>
                             </View>
 
-                            {/* Rola */}
                             <View style={{ flex: 1 }}>
                                 <View style={[styles.statusBadge, { backgroundColor: user.role === 'Driver' ? COLORS.blueLight : '#f3f4f6' }]}>
                                     <Text style={[styles.statusText, { color: user.role === 'Driver' ? COLORS.blue : '#6b7280' }]}>{user.role}</Text>
                                 </View>
                             </View>
 
-                            {/* 2. NOWOŚĆ: Kolumna STATUS (Active/Inactive) na bazie user.isActive */}
                             <View style={{ flex: 0.8, alignItems: 'center' }}>
                                 <View style={[styles.statusBadge, { backgroundColor: user.isActive ?? true ? COLORS.greenLight : COLORS.redLight }]}>
                                     <Text style={[styles.statusText, { color: user.isActive ?? true ? COLORS.green : COLORS.red }]}>
@@ -123,10 +150,8 @@ export default function AdminClients() {
                                 </View>
                             </View>
 
-                            {/* Liczba przejazdów */}
                             <Text style={{ flex: 0.5, textAlign: 'center', fontSize: 14 }}>{user.trips}</Text>
 
-                            {/* Przycisk usuwania */}
                             <View style={{ flex: 0.5, flexDirection: 'row', justifyContent: 'flex-end', gap: 15 }}>
                                 <TouchableOpacity onPress={() => handleDelete(user.id)} style={{ padding: 5 }}>
                                     <Ionicons name="trash-outline" size={18} color={COLORS.red} />
@@ -136,6 +161,39 @@ export default function AdminClients() {
                     ))}
                 </ScrollView>
             </View>
+
+            {/* NOWE OKNO MODALNE REJESTRACJI UŻYTKOWNIKA */}
+            <Modal visible={modalVisible} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Create Account</Text>
+
+                        <Text style={styles.inputLabel}>FULL NAME</Text>
+                        <TextInput style={styles.input} placeholder="" value={newUser.name} onChangeText={(text) => setNewUser({ ...newUser, name: text })} />
+
+                        <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+                        <TextInput style={styles.input} placeholder="" keyboardType="email-address" autoCapitalize="none" value={newUser.email} onChangeText={(text) => setNewUser({ ...newUser, email: text })} />
+
+                        <Text style={styles.inputLabel}>ACCOUNT TYPE / ROLE</Text>
+                        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
+                            {['Client', 'Driver', 'Admin'].map((role) => (
+                                <TouchableOpacity
+                                    key={role}
+                                    style={[styles.statusBadge, { flex: 1, paddingVertical: 10, backgroundColor: newUser.role === role ? COLORS.redLight : '#f3f4f6', borderColor: newUser.role === role ? COLORS.red : 'transparent', borderWidth: 1 }]}
+                                    onPress={() => setNewUser({ ...newUser, role })}
+                                >
+                                    <Text style={{ color: newUser.role === role ? COLORS.red : '#6b7280', fontWeight: 'bold' }}>{role}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 10 }}>
+                            <TouchableOpacity onPress={() => setModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleCreateUser}><Text style={styles.primaryBtnText}>Create</Text></TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
