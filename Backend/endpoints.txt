@@ -134,6 +134,52 @@ Wysyłamy (Body JSON):
     "vehicle_id": 3
 }
 
+[GET] /driver/trips/<trip_id>/stations
+[WYMAGA TOKENA (Kierowca)]
+Cel: Pobranie wszystkich przystanków dla konkretnego kursu w odpowiedniej kolejności (np. do nawigacji lub podglądu trasy).
+Odbieramy (200 OK):
+[
+    {
+        "station_id": 1,
+        "name": "Kraków",
+        "exact_address": "Dworzec MDA, ul. Bosacka 18",
+        "order_on_route": 1
+    },
+    {
+        "station_id": 4,
+        "name": "Kielce",
+        "exact_address": "Dworzec Autobusowy, ul. Czarnowska 12",
+        "order_on_route": 2
+    }
+]
+
+[GET] /driver/trips/<trip_id>/passengers
+[WYMAGA TOKENA (Kierowca)]
+Cel: Pobranie imiennej listy pasażerów (rezerwacji) na konkretny kurs, np. do sprawdzenia obecności przy wejściu.
+Odbieramy (200 OK):
+[
+    {
+        "reservation_id": 142,
+        "reservation_number": "RES-5-1715002233",
+        "first_name": "Anna",
+        "last_name": "Nowak",
+        "phone_number": "987654321",
+        "seat_count": 2,
+        "status": "Paid",
+        "payment_status": "Completed"
+    },
+    {
+        "reservation_id": 145,
+        "reservation_number": "RES-8-1715004455",
+        "first_name": "Jan",
+        "last_name": "Kowalski",
+        "phone_number": "123456789",
+        "seat_count": 1,
+        "status": "Pending Payment",
+        "payment_status": "Pending"
+    }
+]
+
 ======================================================
 4. PANEL ADMINA (Właściciel / Sekretariat)
 ======================================================
@@ -190,4 +236,13 @@ Cel: Anulowanie przypisanego kursu.
 Odbieramy (200 OK):
 {
     "message": "Fleet assignment removed successfully"
+}
+
+[DELETE] /admin/management/users/<user_id>
+[WYMAGA TOKENA (Admin)]
+Cel: Trwałe usunięcie klienta (C_id) lub pracownika (E_id) z bazy danych.
+Parametr w URL: <user_id> musi zawierać prefiks, np. "C_15" (Client) lub "E_3" (Employee).
+Odbieramy (200 OK):
+{
+    "message": "User deleted successfully"
 }
