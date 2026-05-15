@@ -4,6 +4,7 @@ import jwt
 import datetime
 from db import get_db_connection
 from psycopg2.extras import RealDictCursor
+from werkzeug.security import generate_password_hash
 
 universal_auth_bp = Blueprint('universal_auth', __name__)
 
@@ -53,6 +54,63 @@ def login():
             }), 200
 
         return jsonify({"error": "Invalid email or password"}), 401
+
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
+    finally:
+        if conn: conn.close()
+
+
+@universal_auth_bp.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+    role = data.get('role', 'client')
+    
+    # 1. Walidacja podstawowych danych
+    if not name or not email or not password:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # 2. BEZPIECZEŃSTWO: Publiczny endpoint służy TYLKO do rejestracji pasażerów
+    if role.lower() != 'client':
+        return jsonify({"error": "Invalid role for public registration"}), 403
+
+    # Rozdzielamy imię i nazwisko
+    name_parts = name.strip().split(' ', 1)
+    first_name = name_parts[0]
+    last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+    # Szyfrujemy hasło przed zapisem
+    hashed_password = generate_password_hash(password)
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        
+        # 3. Sprawdzamy, czy taki email już przypadkiem nie istnieje (w klientach i pracownikach)
+        cur.execute("SELECT client_id FROM Client WHERE email = %s", (email,))
+        if cur.fetchone():
+            return jsonify({"error": "Email is already registered"}), 409
+            
+        cur.execute("SELECT employee_id FROM Employee WHERE email = %s", (email,))
+        if cur.fetchone():
+            return jsonify({"error": "Email is already registered"}), 409
+
+        # 4. Zapis nowego klienta do bazy
+        query = """
+            INSERT INTO Client (first_name, last_name, email, password, is_active)
+            VALUES (%s, %s, %s, %s, TRUE) RETURNING client_id;
+        """
+        cur.execute(query, (first_name, last_name, email, hashed_password))
+        
+        conn.commit()
+        cur.close()
+
+        return jsonify({"message": "Registration successful"}), 201
 
     except Exception as e:
         print(f"DB Error: {e}")

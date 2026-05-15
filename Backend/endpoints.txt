@@ -28,6 +28,25 @@ Odbieramy (200 OK):
     }
 }
 
+
+[POST] /auth/register
+Cel: Publiczna rejestracja nowego klienta (pasażera) w systemie.
+Wysyłamy (Body JSON):
+{
+    "name": "Jan Kowalski",
+    "email": "jan.kowalski@example.com",
+    "password": "moje_haslo123",
+    "role": "client"
+}
+Odbieramy (201 Created):
+{
+    "message": "Registration successful"
+}
+Możliwe błędy:
+409 Conflict - jeśli "error": "Email is already registered"
+400 Bad Request - jeśli brakuje danych
+
+
 ======================================================
 2. KLIENT (Pasażer)
 ======================================================
