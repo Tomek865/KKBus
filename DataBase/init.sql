@@ -1,4 +1,5 @@
 -- odpalenie Get-Content init.sql | docker exec -i kkbus_postgres psql -U kkbus_admin -d kkbus_db
+SET client_encoding = 'UTF8';
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
 

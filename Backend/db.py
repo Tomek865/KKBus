@@ -19,4 +19,5 @@ def get_db_connection():
     conn = psycopg2.connect(
         host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS, port=DB_PORT
     )
+    conn.set_client_encoding('UTF-8')
     return conn

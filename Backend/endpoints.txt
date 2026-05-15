@@ -246,3 +246,26 @@ Odbieramy (200 OK):
 {
     "message": "User deactivated successfully"
 }
+
+[POST] /admin/management/users
+[WYMAGA TOKENA (Admin)]
+Cel: Utworzenie nowego konta pasażera lub pracownika.
+Wysyłamy (Body JSON):
+{
+    "name": "Jan Kowalski",
+    "email": "jan@example.com",
+    "role": "Passenger" | "Driver" | "Secretariat",
+    "isActive": true
+}
+Domyślne hasło: KKBUS2024
+
+[POST] /admin/fleet/
+[WYMAGA TOKENA (Admin)]
+Cel: Zaplanowanie nowego kursu w harmonogramie.
+Wysyłamy (Body JSON):
+{
+    "busId": 1,      // ID pojazdu
+    "route": 2,      // ID trasy
+    "driver": 5,     // ID pracownika (kierowcy)
+    "status": "Planned"
+}
