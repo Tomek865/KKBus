@@ -5,6 +5,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { driverStyles as styles } from '../src/styles/driverStyles';
 import { authFetch } from '../../utils';
 
+const TRIP_ID = 1;
+
 export default function DriverDashboard() {
     const [stops, setStops] = useState<any[]>([]);
     const [passengers, setPassengers] = useState<any[]>([]);
@@ -21,12 +23,32 @@ export default function DriverDashboard() {
     const fetchData = async () => {
         setLoading(true);
         try {
+            // Zmiana na nowe endpointy z trip_id w adresie URL
             const [stopsRes, passengersRes] = await Promise.all([
-                authFetch(`/driver/stops`),
-                authFetch(`/driver/passengers`)
+                authFetch(`/api/driver/trips/${TRIP_ID}/stations`),
+                authFetch(`/api/driver/trips/${TRIP_ID}/passengers`)
             ]);
-            setStops(await stopsRes.json());
-            setPassengers(await passengersRes.json());
+
+            const stopsData = await stopsRes.json();
+            const passengersData = await passengersRes.json();
+
+            // Mapowanie odebranych danych na potrzeby logiki widoku
+            setStops(stopsData.map((stop: any, index: number) => ({
+                id: stop.station_id,
+                name: stop.name,
+                time: stop.exact_address,
+                status: index === 0 ? 'done' : index === 1 ? 'active' : 'future'
+            })));
+
+            setPassengers(passengersData.map((p: any) => ({
+                id: p.reservation_id.toString(),
+                seat: p.seat_count > 1 ? `X${p.seat_count}` : `RES`,
+                name: `${p.first_name} ${p.last_name}`,
+                ticket: p.reservation_id.toString(), // Przekazywane jako id_rezerwacji do walidacji
+                type: p.reservation_number,
+                status: p.status === 'Paid' ? 'pending' : 'boarded'
+            })));
+
         } catch (e) {
             Alert.alert("Błąd", "Nie udało się pobrać danych trasy.");
         } finally {
@@ -35,20 +57,19 @@ export default function DriverDashboard() {
     };
 
     const handleArriveAtStop = () => {
-        // Usunięto authFetch zgodnie z życzeniem
         fetchData();
     };
 
     const validateTicket = async (ticketData: string) => {
         try {
-            // Zmiana na nowy endpoint: /driver/tickets/<id_rezerwacji>/validate
-            const response = await authFetch(`/driver/tickets/${ticketData}/validate`, {
+            // Nowy endpoint walidacji: /api/driver/tickets/<id_rezerwacji>/validate
+            const response = await authFetch(`/api/driver/tickets/${ticketData}/validate`, {
                 method: 'POST'
             });
             const resData = await response.json();
 
             if (response.ok) {
-                Alert.alert("Sukces", resData.message || "Bilet został pomyślnie zweryfikowany.");
+                Alert.alert("Sukces", resData.message || "Bilet zweryfikowany pomyślnie.");
                 fetchData();
             } else {
                 Alert.alert("Błąd", resData.message || "Nieprawidłowy lub wykorzystany bilet.");
@@ -100,7 +121,7 @@ export default function DriverDashboard() {
                         ) : (
                             <View style={styles.futureStopDot}><Text style={styles.futureStopNumber}>{index + 1}</Text></View>
                         )}
-                        <View>
+                        <View style={{ flex: 1, marginLeft: 5 }}>
                             <Text style={stop.status === 'done' ? styles.stopNameDone : stop.status === 'active' ? styles.stopNameActive : styles.stopNameFuture}>{stop.name}</Text>
                             <Text style={stop.status === 'active' ? styles.stopTimeActive : styles.stopTime}>{stop.time}</Text>
                         </View>
@@ -125,7 +146,7 @@ export default function DriverDashboard() {
                             <View style={styles.seatBadge}><Text style={styles.seatText}>{p.seat}</Text></View>
                             <View style={{ flex: 1, marginLeft: 12 }}>
                                 <Text style={styles.passengerName}>{p.name}</Text>
-                                <Text style={styles.passengerDetails}>TICKET {p.ticket} • {p.type}</Text>
+                                <Text style={styles.passengerDetails}>{p.type}</Text>
                             </View>
                             {p.status === 'boarded' ? <Ionicons name="checkmark-circle" size={28} color="#10b981" /> : <TouchableOpacity style={styles.manualBtn} onPress={() => validateTicket(p.ticket)}><Text style={styles.manualBtnText}>MANUAL</Text></TouchableOpacity>}
                         </View>
