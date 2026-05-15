@@ -50,6 +50,8 @@ def cancel_fleet_assignment(current_admin_id, assignment_id):
         if cur.rowcount == 0:
             return jsonify({"error": "Trip not found"}), 404
 
+        cur.execute("UPDATE Reservation SET status = 'Cancelled' WHERE trip_id = %s", (assignment_id,))
+
         conn.commit()
         cur.close()
 
