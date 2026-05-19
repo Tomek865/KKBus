@@ -251,5 +251,50 @@ export const driverStyles = StyleSheet.create({
     cameraContainer: {
         flex: 1,
         backgroundColor: '#000',
+    },
+
+    // NOWE STYLE DLA MODALA WYBORU TRASY KIEROWCY
+    selectRouteHeaderBtn: {
+        backgroundColor: COLORS.dark,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    selectRouteHeaderBtnText: {
+        color: COLORS.white,
+        fontWeight: 'bold',
+        fontSize: 13,
+        marginLeft: 6
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20
+    },
+    modalContent: {
+        backgroundColor: COLORS.white,
+        borderRadius: 24,
+        padding: 25,
+        width: '100%',
+        maxWidth: 450,
+        elevation: 10
+    },
+    tripItem: {
+        padding: 15,
+        backgroundColor: COLORS.inputBg,
+        borderWidth: 1,
+        borderColor: COLORS.borderColor,
+        borderRadius: 14,
+        marginBottom: 10
+    },
+    busBadge: {
+        backgroundColor: COLORS.red,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6
     }
 });

@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
 import { Slot, router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 import { adminStyles as styles } from '../src/styles/adminStyles';
 
 const MenuItem = ({ icon, label, path, pathname }: any) => {
@@ -19,6 +20,46 @@ const MenuItem = ({ icon, label, path, pathname }: any) => {
 
 export default function AdminLayout() {
     const pathname = usePathname();
+    const [adminData, setAdminData] = useState({ name: 'Administrator', email: 'admin@kkbus.pl' });
+
+    // Pobranie danych zalogowanego admina przy uruchomieniu panelu (Web / Mobile)
+    useEffect(() => {
+        const loadAdminProfile = async () => {
+            try {
+                let storedData = null;
+                if (Platform.OS === 'web') {
+                    storedData = localStorage.getItem('userData');
+                } else {
+                    storedData = await SecureStore.getItemAsync('userData');
+                }
+
+                if (storedData) {
+                    setAdminData(JSON.parse(storedData));
+                }
+            } catch (e) {
+                console.error("Błąd ładowania profilu admina:", e);
+            }
+        };
+        loadAdminProfile();
+    }, []);
+
+    // Czyszczenie sesji w zależności od platformy przy wylogowaniu
+    const handleLogout = async () => {
+        try {
+            if (Platform.OS === 'web') {
+                localStorage.removeItem('userToken');
+                localStorage.removeItem('userData');
+            } else {
+                await SecureStore.deleteItemAsync('userToken');
+                await SecureStore.deleteItemAsync('userData');
+            }
+            router.replace('/');
+        } catch (e) {
+            router.replace('/');
+        }
+    };
+
+    const avatarInitial = adminData.name ? adminData.name[0].toUpperCase() : 'A';
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -43,39 +84,23 @@ export default function AdminLayout() {
 
                     <View style={styles.profileSection}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <View style={{ width: 40, height: 40, backgroundColor: '#f3f4f6', borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                                <Text style={{ fontWeight: 'bold' }}>AD</Text>
+                            <View style={styles.profileAvatar}>
+                                <Text style={{ fontWeight: 'bold' }}>{avatarInitial}</Text>
                             </View>
-                            <View>
-                                <Text style={{ fontSize: 14, fontWeight: 'bold' }}>Admin Secretariat</Text>
-                                <Text style={{ fontSize: 12, color: '#888' }}>admin@transregion.pl</Text>
+                            <View style={{ flexShrink: 1 }}>
+                                <Text style={{ fontSize: 14, fontWeight: 'bold' }} numberOfLines={1}>{adminData.name}</Text>
+                                <Text style={{ fontSize: 12, color: '#888' }} numberOfLines={1}>{adminData.email}</Text>
                             </View>
                         </View>
                     </View>
                 </View>
-
                 <View style={styles.mainArea}>
-                    <View style={styles.topbar}>
-                        <View style={styles.searchContainer}>
-                            <Ionicons name="search" size={20} color="#888" />
-                            <TextInput
-                                style={[styles.searchInput, { outlineStyle: 'none', marginLeft: 10 } as any]}
-                                placeholder="Search buses, drivers, routes..."
-                                placeholderTextColor="#888"
-                            />
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-                            <TouchableOpacity style={{ position: 'relative' }}>
-                                <Ionicons name="notifications-outline" size={24} color="#111" />
-                                <View style={{ position: 'absolute', top: 0, right: 2, width: 8, height: 8, backgroundColor: '#e60000', borderRadius: 4 }} />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.logoutBtn} onPress={() => router.replace('/')}>
-                                <Ionicons name="log-out-outline" size={20} color="#111" />
-                                <Text style={styles.logoutText}>Logout</Text>
-                            </TouchableOpacity>
-                        </View>
+                    <View style={[styles.topbar, { justifyContent: 'flex-end' }]}>
+                        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+                            <Ionicons name="log-out-outline" size={20} color="#111" />
+                            <Text style={styles.logoutText}>Logout</Text>
+                        </TouchableOpacity>
                     </View>
-
                     <View style={styles.content}>
                         <Slot />
                     </View>
