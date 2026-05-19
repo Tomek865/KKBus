@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 
 export const COLORS = {
     red: '#e60000',
@@ -31,7 +31,7 @@ export const adminStyles = StyleSheet.create({
     menuLabel: { marginLeft: 15, fontSize: 14, color: '#4b5563', fontWeight: '500' },
     menuLabelActive: { color: COLORS.red, fontWeight: 'bold' },
 
-    // Profile & Logout (Fixes for red underlines)
+    // Profile & Logout
     profileSection: { flexDirection: 'row', alignItems: 'center', marginTop: 'auto', paddingTop: 20, borderTopWidth: 1, borderColor: COLORS.grayBorder },
     profileAvatar: { width: 40, height: 40, backgroundColor: '#f3f4f6', borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
     logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -58,11 +58,107 @@ export const adminStyles = StyleSheet.create({
     statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, minWidth: 90, alignItems: 'center' },
     statusText: { fontSize: 11, fontWeight: 'bold' },
 
-    // Modals & Forms
+    // Modals & Forms (Standardowe)
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
     modalContent: { backgroundColor: COLORS.white, padding: 30, borderRadius: 24, width: 450, elevation: 20 },
     input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: COLORS.grayBorder, borderRadius: 10, padding: 12, marginBottom: 15 },
     inputLabel: { fontSize: 10, fontWeight: 'bold', color: COLORS.grayText, marginBottom: 5, letterSpacing: 1 },
-    primaryBtn: { backgroundColor: COLORS.red, flexDirection: 'row', padding: 12, borderRadius: 10, alignItems: 'center' },
-    primaryBtnText: { color: COLORS.white, marginLeft: 6, fontWeight: 'bold' }
+    primaryBtn: { backgroundColor: COLORS.red, flexDirection: 'row', padding: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    primaryBtnText: { color: COLORS.white, marginLeft: 6, fontWeight: 'bold' },
+
+    // =========================================================================
+    // NOWE PRZENIESIONE STYLE (Z KOŃCA PLIKU SCHEDULE) DLA ODCHUDZENIA KODU KARTY
+    // =========================================================================
+
+    // Rozwijane Dropdowny (Wybór Auta / Trasy / Kierowcy)
+    dropdownTrigger: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#f9fafb',
+        borderWidth: 1.5,
+        borderColor: '#f3f4f6',
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        height: 48,
+        marginTop: 5
+    },
+    dropdownContainer: {
+        backgroundColor: COLORS.white,
+        borderWidth: 1.5,
+        borderColor: '#e5e7eb',
+        borderRadius: 12,
+        marginTop: 4,
+        position: 'absolute',
+        left: 30,
+        right: 30,
+        top: 'auto',
+        zIndex: 999,
+        // Cień warstwy webowej zapobiegający nakładaniu
+        ...Platform.select({
+            web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.05)' } as any,
+            default: { elevation: 5 }
+        })
+    },
+    dropdownItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f3f4f6',
+    },
+
+    // Kompaktowy układ formularzy (Dwukolumnowy układ floty autobusów)
+    compactLabel: {
+        fontSize: 9,
+        fontWeight: 'bold',
+        color: COLORS.grayText,
+        marginBottom: 4,
+        letterSpacing: 0.5
+    },
+    compactInput: {
+        backgroundColor: '#f9fafb',
+        borderWidth: 1.5,
+        borderColor: '#f3f4f6',
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        height: 40,
+        fontSize: 13,
+        color: '#111'
+    },
+
+    // Kreator sekwencji linii i przystanków pośrednich
+    indexBadge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: COLORS.dark,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    nativeSelectElement: {
+        width: '100%',
+        height: 38,
+        backgroundColor: '#f9fafb',
+        borderWidth: 1.5,
+        borderColor: '#f3f4f6',
+        borderRadius: 10,
+        paddingHorizontal: 10,
+        fontSize: 13,
+        color: '#111',
+        ...Platform.select({
+            web: { outline: 'none', fontFamily: 'inherit', borderStyle: 'solid' } as any
+        })
+    },
+    plusButtonRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 10,
+        marginTop: 5,
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderStyle: 'dashed',
+        borderRadius: 10
+    }
 });

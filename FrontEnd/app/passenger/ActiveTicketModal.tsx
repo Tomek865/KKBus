@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
+import { authFetch } from '../../utils';
 
-// INTERFACES
 export interface BusDetails { busNumber: string; operator: string; amenities: string[]; }
 export interface RouteStop { station: string; time: string; isPassed: boolean; }
 interface TicketData { id: string; ticketNumber: string; seatNumber: string; depStation: string; arrStation: string; price: number; }
 interface ActiveTicketModalProps { visible: boolean; onClose: () => void; ticket: TicketData | null; }
 
-// MOCKI (Zostawione jako fallback, dopóki nie dorobisz endpointu na backendzie)
 const MOCK_BUS: BusDetails = { busNumber: "A240 / Line 4", operator: "KKBus Express", amenities: ['wifi', 'snow', 'flash', 'leaf'] };
 const MOCK_ROUTE: RouteStop[] = [
     { station: "Krakow MDA", time: "15:00", isPassed: true }, { station: "Krakow Balice", time: "15:25", isPassed: false },
@@ -27,14 +26,10 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
             
             const fetchJourneyDetails = async () => {
                 try {
-                    // UWAGA: Musisz dorobić ten endpoint na backendzie!
-                    const res = await fetch(`http://TWOJ_IP:5000/api/client/journey-details/${ticket.id}`, {
-                        headers: { 'Authorization': 'Bearer TWOJ_TOKEN_JWT' }
-                    });
+                    const res = await authFetch(`/api/client/journey-details/${ticket.id}`);
                     
                     if (res.ok) {
                         const data = await res.json();
-                        // Mapowanie z backendu:
                         setBusDetails({
                             busNumber: data.busNumber || "Unknown",
                             operator: data.operator || "KKBus",
@@ -42,7 +37,6 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                         });
                         setRouteDetails(data.routeDetails || []);
                     } else {
-                        // FALLBACK: Jeśli endpointu nie ma, ładujemy mocki
                         console.warn("Brak endpointu - wczytuje mocki.");
                         setBusDetails(MOCK_BUS); 
                         setRouteDetails(MOCK_ROUTE);

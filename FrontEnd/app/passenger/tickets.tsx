@@ -5,7 +5,9 @@ import { TicketCard } from '../../components/passenger/TicketCard';
 import ActiveTicketModal from './ActiveTicketModal'; 
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { authFetch } from '../../utils';
 
+// DEFINICJA INTERFEJSU
 interface TicketData {
     id: string;
     ticketNumber: string;
@@ -26,41 +28,38 @@ export default function PassengerTickets() {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
 
-    // --- ANIMATIONS ---
     const opacityAnim = useRef(new Animated.Value(1)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
-   useEffect(() => {
-    const fetchTickets = async () => {
-        try {
-            const res = await fetch('http://TWOJ_IP:5000/api/client/user/tickets', {
-                headers: { 'Authorization': 'Bearer TWOJ_TOKEN_JWT' }
-            });
-            const data = await res.json();
-            
-            const mappedTickets = data.map((t: any) => ({
-                id: t.reservation_number,
-                ticketNumber: t.reservation_number,
-                seatNumber: 'TBD', // Do uzupełnienia w DB
-                depTime: t.departure_time.split(' ')[1], // Wyciągamy samą godzinę
-                arrTime: 'TBD',
-                depStation: t.route.split('-')[0] || 'Unknown', 
-                arrStation: t.route.split('-')[1] || 'Unknown',
-                duration: 'TBD',
-                seats: 1,
-                price: 0,
-                isPast: new Date(t.departure_time) < new Date()
-            }));
-            setTickets(mappedTickets);
-        } catch (err) {
-            console.error("Błąd pobierania biletów:", err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    fetchTickets();
-}, []);
+    useEffect(() => {
+        const fetchTickets = async () => {
+            try {
+                const res = await authFetch('/api/client/user/tickets');
+                const data = await res.json();
+                
+                const mappedTickets = data.map((t: any) => ({
+                    id: t.reservation_number,
+                    ticketNumber: t.reservation_number,
+                    seatNumber: 'TBD',
+                    depTime: t.departure_time.split(' ')[1],
+                    arrTime: 'TBD',
+                    depStation: t.route.split('-')[0]?.trim() || 'Unknown', 
+                    arrStation: t.route.split('-')[1]?.trim() || 'Unknown',
+                    duration: 'TBD',
+                    seats: 1,
+                    price: 0,
+                    isPast: new Date(t.departure_time) < new Date()
+                }));
+                setTickets(mappedTickets);
+            } catch (err) {
+                console.error("Błąd pobierania biletów:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        fetchTickets();
+    }, []);
 
     const handleOpenDetails = (ticket: TicketData) => {
         setSelectedTicket(ticket);
@@ -154,7 +153,6 @@ export default function PassengerTickets() {
                                 </View>
                             </Animated.View>
                         ) : (
-                            /* --- EMPTY STATE Z SCREENSHOTU --- */
                             <View style={styles.emptyStateContainer}>
                                 <Ionicons name="ticket" size={48} color="#d1d5db" />
                                 <Text style={styles.emptyStateTitle}>No Active Tickets</Text>
