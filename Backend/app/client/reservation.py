@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 import time
+from datetime import datetime, timedelta
 
 client_reservation_bp = Blueprint("client_reservations", __name__)
 
@@ -12,7 +13,9 @@ def get_stations():
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT station_id AS id, name, exact_address FROM Station ORDER BY name ASC")
+        cur.execute(
+            "SELECT station_id AS id, name, exact_address FROM Station ORDER BY name ASC"
+        )
         stations = cur.fetchall()
         cur.close()
         return jsonify(stations), 200
@@ -20,7 +23,8 @@ def get_stations():
         print(f"DB Error: {e}")
         return jsonify({"error": "Error fetching stations"}), 500
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
 
 
 @client_reservation_bp.route("/routes", methods=["GET"])
@@ -30,7 +34,9 @@ def search_routes():
     date = request.args.get("date")
 
     if not date or not from_station or not to_station:
-        return jsonify({"error": "Parameters 'date', 'from', and 'to' are required."}), 400
+        return jsonify(
+            {"error": "Parameters 'date', 'from', and 'to' are required."}
+        ), 400
 
     conn = get_db_connection()
     try:
@@ -107,9 +113,7 @@ def create_reservation(current_user_id):
 
         if seat_count > available_seats:
             return jsonify(
-                {
-                    "error": f"Not enough seats available. Available: {available_seats}"
-                }
+                {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
         reservation_number = f"RES-{current_user_id}-{int(time.time())}"
@@ -138,6 +142,99 @@ def create_reservation(current_user_id):
     except Exception as e:
         print(f"DB Error: {e}")
         return jsonify({"error": "Error occurred during reservation"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@client_reservation_bp.route("/journey-details/<string:res_number>", methods=["GET"])
+@token_required
+def get_journey_details(current_client_id, res_number):
+    """
+    Zwraca szczegóły podróży dla konkretnej rezerwacji.
+    Wykorzystywane m.in. do śledzenia trasy i biletów przez klienta.
+    """
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # 1. Pobranie danych o rezerwacji, kursie i przypisanym pojeździe
+        query_info = """
+            SELECT 
+                r.reservation_number,
+                tr.trip_id,
+                tr.departure_time,
+                v.brand,
+                v.model,
+                v.registration_number
+            FROM Reservation r
+            JOIN Trip tr ON r.trip_id = tr.trip_id
+            JOIN Vehicle v ON tr.vehicle_id = v.vehicle_id
+            WHERE r.reservation_number = %s AND r.client_id = %s;
+        """
+        cur.execute(query_info, (res_number, current_client_id))
+        journey_info = cur.fetchone()
+
+        if not journey_info:
+            return jsonify({"error": "Reservation not found or access denied"}), 404
+
+        trip_id = journey_info["trip_id"]
+        dep_time = journey_info["departure_time"]
+
+        # 2. Pobranie wszystkich przystanków przypisanych do tego kursu
+        query_stations = """
+            SELECT 
+                s.name,
+                rs.order_on_route
+            FROM Trip tr
+            JOIN Route_Station rs ON tr.route_id = rs.route_id
+            JOIN Station s ON rs.station_id = s.station_id
+            WHERE tr.trip_id = %s
+            ORDER BY rs.order_on_route ASC;
+        """
+        cur.execute(query_stations, (trip_id,))
+        stations = cur.fetchall()
+        cur.close()
+
+        # 3. Budowanie routeDetails (symulacja czasu dla pośrednich przystanków)
+        route_details = []
+        now = datetime.now()
+
+        for index, st in enumerate(stations):
+            # Dodajemy np. 25 minut dla każdego kolejnego przystanku
+            station_time = dep_time + timedelta(minutes=25 * index)
+
+            route_details.append(
+                {
+                    "station": st["name"],
+                    "time": station_time.strftime("%H:%M"),
+                    "isPassed": now
+                    > station_time,  # True jeśli obecny czas minął już czas przystanku
+                }
+            )
+
+        # 4. Formowanie JSON-a dokładnie pod wymagania Reacta
+        response_data = {
+            "busDetails": {
+                "operator": "KKBus Express",
+                "vehicleName": f"{journey_info['brand']} {journey_info['model']} / {journey_info['registration_number']}",
+                # Zestaw ikon: wifi, klima, prąd, eko
+                "amenities": ["wifi", "snow", "flash", "leaf"],
+            },
+            "ticketInfo": {
+                # "To Be Determined" (możesz tu podpiąć system miejsc)
+                "seat": "TBD",
+                "class": "Standard",
+                "reservationNumber": journey_info["reservation_number"],
+            },
+            "routeDetails": route_details,
+        }
+
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
     finally:
         if conn:
             conn.close()

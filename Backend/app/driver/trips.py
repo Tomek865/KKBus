@@ -127,3 +127,62 @@ def get_trip_passengers(current_driver_id, trip_id):
     finally:
         if conn:
             conn.close()
+
+
+@driver_trips_bp.route("/<int:trip_id>", methods=["GET"])
+@driver_required
+def get_trip_details(current_driver_id, trip_id):
+    """
+    Zwraca szczegółowe informacje o konkretnym kursie.
+    Kierowca ma dostęp tylko do swoich własnych kursów.
+    """
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Łączymy wybrane kolumny z tabel Trip, Route i Vehicle
+        query = """
+            SELECT 
+                tr.trip_id,
+                rt.name AS route_name,
+                v.brand,
+                v.model,
+                v.registration_number,
+                v.vehicle_id,
+                TO_CHAR(tr.departure_time, 'YYYY-MM-DD HH24:MI') AS departure_time,
+                tr.status
+            FROM Trip tr
+            JOIN Route rt ON tr.route_id = rt.route_id
+            JOIN Vehicle v ON tr.vehicle_id = v.vehicle_id
+            WHERE tr.trip_id = %s AND tr.employee_id = %s;
+        """
+        cur.execute(query, (trip_id, current_driver_id))
+        trip = cur.fetchone()
+        cur.close()
+
+        if not trip:
+            return jsonify(
+                {"error": "Trip not found or you don't have access to it"}
+            ), 404
+
+        # Formatujemy klucze na camelCase zgodnie z wymaganiami frontendu
+        return jsonify(
+            {
+                "id": trip["trip_id"],
+                "routeName": trip["route_name"],
+                "busBrand": trip["brand"],
+                "busModel": trip["model"],
+                "registrationNumber": trip["registration_number"],
+                # Używamy vehicle_id jako numeru bocznego
+                "busNumber": str(trip["vehicle_id"]),
+                "departureTime": trip["departure_time"],
+                "status": trip["status"],
+            }
+        ), 200
+
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
+    finally:
+        if conn:
+            conn.close()

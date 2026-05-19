@@ -5,6 +5,7 @@ from app.utils import token_required
 
 client_profil_bp = Blueprint("client_profile", __name__)
 
+
 @client_profil_bp.route("/user/loyalty", methods=["GET"])
 @token_required
 def get_loyalty(current_user_id):
@@ -63,7 +64,7 @@ def update_profile(current_user_id):
             conn.close()
 
 
-@client_profil_bp.route("/user/tickets", methods=["GET"])
+@client_profil_bp.route("/tickets", methods=["GET"])
 @token_required
 def get_tickets(current_user_id):
     conn = get_db_connection()

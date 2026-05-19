@@ -199,6 +199,25 @@ Odbieramy (200 OK):
     }
 ]
 
+
+[GET] /driver/trips/<trip_id>
+[WYMAGA TOKENA (Kierowca)]
+Cel: Pobranie wszystkich szczegółów konkretnego kursu (pojazdu, trasy, czasu) na podstawie ID.
+Zabezpieczenie: Zwraca dane tylko, jeśli trip_id jest powiązane z zalogowanym kierowcą.
+Odbieramy (200 OK):
+{
+  "id": 12,
+  "routeName": "Kraków (D.A. Główny) - Warszawa (Zachodnia)",
+  "busBrand": "Mercedes-Benz",
+  "busModel": "Sprinter 319",
+  "registrationNumber": "KR 7X890",
+  "busNumber": "12",
+  "departureTime": "2026-05-20 14:30",
+  "status": "In Progress"
+}
+Możliwe błędy:
+404 Not Found - jeśli kurs nie istnieje lub nie należy do tego kierowcy.
+
 ======================================================
 4. PANEL ADMINA (Właściciel / Sekretariat)
 ======================================================
