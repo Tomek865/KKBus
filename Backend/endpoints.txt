@@ -288,3 +288,47 @@ Wysyłamy (Body JSON):
     "driver": 5,     // ID pracownika (kierowcy)
     "status": "Planned"
 }
+
+[GET] /admin/fleet/buses
+[WYMAGA TOKENA (Admin)]
+Cel: Pobranie wszystkich pojazdów z bazy danych (np. do listy lub dropdownu formularza).
+Odbieramy (200 OK):
+[
+    {
+        "vehicle_id": 1,
+        "registration_number": "KR 12345",
+        "seating_capacity": 55,
+        "is_active": true
+    }
+]
+
+[POST] /admin/fleet/buses
+[WYMAGA TOKENA (Admin)]
+Cel: Dodanie nowego autobusu do floty.
+Wysyłamy (Body JSON):
+{
+    "registrationNumber": "WA 98765",
+    "seatingCapacity": 50,
+    "isActive": true
+}
+Odbieramy (201 Created):
+{
+    "id": 2,
+    "registrationNumber": "WA 98765",
+    "seatingCapacity": 50,
+    "isActive": true
+}
+
+
+[POST] /admin/fleet/routes
+[WYMAGA TOKENA (Admin)]
+Cel: Stworzenie ogólnego zarysu nowej trasy.
+Wysyłamy (Body JSON):
+{
+    "name": "Kraków - Zakopane"
+}
+Odbieramy (201 Created):
+{
+    "id": 3,
+    "name": "Kraków - Zakopane"
+}
