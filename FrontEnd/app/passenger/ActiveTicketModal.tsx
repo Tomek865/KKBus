@@ -3,13 +3,13 @@ import { View, Text, Modal, SafeAreaView, TouchableOpacity, ScrollView, Activity
 import { Ionicons } from '@expo/vector-icons';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 
-
-// INTERFACES & MOCKS (same as before)
+// INTERFACES
 export interface BusDetails { busNumber: string; operator: string; amenities: string[]; }
 export interface RouteStop { station: string; time: string; isPassed: boolean; }
 interface TicketData { id: string; ticketNumber: string; seatNumber: string; depStation: string; arrStation: string; price: number; }
 interface ActiveTicketModalProps { visible: boolean; onClose: () => void; ticket: TicketData | null; }
 
+// MOCKI (Zostawione jako fallback, dopóki nie dorobisz endpointu na backendzie)
 const MOCK_BUS: BusDetails = { busNumber: "A240 / Line 4", operator: "KKBus Express", amenities: ['wifi', 'snow', 'flash', 'leaf'] };
 const MOCK_ROUTE: RouteStop[] = [
     { station: "Krakow MDA", time: "15:00", isPassed: true }, { station: "Krakow Balice", time: "15:25", isPassed: false },
@@ -24,8 +24,43 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
     useEffect(() => {
         if (visible && ticket) {
             setIsLoading(true);
-            setTimeout(() => { setBusDetails(MOCK_BUS); setRouteDetails(MOCK_ROUTE); setIsLoading(false); }, 700);
-        } else { setBusDetails(null); setRouteDetails([]); }
+            
+            const fetchJourneyDetails = async () => {
+                try {
+                    // UWAGA: Musisz dorobić ten endpoint na backendzie!
+                    const res = await fetch(`http://TWOJ_IP:5000/api/client/journey-details/${ticket.id}`, {
+                        headers: { 'Authorization': 'Bearer TWOJ_TOKEN_JWT' }
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Mapowanie z backendu:
+                        setBusDetails({
+                            busNumber: data.busNumber || "Unknown",
+                            operator: data.operator || "KKBus",
+                            amenities: data.amenities || []
+                        });
+                        setRouteDetails(data.routeDetails || []);
+                    } else {
+                        // FALLBACK: Jeśli endpointu nie ma, ładujemy mocki
+                        console.warn("Brak endpointu - wczytuje mocki.");
+                        setBusDetails(MOCK_BUS); 
+                        setRouteDetails(MOCK_ROUTE);
+                    }
+                } catch (error) {
+                    console.error("Błąd pobierania szczegółów podróży:", error);
+                    setBusDetails(MOCK_BUS); 
+                    setRouteDetails(MOCK_ROUTE);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            fetchJourneyDetails();
+        } else { 
+            setBusDetails(null); 
+            setRouteDetails([]); 
+        }
     }, [visible, ticket]);
 
     if (!ticket) return null;
@@ -39,17 +74,27 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                 </View>
 
                 {isLoading ? (
-                    <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#e60000" /><Text style={styles.loadingText}>Fetching journey details...</Text></View>
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#e60000" />
+                        <Text style={styles.loadingText}>Fetching journey details...</Text>
+                    </View>
                 ) : (
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                         {busDetails && (
                             <View style={styles.detailCard}>
                                 <View style={styles.cardHeader}>
                                     <View style={styles.busIconContainer}><Ionicons name="bus" size={24} color="#e60000" /></View>
-                                    <View><Text style={styles.operatorText}>{busDetails.operator}</Text><Text style={styles.busNumberText}>{busDetails.busNumber}</Text></View>
+                                    <View>
+                                        <Text style={styles.operatorText}>{busDetails.operator}</Text>
+                                        <Text style={styles.busNumberText}>{busDetails.busNumber}</Text>
+                                    </View>
                                 </View>
                                 <View style={styles.amenitiesRow}>
-                                    {busDetails.amenities.map((icon, idx) => (<View key={idx} style={styles.amenityIcon}><Ionicons name={icon as any} size={16} color="#6b7280" /></View>))}
+                                    {busDetails.amenities.map((icon, idx) => (
+                                        <View key={idx} style={styles.amenityIcon}>
+                                            <Ionicons name={icon as any} size={16} color="#6b7280" />
+                                        </View>
+                                    ))}
                                     <Text style={styles.amenityLabel}>Standard Amenities Included</Text>
                                 </View>
                             </View>
@@ -79,7 +124,10 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                                 ))}
                             </View>
                         )}
-                        <View style={styles.footerInfo}><Ionicons name="information-circle-outline" size={20} color="#9ca3af" /><Text style={styles.footerText}>Please arrive at the platform 15 minutes before departure. Ticket valid only for the selected time.</Text></View>
+                        <View style={styles.footerInfo}>
+                            <Ionicons name="information-circle-outline" size={20} color="#9ca3af" />
+                            <Text style={styles.footerText}>Please arrive at the platform 15 minutes before departure. Ticket valid only for the selected time.</Text>
+                        </View>
                     </ScrollView>
                 )}
             </SafeAreaView>

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import ProfileSettingsModal from './profileSettingsModal';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
+import { IP_adress } from '../../utils';
 
 
 // INTERFACES & MOCKS (same as before)
@@ -55,7 +56,7 @@ export default function PassengerProfile() {
     useEffect(() => {
     const fetchLoyalty = async () => {
         try {
-            const res = await fetch(`http://${IP_address}/api/client/user/loyalty`, {
+            const res = await fetch(`http://${IP_adress}/api/client/user/loyalty`, {
                 headers: { 'Authorization': 'Bearer TWOJ_TOKEN_JWT' }
             });
             const data = await res.json();

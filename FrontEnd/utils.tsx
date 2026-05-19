@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-const IP_adress = "http://192.168.0.104:5000";
+const IP_adress = "http://10.154.64.138:5000";
 
 export { IP_adress };
 
