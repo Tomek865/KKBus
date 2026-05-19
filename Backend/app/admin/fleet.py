@@ -161,8 +161,6 @@ def get_all_buses(current_admin_id):
         buses = cur.fetchall()
         cur.close()
 
-        # Zmiana konwencji z bazy danych (snake_case) na frontend (camelCase)
-        # Aby frontend Reacta czytał to łatwiej
         formatted_buses = [
             {
                 "id": b["vehicle_id"],
@@ -199,12 +197,11 @@ def create_bus(current_admin_id):
     registration_number = data.get("registrationNumber")
     brand = data.get("brand")
     model = data.get("model")
-    status = data.get("status", "Available")  # Domyślnie Available / Dostępny
+    status = data.get("status", "Available")
     parking_location = data.get("parkingLocation", "")
     seating_capacity = data.get("seatingCapacity")
     is_active = data.get("isActive", True)
 
-    # Sprawdzamy wszystkie pola NOT NULL z Twojej bazy!
     if (
         not vin
         or not registration_number
@@ -258,7 +255,6 @@ def create_bus(current_admin_id):
 
     except Exception as e:
         print(f"DB Error: {e}")
-        # Najczęstszy błąd tutaj to zduplikowany VIN (bo ma UNIQUE w bazie)
         return jsonify({"error": "Error creating bus. Check if VIN is unique."}), 500
     finally:
         if conn:
@@ -305,7 +301,6 @@ def get_all_routes(current_admin_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        # Pobieramy ID i nazwę trasy
         cur.execute("SELECT route_id AS id, name FROM Route ORDER BY name ASC;")
         routes = cur.fetchall()
         cur.close()
@@ -328,8 +323,6 @@ def get_all_drivers(current_admin_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        # Szukamy w tabeli Employee osób z rolą 'Driver' (lub 'Kierowca' - dopasuj do nazw w bazie)
-        # oraz tylko tych, którzy są aktywni (is_active = TRUE)
         query = """
             SELECT 
                 employee_id AS id, 
@@ -344,6 +337,182 @@ def get_all_drivers(current_admin_id):
         cur.close()
 
         return jsonify(drivers), 200
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+# ==========================================
+# ZARZĄDZANIE PRZYSTANKAMI (Stations)
+# ==========================================
+
+
+@admin_fleet_bp.route("/stations", methods=["GET"])
+@admin_required
+def get_fleet_stations(current_admin_id):
+    """
+    Pobiera listę wszystkich przystanków w systemie.
+    """
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(
+            "SELECT station_id AS id, name, exact_address FROM Station ORDER BY name ASC;"
+        )
+        stations = cur.fetchall()
+        cur.close()
+
+        # Formatujemy na camelCase dla frontendu
+        formatted = [
+            {"id": s["id"], "name": s["name"], "exactAddress": s["exact_address"]}
+            for s in stations
+        ]
+
+        return jsonify(formatted), 200
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@admin_fleet_bp.route("/stations", methods=["POST"])
+@admin_required
+def create_station(current_admin_id):
+    """
+    Tworzy nowy przystanek (stację) w bazie danych.
+    """
+    data = request.get_json()
+    name = data.get("name")
+    exact_address = data.get("exact_address")
+
+    if not name or not exact_address:
+        return jsonify({"error": "Station name and exact address are required"}), 400
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        query = "INSERT INTO Station (name, exact_address) VALUES (%s, %s) RETURNING station_id;"
+        cur.execute(query, (name, exact_address))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+
+        return jsonify({"id": new_id, "name": name, "exactAddress": exact_address}), 201
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+# ==========================================
+# PRZYPISYWANIE PRZYSTANKÓW DO TRASY
+# ==========================================
+
+
+@admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["POST"])
+@admin_required
+def assign_stations_to_route(current_admin_id, route_id):
+    """
+    Przyjmuje tablicę z ID przystanków (np. [1, 5, 3, 2])
+    i zapisuje je w bazie w podanej kolejności dla danej trasy.
+    """
+    data = request.get_json()
+    station_ids = data.get("stations")  # Oczekujemy tablicy: [1, 5, 3, 2]
+
+    # Sprawdzamy, czy w ogóle dostaliśmy dane i czy faktycznie są one listą (tablicą)
+    if not station_ids or not isinstance(station_ids, list):
+        return jsonify(
+            {"error": "No stations provided. Expected an array of IDs."}
+        ), 400
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+
+        # 1. Czyścimy obecne przystanki przypisane do tej trasy
+        cur.execute("DELETE FROM Route_Station WHERE route_id = %s", (route_id,))
+
+        # 2. Wrzucamy przystanki po kolei z otrzymanej listy
+        query = """
+            INSERT INTO Route_Station (route_id, station_id, order_on_route)
+            VALUES (%s, %s, %s);
+        """
+
+        for index, station_id in enumerate(station_ids):
+            # Pierwszy element w tablicy dostanie numer 1, drugi 2, itd.
+            order = index + 1
+            # Rzutujemy station_id na int, by uniknąć błędów jeśli frontend wyśle np. ["1", "2"]
+            cur.execute(query, (route_id, int(station_id), order))
+
+        conn.commit()
+        cur.close()
+
+        return jsonify(
+            {
+                "message": f"Successfully assigned {len(station_ids)} stations to route {route_id} in order."
+            }
+        ), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()  # Cofamy operację, jeśli któraś stacja np. nie istnieje w bazie
+        print(f"DB Error: {e}")
+        return jsonify(
+            {"error": "Server error occurred. Make sure all station IDs exist."}
+        ), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["GET"])
+@admin_required
+def get_route_stations(current_admin_id, route_id):
+    """
+    Pobiera listę wszystkich przystanków przypisanych do danej trasy
+    w odpowiedniej kolejności (order_on_route).
+    """
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Łączymy tabelę łącznikową Route_Station z tabelą Station,
+        # aby wyciągnąć pełne dane o przystankach dla konkretnej trasy
+        query = """
+            SELECT 
+                s.station_id AS id,
+                s.name,
+                s.exact_address,
+                rs.order_on_route
+            FROM Route_Station rs
+            JOIN Station s ON rs.station_id = s.station_id
+            WHERE rs.route_id = %s
+            ORDER BY rs.order_on_route ASC;
+        """
+        cur.execute(query, (route_id,))
+        stations = cur.fetchall()
+        cur.close()
+
+        # Formatujemy klucze na camelCase dla spójności z frontendem Reacta
+        formatted_stations = [
+            {
+                "id": s["id"],
+                "name": s["name"],
+                "exactAddress": s["exact_address"],
+                "orderOnRoute": s["order_on_route"],
+            }
+            for s in stations
+        ]
+
+        return jsonify(formatted_stations), 200
+
     except Exception as e:
         print(f"DB Error: {e}")
         return jsonify({"error": "Server error occurred"}), 500
