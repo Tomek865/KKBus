@@ -23,6 +23,7 @@ export default function LoginScreen() {
         setIsLoading(true);
 
         try {
+            // fetch - Logowanie do API TransRegion
             const response = await fetch(`${IP_adress}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
