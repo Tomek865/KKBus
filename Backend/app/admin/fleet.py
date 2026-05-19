@@ -317,3 +317,36 @@ def get_all_routes(current_admin_id):
     finally:
         if conn:
             conn.close()
+
+
+@admin_fleet_bp.route("/drivers", methods=["GET"])
+@admin_required
+def get_all_drivers(current_admin_id):
+    """
+    Pobiera listę tylko tych pracowników, którzy są kierowcami i są aktywni.
+    """
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        # Szukamy w tabeli Employee osób z rolą 'Driver' (lub 'Kierowca' - dopasuj do nazw w bazie)
+        # oraz tylko tych, którzy są aktywni (is_active = TRUE)
+        query = """
+            SELECT 
+                employee_id AS id, 
+                first_name || ' ' || last_name AS name,
+                email
+            FROM Employee 
+            WHERE role = 'Driver' AND is_active = TRUE
+            ORDER BY last_name ASC;
+        """
+        cur.execute(query)
+        drivers = cur.fetchall()
+        cur.close()
+
+        return jsonify(drivers), 200
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
+    finally:
+        if conn:
+            conn.close()

@@ -353,3 +353,20 @@ Odbieramy (200 OK):
         "name": "Warszawa - Gdańsk"
     }
 ]
+
+[GET] /admin/fleet/drivers
+[WYMAGA TOKENA (Admin)]
+Cel: Pobranie listy wyłącznie aktywnych kierowców (pracowników z rolą 'Driver').
+Odbieramy (200 OK):
+[
+    {
+        "id": 3,
+        "name": "Jan Kowalski",
+        "email": "jan.driver@example.com"
+    },
+    {
+        "id": 5,
+        "name": "Marek Nowak",
+        "email": "marek.driver@example.com"
+    }
+]
