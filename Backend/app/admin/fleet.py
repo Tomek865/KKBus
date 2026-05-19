@@ -138,18 +138,47 @@ def create_trip(current_admin_id):
 @admin_required
 def get_all_buses(current_admin_id):
     """
-    Pobiera listę wszystkich autobusów w systemie.
+    Pobiera pełną listę wszystkich autobusów ze szczegółami.
     """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute(
-            "SELECT vehicle_id, registration_number, seating_capacity, is_active FROM Vehicle ORDER BY vehicle_id ASC;"
-        )
+        query = """
+            SELECT 
+                vehicle_id, 
+                vin, 
+                registration_number, 
+                brand, 
+                model, 
+                status, 
+                parking_location, 
+                seating_capacity, 
+                is_active 
+            FROM Vehicle 
+            ORDER BY vehicle_id ASC;
+        """
+        cur.execute(query)
         buses = cur.fetchall()
         cur.close()
 
-        return jsonify(buses), 200
+        # Zmiana konwencji z bazy danych (snake_case) na frontend (camelCase)
+        # Aby frontend Reacta czytał to łatwiej
+        formatted_buses = [
+            {
+                "id": b["vehicle_id"],
+                "vin": b["vin"],
+                "registrationNumber": b["registration_number"],
+                "brand": b["brand"],
+                "model": b["model"],
+                "status": b["status"],
+                "parkingLocation": b["parking_location"],
+                "seatingCapacity": b["seating_capacity"],
+                "isActive": b["is_active"],
+            }
+            for b in buses
+        ]
+
+        return jsonify(formatted_buses), 200
     except Exception as e:
         print(f"DB Error: {e}")
         return jsonify({"error": "Server error occurred"}), 500
@@ -162,26 +191,53 @@ def get_all_buses(current_admin_id):
 @admin_required
 def create_bus(current_admin_id):
     """
-    Dodaje nowy autobus do bazy danych.
+    Dodaje nowy autobus ze wszystkimi wymaganymi polami.
     """
     data = request.get_json()
+
+    vin = data.get("vin")
     registration_number = data.get("registrationNumber")
+    brand = data.get("brand")
+    model = data.get("model")
+    status = data.get("status", "Available")  # Domyślnie Available / Dostępny
+    parking_location = data.get("parkingLocation", "")
     seating_capacity = data.get("seatingCapacity")
     is_active = data.get("isActive", True)
 
-    if not registration_number or not seating_capacity:
+    # Sprawdzamy wszystkie pola NOT NULL z Twojej bazy!
+    if (
+        not vin
+        or not registration_number
+        or not brand
+        or not model
+        or not seating_capacity
+    ):
         return jsonify(
-            {"error": "Registration number and seating capacity are required"}
+            {
+                "error": "VIN, registration number, brand, model, and seating capacity are required"
+            }
         ), 400
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         query = """
-            INSERT INTO Vehicle (registration_number, seating_capacity, is_active)
-            VALUES (%s, %s, %s) RETURNING vehicle_id;
+            INSERT INTO Vehicle (vin, registration_number, brand, model, status, parking_location, seating_capacity, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING vehicle_id;
         """
-        cur.execute(query, (registration_number, seating_capacity, is_active))
+        cur.execute(
+            query,
+            (
+                vin,
+                registration_number,
+                brand,
+                model,
+                status,
+                parking_location,
+                seating_capacity,
+                is_active,
+            ),
+        )
         new_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
@@ -189,7 +245,12 @@ def create_bus(current_admin_id):
         return jsonify(
             {
                 "id": new_id,
+                "vin": vin,
                 "registrationNumber": registration_number,
+                "brand": brand,
+                "model": model,
+                "status": status,
+                "parkingLocation": parking_location,
                 "seatingCapacity": seating_capacity,
                 "isActive": is_active,
             }
@@ -197,9 +258,8 @@ def create_bus(current_admin_id):
 
     except Exception as e:
         print(f"DB Error: {e}")
-        return jsonify(
-            {"error": "Error creating bus (maybe registration already exists?)"}
-        ), 500
+        # Najczęstszy błąd tutaj to zduplikowany VIN (bo ma UNIQUE w bazie)
+        return jsonify({"error": "Error creating bus. Check if VIN is unique."}), 500
     finally:
         if conn:
             conn.close()
@@ -231,6 +291,29 @@ def create_route(current_admin_id):
     except Exception as e:
         print(f"DB Error: {e}")
         return jsonify({"error": "Error creating route"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@admin_fleet_bp.route("/routes", methods=["GET"])
+@admin_required
+def get_all_routes(current_admin_id):
+    """
+    Pobiera listę wszystkich tras w systemie (przydatne do dropdowna).
+    """
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        # Pobieramy ID i nazwę trasy
+        cur.execute("SELECT route_id AS id, name FROM Route ORDER BY name ASC;")
+        routes = cur.fetchall()
+        cur.close()
+
+        return jsonify(routes), 200
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Server error occurred"}), 500
     finally:
         if conn:
             conn.close()

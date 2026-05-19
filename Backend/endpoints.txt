@@ -304,21 +304,27 @@ Odbieramy (200 OK):
 
 [POST] /admin/fleet/buses
 [WYMAGA TOKENA (Admin)]
-Cel: Dodanie nowego autobusu do floty.
+Cel: Dodanie nowego autobusu do floty (wszystkie dane pojazdu).
 Wysyłamy (Body JSON):
 {
-    "registrationNumber": "WA 98765",
-    "seatingCapacity": 50,
+    "vin": "WBA00000000000000",
+    "registrationNumber": "KR 12345",
+    "brand": "Mercedes",
+    "model": "Tourismo",
+    "status": "Available",
+    "parkingLocation": "Baza Główna",
+    "seatingCapacity": 55,
     "isActive": true
 }
 Odbieramy (201 Created):
 {
-    "id": 2,
-    "registrationNumber": "WA 98765",
-    "seatingCapacity": 50,
-    "isActive": true
+    "id": 1,
+    "vin": "WBA00000000000000",
+    ... (zwraca to samo co wysłano + nowe id)
 }
-
+Możliwe błędy:
+400 - Jeśli brakuje wymaganego pola (vin, brand, model, registrationNumber, seatingCapacity)
+500 - Jeśli taki VIN już istnieje w bazie (UNIQUE)
 
 [POST] /admin/fleet/routes
 [WYMAGA TOKENA (Admin)]
@@ -332,3 +338,18 @@ Odbieramy (201 Created):
     "id": 3,
     "name": "Kraków - Zakopane"
 }
+
+[GET] /admin/fleet/routes
+[WYMAGA TOKENA (Admin)]
+Cel: Pobranie wszystkich dostępnych tras (np. do listy wyboru w formularzu tworzenia kursu).
+Odbieramy (200 OK):
+[
+    {
+        "id": 1,
+        "name": "Kraków - Warszawa"
+    },
+    {
+        "id": 2,
+        "name": "Warszawa - Gdańsk"
+    }
+]
