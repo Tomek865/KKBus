@@ -43,7 +43,7 @@ export default function AdminClients() {
 
         try {
             // fetch - Dodawanie użytkownika z tokenem (POST)
-            const response = await authFetch('/api/admin/users', {
+            const response = await authFetch('/api/admin/management/users', {
                 method: 'POST',
                 body: JSON.stringify(newUser)
             });
