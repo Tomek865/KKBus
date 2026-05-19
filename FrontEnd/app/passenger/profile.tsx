@@ -4,12 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import ProfileSettingsModal from './profileSettingsModal';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
-import { IP_adress } from '../../utils';
+import { authFetch } from '../../utils';
 
-
-// INTERFACES & MOCKS (same as before)
 interface LoyaltyData { points: number; currentTier: string; nextTier: string; nextTierPoints: number; }
-const MOCK_LOYALTY_DATA: LoyaltyData = { points: 1450, currentTier: 'SILVER TIER', nextTier: 'GOLD', nextTierPoints: 2000, };
 
 const ProfileMenuItem = ({ icon, title, onPress, isDestructive = false }: any) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
@@ -54,30 +51,28 @@ export default function PassengerProfile() {
     const [activeSection, setActiveSection] = useState<any>(null);
 
     useEffect(() => {
-    const fetchLoyalty = async () => {
-        try {
-            const res = await fetch(`http://${IP_adress}/api/client/user/loyalty`, {
-                headers: { 'Authorization': 'Bearer TWOJ_TOKEN_JWT' }
-            });
-            const data = await res.json();
-            
-            if(data.points !== undefined) {
-                setLoyaltyData({
-                    points: data.points,
-                    currentTier: data.points > 2000 ? 'GOLD' : 'STANDARD', // Logika wyliczania rang
-                    nextTier: 'GOLD',
-                    nextTierPoints: 2000
-                });
+        const fetchLoyalty = async () => {
+            try {
+                const res = await authFetch('/api/client/user/loyalty');
+                const data = await res.json();
+                
+                if(data.points !== undefined) {
+                    setLoyaltyData({
+                        points: data.points,
+                        currentTier: data.points > 2000 ? 'GOLD' : 'STANDARD',
+                        nextTier: 'GOLD',
+                        nextTierPoints: 2000
+                    });
+                }
+            } catch (err) {
+                console.error("Błąd pobierania pkt lojalnościowych:", err);
+            } finally {
+                setIsLoadingLoyalty(false);
             }
-        } catch (err) {
-            console.error("Błąd pobierania pkt lojalnościowych:", err);
-        } finally {
-            setIsLoadingLoyalty(false);
-        }
-    };
+        };
 
-    fetchLoyalty();
-}, []);
+        fetchLoyalty();
+    }, []);
 
     const openSettings = (section: any) => { setActiveSection(section); setSettingsModalVisible(true); };
     const handleLogout = () => { router.replace('/'); };

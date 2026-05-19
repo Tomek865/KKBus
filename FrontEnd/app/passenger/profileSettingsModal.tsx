@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
-
+import { authFetch } from '../../utils';
 
 export type ActiveSection = 'personal' | 'payment' | 'notifications' | 'language' | 'help' | 'terms' | null;
 interface ProfileSettingsModalProps { visible: boolean; onClose: () => void; activeSection: ActiveSection; }
@@ -17,28 +17,29 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     const [phone, setPhone] = useState('+48 123 456 789');
     const [userEmail, setUserEmail] = useState('anna.kowalska@example.com');
 
-
     useEffect(() => { if (visible) setPaymentView('list'); }, [visible]);
 
     const handleSavePersonalInfo = async () => {
-    try {
-        await fetch('http://TWOJ_IP:5000/api/client/user/update', {
-            method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer TWOJ_TOKEN_JWT'
-            },
-            body: JSON.stringify({
-                first_name: firstName,
-                last_name: lastName,
-                phone_number: phone
-            })
-        });
-        onClose();
-    } catch (err) {
-        console.error("Błąd aktualizacji profilu:", err);
-    }
-};
+        try {
+            // Zmiana na zgodny z dokumentacją endpoint [POST] i użycie authFetch
+            const res = await authFetch('/api/client/user/update', {
+                method: 'POST',
+                body: JSON.stringify({
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone_number: phone
+                })
+            });
+            
+            if (res.ok) {
+                onClose();
+            } else {
+                console.error("Błąd aktualizacji profilu, status:", res.status);
+            }
+        } catch (err) {
+            console.error("Błąd aktualizacji profilu:", err);
+        }
+    };
     const handleSaveCard = () => { setPaymentView('list'); };
     const handleToggleNotification = (type: 'push' | 'email', val: boolean) => {
         if(type === 'push') setPushEnabled(val); if(type === 'email') setEmailEnabled(val);

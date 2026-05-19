@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SearchInput } from '../../components/passenger/SearchInput';
-import { passengerStyles as styles } from '../src/styles/passengerStyles'; // Dopasuj ścieżkę do projektu!
+import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { authFetch, IP_adress } from '../../utils';
+import { router } from 'expo-router';
 
 export interface Departure {
     id: string; departureTime: string; arrivalTime: string; departureStation: string;
     arrivalStation: string; duration: string; seatsLeft: number; price: number;
 }
-
-const MOCK_DEPARTURES: Departure[] = [
-    { id: '1', departureTime: '08:15', arrivalTime: '09:40', departureStation: 'Krakow MDA', arrivalStation: 'Katowice Dworzec', duration: '1H 25M', seatsLeft: 12, price: 24 },
-    { id: '2', departureTime: '09:30', arrivalTime: '10:55', departureStation: 'Krakow MDA', arrivalStation: 'Katowice Dworzec', duration: '1H 25M', seatsLeft: 4, price: 24 }
-];
 
 const generateNext14Days = () => {
     const dates = [];
@@ -23,7 +20,7 @@ const generateNext14Days = () => {
     return dates;
 };
 
-const DepartureCard = ({ departure }: { departure: Departure }) => {
+const DepartureCard = ({ departure, onBook }: { departure: Departure, onBook: () => void }) => {
     const isLowSeats = departure.seatsLeft <= 5;
     return (
         <View style={styles.departureCard}>
@@ -53,8 +50,8 @@ const DepartureCard = ({ departure }: { departure: Departure }) => {
                 </View>
                 <View style={styles.priceContainer}>
                     <Text style={styles.priceText}>{departure.price} PLN</Text>
-                    <TouchableOpacity style={styles.actionIcon}>
-                        <Ionicons name="swap-horizontal" size={18} color="#e60000" />
+                    <TouchableOpacity style={styles.actionIcon} onPress={onBook}>
+                        <Ionicons name="cart" size={18} color="#e60000" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -65,61 +62,123 @@ const DepartureCard = ({ departure }: { departure: Departure }) => {
 export default function PassengerSearch() {
     const [stations, setStations] = useState<string[]>([]);
     const [fromStation, setFromStation] = useState('Krakow');
-    const [toStation, setToStation] = useState('Katowice');
+    const [toStation, setToStation] = useState('Warszawa');
     const [availableDates] = useState(generateNext14Days());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [passengerCounts, setPassengerCounts] = useState({ adult: 1, student: 0, reduced: 0 });
     const [departures, setDepartures] = useState<Departure[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    
+    // Stany Modali
     const [modalVisible, setModalVisible] = useState(false);
     const [selectingField, setSelectingField] = useState<'from' | 'to' | null>(null);
     const [passengerModalVisible, setPassengerModalVisible] = useState(false);
     const [dateModalVisible, setDateModalVisible] = useState(false);
+    const [reservationModalVisible, setReservationModalVisible] = useState(false);
+    
+    const [selectedDep, setSelectedDep] = useState<Departure | null>(null);
+    const [isBooking, setIsBooking] = useState(false);
 
-    useEffect(() => {
-    const fetchStationsFromDB = async () => {
-        try {
-            const res = await fetch('http://TWOJ_IP:5000/api/client/stations');
-            const data = await res.json();
-            // Backend zwraca listę obiektów, mapujemy na same nazwy stacji
-            setStations(data.map((s: any) => s.name));
-        } catch (err) {
-            console.error("Błąd pobierania stacji:", err);
-        }
-    };
-    fetchStationsFromDB();
-}, []);
+        useEffect(() => {
+        const fetchStationsFromDB = async () => {
+            try {
+                // Używamy authFetch dla spójności nagłówków i bazowego URL
+                const res = await authFetch('/api/client/reservations/stations');
+                
+                if (!res.ok) {
+                    console.error("Błąd HTTP przy pobieraniu stacji:", res.status);
+                    return;
+                }
+
+                const data = await res.json();
+                
+                // Zabezpieczenie: sprawdzamy czy backend na pewno zwrócił tablicę
+                if (Array.isArray(data)) {
+                    setStations(data.map((s: any) => s.name));
+                } else {
+                    console.error("Nieoczekiwany format danych stacji:", data);
+                }
+            } catch (err) {
+                console.error("Błąd pobierania stacji (sieć/CORS):", err);
+            }
+        };
+        fetchStationsFromDB();
+    }, []);
 
     const handleSearchRoutes = async () => {
-    setIsSearching(true); 
-    setHasSearched(true); 
-    setDepartures([]);
-    
-    try {
-        const dateStr = selectedDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
-        const res = await fetch(`http://TWOJ_IP:5000/api/client/routes?from=${fromStation}&to=${toStation}&date=${dateStr}`);
-        const data = await res.json();
+        setIsSearching(true); 
+        setHasSearched(true); 
+        setDepartures([]);
         
-        // Mapowanie odpowiedzi backendu na interfejs Departure
-        const mappedDepartures = data.map((d: any) => ({
-            id: String(d.trip_id),
-            departureTime: d.departure_time,
-            arrivalTime: d.arrival_time,
-            departureStation: fromStation,
-            arrivalStation: toStation,
-            duration: 'N/A', // Możesz to doliczyć na froncie
-            seatsLeft: d.seating_capacity, // Backend w tym widoku nie zwraca jeszcze zajętych miejsc
-            price: 24 // Zmockowana cena, do dorobienia w DB
-        }));
-        setDepartures(mappedDepartures);
-    } catch (err) {
-        console.error("Błąd wyszukiwania tras:", err);
-    } finally {
-        setIsSearching(false);
-    }
-};
+        try {
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            // Tu również przechodzimy na authFetch
+            const res = await authFetch(`/api/client/reservations/routes?from=${fromStation}&to=${toStation}&date=${dateStr}`);
+            
+            if (!res.ok) {
+                console.error("Błąd HTTP przy pobieraniu tras:", res.status);
+                return;
+            }
 
+            const data = await res.json();
+            
+            if (Array.isArray(data)) {
+                const mappedDepartures = data.map((d: any) => ({
+                    id: String(d.trip_id),
+                    departureTime: d.departure_time,
+                    arrivalTime: d.arrival_time,
+                    departureStation: fromStation,
+                    arrivalStation: toStation,
+                    duration: 'N/A', 
+                    seatsLeft: d.seating_capacity, 
+                    price: 24 
+                }));
+                setDepartures(mappedDepartures);
+            } else {
+                console.error("Nieoczekiwany format danych tras:", data);
+            }
+        } catch (err) {
+            console.error("Błąd wyszukiwania tras:", err);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+        const handleBookTicket = async () => {
+        if (!selectedDep) return;
+        setIsBooking(true);
+        const totalSeats = passengerCounts.adult + passengerCounts.student + passengerCounts.reduced;
+
+        try {
+            const res = await authFetch('/api/client/reservations/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    trip_id: parseInt(selectedDep.id, 10),
+                    seat_count: totalSeats
+                })
+            });
+
+            if (res.ok) {
+                setReservationModalVisible(false);
+                router.push('../user/tickets' as any);
+            } else {
+                const errorText = await res.text();
+                console.error("Serwer zwrócił błąd:", errorText);
+                Alert.alert("Error", "Failed to book the ticket. Check console.");
+            }
+        } catch (err) {
+            console.error("Booking error:", err);
+            Alert.alert("Error", "Something went wrong.");
+        } finally {
+            setIsBooking(false);
+        }
+    };
+
+    const openReservationModal = (departure: Departure) => {
+        setSelectedDep(departure);
+        setReservationModalVisible(true);
+    };
 
     const updateCount = (type: 'adult' | 'student' | 'reduced', delta: number) => {
         setPassengerCounts(prev => {
@@ -149,6 +208,7 @@ export default function PassengerSearch() {
     const swapStations = () => { const temp = fromStation; setFromStation(toStation); setToStation(temp); };
     const handleDateSelect = (date: Date) => { setSelectedDate(date); setDateModalVisible(false); };
     const formattedDate = selectedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const totalSeats = passengerCounts.adult + passengerCounts.student + passengerCounts.reduced;
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -178,12 +238,12 @@ export default function PassengerSearch() {
                             <Text style={styles.resultsTitle}>Available Departures</Text>
                             <View style={styles.optionsBadge}><Text style={styles.optionsText}>{departures.length} options</Text></View>
                         </View>
-                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => <DepartureCard key={dep.id} departure={dep} />)}
+                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => <DepartureCard key={dep.id} departure={dep} onBook={() => openReservationModal(dep)} />)}
                     </View>
                 )}
             </ScrollView>
 
-            {/* Modals - reszta pozostaje logiką TSX z użyciem wspólnych styli modalContainer / modalHeader */}
+            {/* MODAL: WYBÓR STACJI */}
             <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
@@ -203,6 +263,7 @@ export default function PassengerSearch() {
                 </SafeAreaView>
             </Modal>
 
+            {/* MODAL: WYBÓR DATY */}
             <Modal visible={dateModalVisible} animationType="slide" presentationStyle="pageSheet">
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
@@ -227,6 +288,7 @@ export default function PassengerSearch() {
                 </SafeAreaView>
             </Modal>
 
+            {/* MODAL: WYBÓR PASAŻERÓW */}
             <Modal visible={passengerModalVisible} animationType="slide" presentationStyle="pageSheet">
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
@@ -251,6 +313,40 @@ export default function PassengerSearch() {
                     <TouchableOpacity style={styles.primaryBtn} onPress={() => setPassengerModalVisible(false)}>
                         <Text style={styles.primaryBtnText}>Confirm</Text>
                     </TouchableOpacity>
+                </SafeAreaView>
+            </Modal>
+
+            {/* MODAL: POTWIERDZENIE REZERWACJI */}
+            <Modal visible={reservationModalVisible} animationType="slide" presentationStyle="pageSheet">
+                <SafeAreaView style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Confirm Reservation</Text>
+                        <TouchableOpacity onPress={() => setReservationModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
+                    </View>
+                    
+                    {selectedDep && (
+                        <View style={{ padding: 20 }}>
+                            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Summary</Text>
+                            <Text>Route: {selectedDep.departureStation} ➝ {selectedDep.arrivalStation}</Text>
+                            <Text>Departure: {selectedDep.departureTime}</Text>
+                            <Text>Tickets: {totalSeats}</Text>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginTop: 20, color: '#e60000' }}>
+                                Total: {(selectedDep.price * totalSeats)} PLN
+                            </Text>
+
+                            <TouchableOpacity 
+                                style={[styles.primaryBtn, { marginTop: 40 }]} 
+                                onPress={handleBookTicket}
+                                disabled={isBooking}
+                            >
+                                {isBooking ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.primaryBtnText}>Confirm and Book</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </SafeAreaView>
             </Modal>
         </SafeAreaView>
