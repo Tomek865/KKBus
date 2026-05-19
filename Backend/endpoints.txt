@@ -370,3 +370,46 @@ Odbieramy (200 OK):
         "email": "marek.driver@example.com"
     }
 ]
+
+------------------------------------------------------
+ZARZĄDZANIE PRZYSTANKAMI I KONFIGURACJA TRASY
+------------------------------------------------------
+
+[GET] /admin/fleet/stations
+[WYMAGA TOKENA (Admin)]
+Cel: Pobranie listy wszystkich przystanków w systemie (do tabeli zarządzania przystankami lub konfiguratora tras).
+Odbieramy (200 OK):
+[
+    {
+        "id": 1,
+        "name": "Kraków",
+        "exactAddress": "Dworzec MDA, ul. Bosacka 18"
+    }
+]
+
+[POST] /admin/fleet/stations
+[WYMAGA TOKENA (Admin)]
+Cel: Stworzenie nowego fizycznego przystanku autobusowego.
+Wysyłamy (Body JSON):
+{
+    "name": "Katowice",
+    "exactAddress": "Dworzec Autobusowy Sądowa"
+}
+Odbieramy (201 Created):
+{
+    "id": 5,
+    "name": "Katowice",
+    "exactAddress": "Dworzec Autobusowy Sądowa"
+}
+
+[POST] /admin/fleet/routes/<route_id>/stations
+[WYMAGA TOKENA (Admin)]
+Cel: Ustala lub nadpisuje pełną listę przystanków na danej trasie w określonej kolejności.
+Wysyłamy (Body JSON):
+{
+    "stations": "1,5,3,2"  // ID przystanków po przecinku w kolejności jazdy!
+}
+Odbieramy (200 OK):
+{
+    "message": "Successfully assigned 4 stations to route 2 in order."
+}
