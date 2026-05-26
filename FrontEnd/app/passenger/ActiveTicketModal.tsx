@@ -3,22 +3,18 @@ import { View, Text, Modal, SafeAreaView, TouchableOpacity, ScrollView, Activity
 import { Ionicons } from '@expo/vector-icons';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { authFetch } from '../../utils';
+import { TicketData } from './tickets';
 
 export interface BusDetails { busNumber: string; operator: string; amenities: string[]; }
-export interface RouteStop { station: string; time: string; isPassed: boolean; }
-interface TicketData { id: string; ticketNumber: string; seatNumber: string; depStation: string; arrStation: string; price: number; }
-interface ActiveTicketModalProps { visible: boolean; onClose: () => void; ticket: TicketData | null; }
-
-const MOCK_BUS: BusDetails = { busNumber: "A240 / Line 4", operator: "KKBus Express", amenities: ['wifi', 'snow', 'flash', 'leaf'] };
-const MOCK_ROUTE: RouteStop[] = [
-    { station: "Krakow MDA", time: "15:00", isPassed: true }, { station: "Krakow Balice", time: "15:25", isPassed: false },
-    { station: "Chrzanow Glowy", time: "15:55", isPassed: false }, { station: "Katowice Dworzec", time: "16:25", isPassed: false },
-];
+export interface RouteStop { station: string; time?: string; isPassed: boolean; }
+export interface TicketInfo { class: string; reservationNumber: string; seat: string; seatCount: number; }
+export interface ActiveTicketModalProps { visible: boolean; onClose: () => void; ticket: TicketData | null; }
 
 export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTicketModalProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [busDetails, setBusDetails] = useState<BusDetails | null>(null);
     const [routeDetails, setRouteDetails] = useState<RouteStop[]>([]);
+    const [ticketInfo, setTicketInfo] = useState<TicketInfo | null>(null);
 
     useEffect(() => {
         if (visible && ticket) {
@@ -26,25 +22,47 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
             
             const fetchJourneyDetails = async () => {
                 try {
-                    const res = await authFetch(`/api/client/journey-details/${ticket.id}`);
-                    
+                    const res = await authFetch(`/api/client/reservations/journey-details/${ticket.id}`);
+                 
                     if (res.ok) {
                         const data = await res.json();
-                        setBusDetails({
-                            busNumber: data.busNumber || "Unknown",
-                            operator: data.operator || "KKBus",
-                            amenities: data.amenities || []
-                        });
+                        console.log("Journey details data:", data);
+                        
+                        // Bezpieczne mapowanie danych na podstawie zagnieżdżonego obiektu JSON
+                        if (data.busDetails) {
+                             setBusDetails({
+                                busNumber: data.busDetails.vehicleName || "Brak danych",
+                                operator: data.busDetails.operator || "Brak danych",
+                                amenities: data.busDetails.amenities || []
+                            });
+                        } else {
+                            setBusDetails(null);
+                        }
+
                         setRouteDetails(data.routeDetails || []);
+                        
+                        if (data.ticketInfo) {
+                            setTicketInfo({
+                                class: data.ticketInfo.class || "Standard",
+                                reservationNumber: data.ticketInfo.reservationNumber || ticket.ticketNumber,
+                                seat: data.ticketInfo.seat || "TBD",
+                                seatCount: data.ticketInfo.seatCount || 1
+                            });
+                        } else {
+                             setTicketInfo(null);
+                        }
+
                     } else {
-                        console.warn("Brak endpointu - wczytuje mocki.");
-                        setBusDetails(MOCK_BUS); 
-                        setRouteDetails(MOCK_ROUTE);
+                        // Backend nie zwrócił danych - czyścimy stany
+                        setBusDetails(null); 
+                        setRouteDetails([]);
+                        setTicketInfo(null);
                     }
                 } catch (error) {
                     console.error("Błąd pobierania szczegółów podróży:", error);
-                    setBusDetails(MOCK_BUS); 
-                    setRouteDetails(MOCK_ROUTE);
+                    setBusDetails(null); 
+                    setRouteDetails([]);
+                    setTicketInfo(null);
                 } finally {
                     setIsLoading(false);
                 }
@@ -54,6 +72,7 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
         } else { 
             setBusDetails(null); 
             setRouteDetails([]); 
+            setTicketInfo(null);
         }
     }, [visible, ticket]);
 
@@ -74,7 +93,7 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                     </View>
                 ) : (
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                        {busDetails && (
+                        {busDetails ? (
                             <View style={styles.detailCard}>
                                 <View style={styles.cardHeader}>
                                     <View style={styles.busIconContainer}><Ionicons name="bus" size={24} color="#e60000" /></View>
@@ -84,38 +103,57 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                                     </View>
                                 </View>
                                 <View style={styles.amenitiesRow}>
-                                    {busDetails.amenities.map((icon, idx) => (
+                                    {busDetails.amenities.length > 0 ? busDetails.amenities.map((icon, idx) => (
                                         <View key={idx} style={styles.amenityIcon}>
                                             <Ionicons name={icon as any} size={16} color="#6b7280" />
                                         </View>
-                                    ))}
-                                    <Text style={styles.amenityLabel}>Standard Amenities Included</Text>
+                                    )) : <Text style={styles.amenityLabel}>Brak danych o udogodnieniach</Text>}
                                 </View>
                             </View>
+                        ) : (
+                            <View style={styles.detailCard}>
+                                <Text style={styles.operatorText}>Brak danych o pojeździe</Text>
+                            </View>
                         )}
+                        
                         <View style={styles.infoGrid}>
-                            <View style={styles.infoBox}><Text style={styles.infoLabel}>SEAT</Text><Text style={styles.infoValue}>{ticket.seatNumber}</Text></View>
-                            <View style={styles.infoBox}><Text style={styles.infoLabel}>CLASS</Text><Text style={styles.infoValue}>Standard</Text></View>
-                            <View style={[styles.infoBox, { borderRightWidth: 0 }]}><Text style={styles.infoLabel}>TICKET</Text><Text style={[styles.infoValue, { fontSize: 14 }]}>{ticket.ticketNumber}</Text></View>
+                            <View style={styles.infoBox}>
+                                <Text style={styles.infoLabel}>SEATS</Text>
+                                <Text style={styles.infoValue}>{ticketInfo ? ticketInfo.seatCount : ticket.seats}</Text>
+                            </View>
+                            <View style={styles.infoBox}>
+                                <Text style={styles.infoLabel}>CLASS</Text>
+                                <Text style={styles.infoValue}>{ticketInfo ? ticketInfo.class : 'Standard'}</Text>
+                            </View>
+                            <View style={[styles.infoBox, { borderRightWidth: 0 }]}>
+                                <Text style={styles.infoLabel}>TICKET</Text>
+                                <Text style={[styles.infoValue, { fontSize: 14 }]}>{ticketInfo ? ticketInfo.reservationNumber : ticket.ticketNumber}</Text>
+                            </View>
                         </View>
 
-                        {routeDetails.length > 0 && (
+                        {routeDetails.length > 0 ? (
                             <View style={styles.timelineCard}>
                                 <Text style={styles.sectionTitle}>Full Route Schedule</Text>
                                 {routeDetails.map((stop, index) => (
                                     <View key={index} style={styles.timelineItem}>
-                                        <View style={styles.timelineLeft}><Text style={[styles.timelineTime, stop.isPassed && styles.textPassed]}>{stop.time}</Text></View>
+                                        <View style={styles.timelineLeft}>
+                                            <Text style={[styles.timelineTime, stop.isPassed && styles.textPassed]}>{stop.time || 'Brak'}</Text>
+                                        </View>
                                         <View style={styles.timelineCenter}>
                                             <View style={[styles.timelineDot, stop.isPassed ? styles.dotPassed : styles.dotFuture]} />
                                             {index !== routeDetails.length - 1 && (<View style={[styles.timelineLine, stop.isPassed ? styles.linePassed : styles.lineFuture]} />)}
                                         </View>
                                         <View style={styles.timelineRight}>
-                                            <Text style={[styles.timelineStation, stop.isPassed && styles.textPassed]}>{stop.station}</Text>
+                                            <Text style={[styles.timelineStation, stop.isPassed && styles.textPassed]}>{stop.station || 'Brak danych'}</Text>
                                             {index === 0 && <Text style={styles.statusLabel}>Departure</Text>}
                                             {index === routeDetails.length - 1 && <Text style={styles.statusLabel}>Final Destination</Text>}
                                         </View>
                                     </View>
                                 ))}
+                            </View>
+                        ) : (
+                            <View style={styles.timelineCard}>
+                                <Text style={styles.sectionTitle}>Brak danych o rozkładzie jazdy</Text>
                             </View>
                         )}
                         <View style={styles.footerInfo}>

@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import ProfileSettingsModal from './profileSettingsModal';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { authFetch } from '../../utils';
 
 interface LoyaltyData { points: number; currentTier: string; nextTier: string; nextTierPoints: number; }
+interface UserData { name: string; email: string; initials: string; }
 
 const ProfileMenuItem = ({ icon, title, onPress, isDestructive = false }: any) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
@@ -46,46 +48,72 @@ const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading:
 
 export default function PassengerProfile() {
     const [loyaltyData, setLoyaltyData] = useState<LoyaltyData | null>(null);
+    const [userData, setUserData] = useState<UserData>({ name: 'Ładowanie...', email: 'Ładowanie...', initials: '?' });
     const [isLoadingLoyalty, setIsLoadingLoyalty] = useState(true);
+    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [settingsModalVisible, setSettingsModalVisible] = useState(false);
     const [activeSection, setActiveSection] = useState<any>(null);
 
-    useEffect(() => {
-        const fetchLoyalty = async () => {
-            try {
-                const res = await authFetch('/api/client/user/loyalty');
-                const data = await res.json();
-                
-                if(data.points !== undefined) {
-                    setLoyaltyData({
-                        points: data.points,
-                        currentTier: data.points > 2000 ? 'GOLD' : 'STANDARD',
-                        nextTier: 'GOLD',
-                        nextTierPoints: 2000
-                    });
-                }
-            } catch (err) {
-                console.error("Błąd pobierania pkt lojalnościowych:", err);
-            } finally {
-                setIsLoadingLoyalty(false);
-            }
-        };
+    useFocusEffect(
+        useCallback(() => {
+            const fetchLoyaltyAndProfile = async () => {
+                setIsLoadingLoyalty(true);
+                setIsLoadingProfile(true);
+                try {
+                    // 1. Fetch Loyalty z API
+                    const resLoyalty = await authFetch('/api/client/profile/user/loyalty');
+                    if (resLoyalty.ok) {
+                        const dataLoyalty = await resLoyalty.json();
+                        if(dataLoyalty.points !== undefined) {
+                            setLoyaltyData({
+                                points: dataLoyalty.points,
+                                currentTier: dataLoyalty.points > 2000 ? 'GOLD' : 'STANDARD',
+                                nextTier: 'GOLD',
+                                nextTierPoints: 2000
+                            });
+                        }
+                    }
 
-        fetchLoyalty();
-    }, []);
+                    // 2. Pobieranie danych zalogowanego użytkownika z Local Storage
+                    const storedName = await AsyncStorage.getItem('userName');
+                    const storedEmail = await AsyncStorage.getItem('userEmail');
+
+                    setUserData({
+                        name: storedName || 'Brak danych',
+                        email: storedEmail || 'Brak danych',
+                        initials: storedName ? storedName.substring(0, 2).toUpperCase() : '?'
+                    });
+                } catch (err) {
+                    console.error("Błąd ładowania danych:", err);
+                } finally {
+                    setIsLoadingLoyalty(false);
+                    setIsLoadingProfile(false);
+                }
+            };
+
+            fetchLoyaltyAndProfile();
+        }, [])
+    );
+
+    const handleLogout = async () => { 
+        await AsyncStorage.multiRemove(['userToken', 'userName', 'userEmail']);
+        router.replace('/'); 
+    };
 
     const openSettings = (section: any) => { setActiveSection(section); setSettingsModalVisible(true); };
-    const handleLogout = () => { router.replace('/'); };
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
                 <Text style={styles.headerTitle}>My Profile</Text>
+                
                 <View style={styles.profileCard}>
-                    <View style={styles.avatarContainer}><Text style={styles.avatarText}>AK</Text></View>
+                    <View style={styles.avatarContainer}>
+                        {isLoadingProfile ? <ActivityIndicator color="#e60000" /> : <Text style={styles.avatarText}>{userData.initials}</Text>}
+                    </View>
                     <View style={styles.userInfo}>
-                        <Text style={styles.userName}>Anna Kowalska</Text>
-                        <Text style={styles.userEmail}>anna.kowalska@example.com</Text>
+                        <Text style={styles.userName}>{userData.name}</Text>
+                        <Text style={styles.userEmail}>{userData.email}</Text>
                         <View style={styles.badge}><Text style={styles.badgeText}>Standard Passenger</Text></View>
                     </View>
                 </View>
