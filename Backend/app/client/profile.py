@@ -52,7 +52,8 @@ def update_profile(current_user_id):
                 phone_number = COALESCE(%s, phone_number)
             WHERE client_id = %s
         """
-        cur.execute(query, (first_name, last_name, phone_number, current_user_id))
+        cur.execute(query, (first_name, last_name,
+                    phone_number, current_user_id))
         conn.commit()
         cur.close()
 
