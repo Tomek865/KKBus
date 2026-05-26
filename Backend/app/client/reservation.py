@@ -509,6 +509,31 @@ def process_checkout(current_user_id):
         )
         new_id = cur.fetchone()["reservation_id"]
 
+        # --- D. TWORZENIE JEDNEGO GRUPOWEGO BILETU ---
+
+        # 1. Budujemy opis na bilet (np. "1x Normalny, 2x Student")
+        summary_parts = []
+        if adult_count > 0:
+            summary_parts.append(f"{adult_count}x Normalny")
+        if student_count > 0:
+            summary_parts.append(f"{student_count}x Student")
+        if reduced_count > 0:
+            summary_parts.append(f"{reduced_count}x Ulgowy")
+
+        ticket_summary = ", ".join(summary_parts)
+
+        default_segment_id = 1
+
+        # 2. Zapisujemy JEDEN bilet do tabeli
+        query_insert_ticket = """
+            INSERT INTO Ticket (reservation_id, segment_id, final_price, ticket_summary, status)
+            VALUES (%s, %s, %s, %s, 'Active')
+        """
+        cur.execute(
+            query_insert_ticket,
+            (new_id, default_segment_id, total_price, ticket_summary),
+        )
+
         # Potwierdzenie zapisu do bazy!
         conn.commit()
         cur.close()
@@ -539,69 +564,56 @@ def process_checkout(current_user_id):
 @token_required
 def cancel_ticket(current_user_id, ticket_id):
     """
-    Pozwala klientowi zmienić status konkretnego biletu na 'Cancelled' (Nieaktywny).
-    Używamy metody PATCH, ponieważ modyfikujemy tylko część istniejącego zasobu.
+    Anuluje bilet grupowy i całą powiązaną z nim rezerwację,
+    co automatycznie zwalnia wszystkie miejsca w autobusie.
     """
-
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 2. WERYFIKACJA WŁASNOŚCI BILETU
-        # Sprawdzamy, czy bilet istnieje i czy należy do rezerwacji tego klienta
+        # 1. WERYFIKACJA: Sprawdzamy bilet i powiązaną rezerwację
         query_check = """
-            SELECT t.ticket_id, t.status
+            SELECT t.ticket_id, t.status, r.reservation_id 
             FROM Ticket t
             JOIN Reservation r ON t.reservation_id = r.reservation_id
             WHERE t.ticket_id = %s AND r.client_id = %s;
         """
         cur.execute(query_check, (ticket_id, current_user_id))
-        ticket = cur.fetchone()
+        data = cur.fetchone()
 
-        if not ticket:
-            return jsonify(
-                {"error": "Ticket not found or you don't have permission to cancel it"}
-            ), 404
+        if not data:
+            return jsonify({"error": "Bilet nie istnieje lub brak uprawnień."}), 404
 
-        if ticket["status"] == "Cancelled":
-            return jsonify({"error": "Ticket is already cancelled"}), 400
+        if data["status"] == "Cancelled":
+            return jsonify({"error": "Ten bilet został już anulowany."}), 400
 
-        # 3. AKTUALIZACJA STATUSU BILETU
-        query_update = """
-            UPDATE Ticket
-            SET status = 'Cancelled'
-            WHERE ticket_id = %s;
-        """
-        cur.execute(query_update, (ticket_id,))
+        # 2. ANULOWANIE BILETU GRUPOWEGO
+        cur.execute(
+            "UPDATE Ticket SET status = 'Cancelled' WHERE ticket_id = %s", (ticket_id,)
+        )
 
-        # Opcjonalnie: Jeśli klient anuluje bilet, możemy chcieć też zwolnić
-        # jedno miejsce (seat_count) w głównej tabeli Reservation:
-        query_update_reservation = """
-            UPDATE Reservation 
-            SET seat_count = seat_count - 1
-            WHERE reservation_id = (SELECT reservation_id FROM Ticket WHERE ticket_id = %s)
-            AND seat_count > 0;
-        """
-        cur.execute(query_update_reservation, (ticket_id,))
+        # 3. ANULOWANIE GŁÓWNEJ REZERWACJI (To zwalnia miejsca!)
+        cur.execute(
+            "UPDATE Reservation SET status = 'Cancelled' WHERE reservation_id = %s",
+            (data["reservation_id"],),
+        )
 
         conn.commit()
         cur.close()
 
         return jsonify(
             {
-                "message": "Bilet został pomyślnie anulowany.",
+                "message": "Bilet grupowy został anulowany, wszystkie miejsca zostały zwolnione.",
                 "ticket_id": ticket_id,
                 "new_status": "Cancelled",
             }
         ), 200
 
     except Exception as e:
-        print(f"DB Error w /tickets/cancel: {e}")
+        print(f"DB Error w /cancel: {e}")
         if conn:
             conn.rollback()
-        return jsonify(
-            {"error": "Server error occurred while cancelling the ticket"}
-        ), 500
+        return jsonify({"error": "Błąd serwera podczas anulowania biletu."}), 500
     finally:
         if conn:
             conn.close()
