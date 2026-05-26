@@ -52,8 +52,7 @@ def update_profile(current_user_id):
                 phone_number = COALESCE(%s, phone_number)
             WHERE client_id = %s
         """
-        cur.execute(query, (first_name, last_name,
-                    phone_number, current_user_id))
+        cur.execute(query, (first_name, last_name, phone_number, current_user_id))
         conn.commit()
         cur.close()
 
@@ -76,6 +75,7 @@ def get_tickets(current_user_id):
                 r.reservation_number,
                 r.reservation_date,
                 r.status,
+                t.ticket_id,
                 t.name AS route,
                 TO_CHAR(tr.departure_time, 'YYYY-MM-DD HH24:MI') AS departure_time
             FROM Reservation r
