@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import ProfileSettingsModal from './profileSettingsModal';
@@ -8,7 +8,7 @@ import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { authFetch } from '../../utils';
 
 interface LoyaltyData { points: number; currentTier: string; nextTier: string; nextTierPoints: number; }
-interface UserData { name: string; email: string; initials: string; }
+interface UserData { first_name: string; last_name: string; email: string; initials: string }
 
 const ProfileMenuItem = ({ icon, title, onPress, isDestructive = false }: any) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
@@ -48,7 +48,7 @@ const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading:
 
 export default function PassengerProfile() {
     const [loyaltyData, setLoyaltyData] = useState<LoyaltyData | null>(null);
-    const [userData, setUserData] = useState<UserData>({ name: 'Ładowanie...', email: 'Ładowanie...', initials: '?' });
+    const [userData, setUserData] = useState<UserData>({ first_name: 'Ładowanie...', last_name: 'Ładowanie...', email: 'Ładowanie...', initials: '?' });
     const [isLoadingLoyalty, setIsLoadingLoyalty] = useState(true);
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -64,7 +64,7 @@ export default function PassengerProfile() {
                     const resLoyalty = await authFetch('/api/client/profile/user/loyalty');
                     if (resLoyalty.ok) {
                         const dataLoyalty = await resLoyalty.json();
-                        if(dataLoyalty.points !== undefined) {
+                        if (dataLoyalty.points !== undefined) {
                             setLoyaltyData({
                                 points: dataLoyalty.points,
                                 currentTier: dataLoyalty.points > 2000 ? 'GOLD' : 'STANDARD',
@@ -74,17 +74,36 @@ export default function PassengerProfile() {
                         }
                     }
 
-                    // 2. Pobieranie danych zalogowanego użytkownika z Local Storage
-                    const storedName = await AsyncStorage.getItem('userName');
-                    const storedEmail = await AsyncStorage.getItem('userEmail');
+                    let user_data_string;
 
-                    setUserData({
-                        name: storedName || 'Brak danych',
-                        email: storedEmail || 'Brak danych',
-                        initials: storedName ? storedName.substring(0, 2).toUpperCase() : '?'
-                    });
-                } catch (err) {
-                    console.error("Błąd ładowania danych:", err);
+                    try {
+                        if (Platform.OS === 'web') {
+                            user_data_string = localStorage.getItem('userData');
+                        } else {
+                            user_data_string = await SecureStore.getItemAsync('userData');
+                        }
+
+                        if (user_data_string) {
+                            const parsed_data = JSON.parse(user_data_string);
+                            const actual_data = parsed_data.data ? parsed_data.data : parsed_data;
+                            const fName = actual_data.first_name || '';
+                            const lName = actual_data.last_name || '';
+                            const initF = fName.length > 0 ? fName[0] : '';
+                            const initL = lName.length > 0 ? lName[0] : '';
+
+                            setUserData({
+                                first_name: fName || 'Brak danych',
+                                last_name: lName || 'Brak danych',
+                                email: actual_data.email || 'Brak danych',
+                                initials: (initF + initL) || '?'
+                            });
+                        } else {
+                            console.warn("Brak danych użytkownika w Local Storage");
+                        }
+
+                    } catch (error) {
+                        console.error("error while trying to load user session data: ", error);
+                    }
                 } finally {
                     setIsLoadingLoyalty(false);
                     setIsLoadingProfile(false);
@@ -95,9 +114,24 @@ export default function PassengerProfile() {
         }, [])
     );
 
-    const handleLogout = async () => { 
-        await AsyncStorage.multiRemove(['userToken', 'userName', 'userEmail']);
-        router.replace('/'); 
+    const handleLogout = async () => {
+        try {
+            const keysToRemove = ['userToken', 'userData'];
+
+            if (Platform.OS === 'web') {
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+            } else {
+                await Promise.all(
+                    keysToRemove.map(key => SecureStore.deleteItemAsync(key))
+                );
+            }
+
+            router.replace('/');
+        } catch (error) {
+            console.error("Błąd podczas wylogowywania: ", error);
+        }
     };
 
     const openSettings = (section: any) => { setActiveSection(section); setSettingsModalVisible(true); };
@@ -106,13 +140,13 @@ export default function PassengerProfile() {
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
                 <Text style={styles.headerTitle}>My Profile</Text>
-                
+
                 <View style={styles.profileCard}>
                     <View style={styles.avatarContainer}>
                         {isLoadingProfile ? <ActivityIndicator color="#e60000" /> : <Text style={styles.avatarText}>{userData.initials}</Text>}
                     </View>
                     <View style={styles.userInfo}>
-                        <Text style={styles.userName}>{userData.name}</Text>
+                        <Text style={styles.userName}>{userData.first_name} {userData.last_name}</Text>
                         <Text style={styles.userEmail}>{userData.email}</Text>
                         <View style={styles.badge}><Text style={styles.badgeText}>Standard Passenger</Text></View>
                     </View>

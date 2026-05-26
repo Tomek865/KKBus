@@ -6,52 +6,82 @@ from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from werkzeug.security import generate_password_hash
 
-universal_auth_bp = Blueprint('universal_auth', __name__)
+universal_auth_bp = Blueprint("universal_auth", __name__)
 
-@universal_auth_bp.route('/login', methods=['POST'])
+
+@universal_auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
-    
-    if not data or not data.get('email') or not data.get('password'):
+
+    if not data or not data.get("email") or not data.get("password"):
         return jsonify({"error": "Missing email or password"}), 400
 
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        email = data['email']
-        password_provided = data['password']
+        email = data["email"]
+        password_provided = data["password"]
 
-        cur.execute("SELECT client_id, password, first_name, last_name FROM Client WHERE email = %s", (email,))
+        cur.execute(
+            "SELECT client_id, password, first_name, last_name, phone_number FROM Client WHERE email = %s",
+            (email,),
+        )
         client = cur.fetchone()
 
-        if client and check_password_hash(client['password'], password_provided):
-            token = jwt.encode({
-                'client_id': client['client_id'], 
-                'role': 'Client',
-                'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=24)
-            }, current_app.config['SECRET_KEY'], algorithm='HS256')
+        if client and check_password_hash(client["password"], password_provided):
+            token = jwt.encode(
+                {
+                    "client_id": client["client_id"],
+                    "role": "Client",
+                    "exp": datetime.datetime.now(datetime.timezone.utc)
+                    + datetime.timedelta(hours=24),
+                },
+                current_app.config["SECRET_KEY"],
+                algorithm="HS256",
+            )
 
-            return jsonify({
-                "token": token,
-                "role": "Client",
-                "data": {"first_name": client['first_name'], "last_name": client['last_name']}
-            }), 200
+            return jsonify(
+                {
+                    "token": token,
+                    "role": "Client",
+                    "data": {
+                        "first_name": client["first_name"],
+                        "last_name": client["last_name"],
+                        "email": email,
+                        "phone": client["phone_number"],
+                    },
+                }
+            ), 200
 
-        cur.execute("SELECT employee_id, password, first_name, last_name, role FROM Employee WHERE email = %s AND is_active = TRUE", (email,))
+        cur.execute(
+            "SELECT employee_id, password, first_name, last_name, role FROM Employee WHERE email = %s AND is_active = TRUE",
+            (email,),
+        )
         employee = cur.fetchone()
 
-        if employee and check_password_hash(employee['password'], password_provided):
-            token = jwt.encode({
-                'employee_id': employee['employee_id'],
-                'role': employee['role'],
-                'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=12)
-            }, current_app.config['SECRET_KEY'], algorithm='HS256')
+        if employee and check_password_hash(employee["password"], password_provided):
+            token = jwt.encode(
+                {
+                    "employee_id": employee["employee_id"],
+                    "role": employee["role"],
+                    "exp": datetime.datetime.now(datetime.timezone.utc)
+                    + datetime.timedelta(hours=12),
+                },
+                current_app.config["SECRET_KEY"],
+                algorithm="HS256",
+            )
 
-            return jsonify({
-                "token": token,
-                "role": employee['role'], 
-                "data": {"first_name": employee['first_name'], "last_name": employee['last_name']}
-            }), 200
+            return jsonify(
+                {
+                    "token": token,
+                    "role": employee["role"],
+                    "data": {
+                        "first_name": employee["first_name"],
+                        "last_name": employee["last_name"],
+                        "email": email,
+                    },
+                }
+            ), 200
 
         return jsonify({"error": "Invalid email or password"}), 401
 
@@ -59,28 +89,29 @@ def login():
         print(f"DB Error: {e}")
         return jsonify({"error": "Server error occurred"}), 500
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
 
 
-@universal_auth_bp.route('/register', methods=['POST'])
+@universal_auth_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
-    
-    name = data.get('name')
-    email = data.get('email')
-    password = data.get('password')
-    role = data.get('role', 'client')
-    
+
+    name = data.get("name")
+    email = data.get("email")
+    password = data.get("password")
+    role = data.get("role", "client")
+
     # 1. Walidacja podstawowych danych
     if not name or not email or not password:
         return jsonify({"error": "Missing required fields"}), 400
 
     # 2. BEZPIECZEŃSTWO: Publiczny endpoint służy TYLKO do rejestracji pasażerów
-    if role.lower() != 'client':
+    if role.lower() != "client":
         return jsonify({"error": "Invalid role for public registration"}), 403
 
     # Rozdzielamy imię i nazwisko
-    name_parts = name.strip().split(' ', 1)
+    name_parts = name.strip().split(" ", 1)
     first_name = name_parts[0]
     last_name = name_parts[1] if len(name_parts) > 1 else ""
 
@@ -90,12 +121,12 @@ def register():
     conn = get_db_connection()
     try:
         cur = conn.cursor()
-        
+
         # 3. Sprawdzamy, czy taki email już przypadkiem nie istnieje (w klientach i pracownikach)
         cur.execute("SELECT client_id FROM Client WHERE email = %s", (email,))
         if cur.fetchone():
             return jsonify({"error": "Email is already registered"}), 409
-            
+
         cur.execute("SELECT employee_id FROM Employee WHERE email = %s", (email,))
         if cur.fetchone():
             return jsonify({"error": "Email is already registered"}), 409
@@ -106,7 +137,7 @@ def register():
             VALUES (%s, %s, %s, %s, TRUE) RETURNING client_id;
         """
         cur.execute(query, (first_name, last_name, email, hashed_password))
-        
+
         conn.commit()
         cur.close()
 
@@ -116,4 +147,5 @@ def register():
         print(f"DB Error: {e}")
         return jsonify({"error": "Server error occurred"}), 500
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()

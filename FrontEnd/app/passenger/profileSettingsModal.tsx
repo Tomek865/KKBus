@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Switch, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Modal, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Switch, ActivityIndicator, Alert, Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
@@ -13,11 +14,11 @@ interface ProfileSettingsModalProps {
 
 export default function ProfileSettingsModal({ visible, onClose, activeSection }: ProfileSettingsModalProps) {
     const [userData, setUserData] = useState({ name: '', email: '', phone: '' });
-    
+
     // Stany dla nowych sekcji
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
     const [isLoadingPayment, setIsLoadingPayment] = useState(false);
-    
+
     const [notifications, setNotifications] = useState({ push: true, email: true });
     const [selectedLanguage, setSelectedLanguage] = useState('pl');
     const [isSaving, setIsSaving] = useState(false);
@@ -27,15 +28,36 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
 
         const loadSectionData = async () => {
             if (activeSection === 'personal') {
+                let user_data_string;
+
                 try {
-                    const res = await authFetch('/api/client/profile');
-                    if (res.ok) {
-                        const data = await res.json();
-                        setUserData({ name: data.name || '', email: data.email || '', phone: data.phone || '' });
+                    if (Platform.OS === 'web') {
+                        user_data_string = localStorage.getItem('userData');
+                    } else {
+                        user_data_string = await SecureStore.getItemAsync('userData');
                     }
-                } catch (err) { console.error("Błąd pobierania danych profilu:", err); }
+
+                    if (user_data_string) {
+                        const parsed_data = JSON.parse(user_data_string);
+                        const actual_data = parsed_data.data ? parsed_data.data : parsed_data;
+                        const fName = actual_data.first_name || '';
+                        const lName = actual_data.last_name || '';
+                        const phone_number = actual_data.phone || '';
+
+                        setUserData({
+                            name: `${fName} ${lName}`,
+                            email: actual_data.email || 'Brak danych',
+                            phone: phone_number
+                        });
+                    } else {
+                        console.warn("Brak danych użytkownika w Local Storage");
+                    }
+
+                } catch (error) {
+                    console.error("error while trying to load user session data: ", error);
+                }
             }
-            
+
             if (activeSection === 'payment') {
                 setIsLoadingPayment(true);
                 try {
@@ -47,7 +69,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         // Jeśli endpoint nie istnieje, zostaw puste
                         setPaymentMethods([]);
                     }
-                } catch (err) { console.error("Błąd pobierania kart:", err); } 
+                } catch (err) { console.error("Błąd pobierania kart:", err); }
                 finally { setIsLoadingPayment(false); }
             }
 
@@ -62,7 +84,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         push: push !== 'false', // Domyślnie true
                         email: email !== 'false'
                     });
-                } catch (err) {}
+                } catch (err) { }
             }
         };
 
@@ -72,7 +94,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     const handleSavePersonal = async () => {
         setIsSaving(true);
         try {
-            const res = await authFetch('/api/client/profile/update', {
+            const res = await authFetch('/api/client/profile/user/update', {
                 method: 'PUT',
                 body: JSON.stringify(userData)
             });
@@ -121,7 +143,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                 return (
                     <View style={{ paddingVertical: 10 }}>
                         <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Full Name</Text>
-                        <TextInput 
+                        <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16, backgroundColor: '#f9fafb' }}
                             value={userData.name}
                             placeholder="Wpisz imię i nazwisko"
@@ -129,7 +151,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         />
 
                         <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Email Address</Text>
-                        <TextInput 
+                        <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16, backgroundColor: '#f9fafb' }}
                             value={userData.email}
                             placeholder="Wpisz adres email"
@@ -139,7 +161,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         />
 
                         <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Phone Number</Text>
-                        <TextInput 
+                        <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 24, backgroundColor: '#f9fafb' }}
                             value={userData.phone}
                             placeholder="Wpisz numer telefonu"

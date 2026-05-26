@@ -35,20 +35,21 @@ export default function LoginScreen() {
 
             const data = await response.json();
             if (response.ok) {
+                console.log('dane z logowania', data)
                 const role = data.role?.toLowerCase();
                 if (data.token) {
                     try {
                         if (Platform.OS === 'web') {
                             localStorage.setItem('userToken', String(data.token));
                             // Zapis profilu do localStorage na potrzeby sesji webowej
-                            if (data.user) {
-                                localStorage.setItem('userData', JSON.stringify(data.user));
+                            if (data.data) {
+                                localStorage.setItem('userData', JSON.stringify(data.data));
                             }
                         } else {
                             await SecureStore.setItemAsync('userToken', String(data.token));
                             // Zapis profilu do SecureStore na telefonie
                             if (data.user) {
-                                await SecureStore.setItemAsync('userData', JSON.stringify(data.user));
+                                await SecureStore.setItemAsync('userData', JSON.stringify(data.data));
                             }
                         }
                     } catch (error) {
