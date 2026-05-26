@@ -188,7 +188,12 @@ export default function PassengerSearch() {
         if (!selectedDep) return;
         setIsBooking(true);
 
+        // const generateRandomNumberId = () => {
+        //     return Date.now() + Math.floor(Math.random() * 1000); 
+        // };
+
         const payload = {
+            //ticket_id: generateRandomNumberId(),
             trip: {
                 id: parseInt(selectedDep.id, 10),
                 from: selectedDep.departureStation,
