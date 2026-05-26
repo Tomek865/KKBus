@@ -10,7 +10,7 @@ import { authFetch } from '../../utils';
 
 export interface TicketData {
     id: string; ticketNumber: string; seatCount: string; depTime: string; arrTime: string;
-    depStation: string; arrStation: string; duration: string; seats: number; price: number | string; isPast: boolean;
+    depStation: string; arrStation: string; duration: string; seats: number; price: number | string; isPast: boolean; isCancelled: boolean;
 }
 
 // ------------------------------------------------------------------
@@ -85,7 +85,8 @@ export default function PassengerTickets() {
                         duration: t.duration || 'Brak danych',
                         seats: t.seat_count || 1,
                         price: t.total_price !== undefined ? t.total_price : (t.price !== undefined ? t.price : 'Brak danych'),
-                        isPast: t.departure_time ? new Date(t.departure_time) < new Date() : false
+                        isPast: t.departure_time ? new Date(t.departure_time) < new Date() : false,
+                        isCancelled: t.is_cancelled || false
                     }));
                     setTickets(mappedTickets);
                 } catch (err) {
