@@ -120,7 +120,8 @@ CREATE TABLE Ticket (
     reservation_id INTEGER NOT NULL REFERENCES Reservation(reservation_id) ON DELETE CASCADE,
     segment_id INTEGER NOT NULL REFERENCES Fare_Segment(segment_id),
     final_price FLOAT NOT NULL,
-    discount_type VARCHAR(50)
+    discount_type VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'Active'
 );
 
 CREATE TABLE Reward (
