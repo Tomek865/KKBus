@@ -111,7 +111,8 @@ CREATE TABLE Reservation (
     reservation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     seat_count INTEGER NOT NULL,
     status VARCHAR(50), 
-    payment_status VARCHAR(50) DEFAULT 'Unpaid' 
+    payment_status VARCHAR(50) DEFAULT 'Unpaid',
+    total_price NUMERIC(10, 2) DEFAULT 0.00
 );
 
 CREATE TABLE Ticket (
