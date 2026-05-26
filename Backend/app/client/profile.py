@@ -72,15 +72,17 @@ def get_tickets(current_user_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         query = """
             SELECT 
+                tc.ticket_id,
+                tc.status AS ticket_status,
                 r.reservation_number,
-                r.reservation_date,
-                r.status,
-                t.ticket_id,
-                t.name AS route,
+                TO_CHAR(r.reservation_date, 'YYYY-MM-DD HH24:MI') AS reservation_date,
+                r.status AS reservation_status,
+                rt.name AS route,
                 TO_CHAR(tr.departure_time, 'YYYY-MM-DD HH24:MI') AS departure_time
             FROM Reservation r
             JOIN Trip tr ON r.trip_id = tr.trip_id
-            JOIN Route t ON tr.route_id = t.route_id
+            JOIN Route rt ON tr.route_id = rt.route_id
+            JOIN Ticket tc ON r.reservation_id = tc.reservation_id
             WHERE r.client_id = %s
             ORDER BY tr.departure_time DESC
         """
