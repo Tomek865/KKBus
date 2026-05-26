@@ -524,32 +524,38 @@ def process_checkout(current_user_id):
 
         default_segment_id = 1
 
-        # 2. Zapisujemy JEDEN bilet do tabeli
+        # 2. Zapisujemy JEDEN bilet do tabeli i POBIERAMY JEGO ID (dodane RETURNING ticket_id)
         query_insert_ticket = """
             INSERT INTO Ticket (reservation_id, segment_id, final_price, ticket_summary, status)
-            VALUES (%s, %s, %s, %s, 'Active')
+            VALUES (%s, %s, %s, %s, 'Active') RETURNING ticket_id;
         """
         cur.execute(
             query_insert_ticket,
             (new_id, default_segment_id, total_price, ticket_summary),
         )
 
+        # Pobieramy prawdziwe ID nowo utworzonego biletu!
+        new_ticket_id = cur.fetchone()["ticket_id"]
+
         # Potwierdzenie zapisu do bazy!
         conn.commit()
         cur.close()
 
         # Zwracamy frontendowi odpowiedź z sukcesem
-        return jsonify(
-            {
-                "message": "Reservation created successfully.",
-                "reservation_id": new_id,
-                "reservation_number": reservation_number,
-                "total_price": total_price,
-                "received_seats": seat_count,
-                "route": f"{from_station} -> {to_station}",
-            }
-        ), 201
-
+        return (
+            jsonify(
+                {
+                    "message": "Reservation created successfully.",
+                    "reservation_id": new_id,
+                    "ticket_id": new_ticket_id,
+                    "reservation_number": reservation_number,
+                    "total_price": total_price,
+                    "received_seats": seat_count,
+                    "route": f"{from_station} -> {to_station}",
+                }
+            ),
+            201,
+        )
     except Exception as e:
         print(f"DB Error w /checkout: {e}")
         if conn:
