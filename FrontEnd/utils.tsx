@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-const IP_adress = "http://10.111.109.100:5000";
+const IP_adress = "http://192.168.0.101:5050";
 
 export { IP_adress };
 
@@ -33,7 +33,7 @@ export const authFetch = async (endpoint: string, options: any = {}) => {
     });
 
     if (response.status === 401) {
-        console.warn("Token wygasł lub jest nieprawidłowy (401)");
+        console.warn(`Brak uprawnień lub token wygasł (401) dla: ${endpoint}`);
     }
 
     return response;

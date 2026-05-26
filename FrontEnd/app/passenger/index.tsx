@@ -4,12 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { SearchInput } from '../../components/passenger/SearchInput';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { authFetch, IP_adress } from '../../utils';
-import { router } from 'expo-router';
+import { authFetch } from '../../utils';
 
 export interface Departure {
-    id: string; departureTime: string; arrivalTime: string; departureStation: string;
-    arrivalStation: string; duration: string; seatsLeft: number; price: number;
+    id: string; 
+    departureTime: string; 
+    arrivalTime: string; 
+    departureStation: string;
+    arrivalStation: string; 
+    duration: string; 
+    seatsLeft: number | string; 
+    price: number | null;
 }
 
 const generateNext14Days = () => {
@@ -21,9 +26,10 @@ const generateNext14Days = () => {
 };
 
 const DepartureCard = ({ departure, onBook }: { departure: Departure, onBook: () => void }) => {
-    const isLowSeats = departure.seatsLeft <= 5;
+    const isLowSeats = typeof departure.seatsLeft === 'number' && departure.seatsLeft <= 5;
+    
     return (
-        <View style={styles.departureCard}>
+        <TouchableOpacity style={styles.departureCard} onPress={onBook}>
             <View style={styles.routeContainer}>
                 <View style={styles.timeBlock}>
                     <Text style={styles.timeText}>{departure.departureTime}</Text>
@@ -45,17 +51,19 @@ const DepartureCard = ({ departure, onBook }: { departure: Departure, onBook: ()
             <View style={styles.departureFooter}>
                 <View style={[styles.seatsBadge, isLowSeats ? styles.seatsBadgeOrange : styles.seatsBadgeGreen]}>
                     <Text style={[styles.seatsText, isLowSeats ? styles.seatsTextOrange : styles.seatsTextGreen]}>
-                        {departure.seatsLeft} SEATS LEFT
+                        {departure.seatsLeft === 'Brak danych' ? 'BRAK DANYCH O MIEJSCACH' : `${departure.seatsLeft} SEATS LEFT`}
                     </Text>
                 </View>
                 <View style={styles.priceContainer}>
-                    <Text style={styles.priceText}>{departure.price} PLN</Text>
-                    <TouchableOpacity style={styles.actionIcon} onPress={onBook}>
+                    <Text style={styles.priceText}>
+                        {departure.price !== null ? `${departure.price} PLN` : 'Brak danych'}
+                    </Text>
+                    <View style={styles.actionIcon}>
                         <Ionicons name="cart" size={18} color="#e60000" />
-                    </TouchableOpacity>
+                    </View>
                 </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 };
 
@@ -70,7 +78,6 @@ export default function PassengerSearch() {
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     
-    // Stany Modali
     const [modalVisible, setModalVisible] = useState(false);
     const [selectingField, setSelectingField] = useState<'from' | 'to' | null>(null);
     const [passengerModalVisible, setPassengerModalVisible] = useState(false);
@@ -80,92 +87,131 @@ export default function PassengerSearch() {
     const [selectedDep, setSelectedDep] = useState<Departure | null>(null);
     const [isBooking, setIsBooking] = useState(false);
 
-        useEffect(() => {
+       useEffect(() => {
         const fetchStationsFromDB = async () => {
             try {
-                // Używamy authFetch dla spójności nagłówków i bazowego URL
                 const res = await authFetch('/api/client/reservations/stations');
-                
                 if (!res.ok) {
-                    console.error("Błąd HTTP przy pobieraniu stacji:", res.status);
+                    console.error("Błąd pobierania stacji, status HTTP:", res.status);
                     return;
                 }
-
                 const data = await res.json();
+                console.log("Pobrane stacje z API:", data); // Zobacz w konsoli co przyszło
+
+                // Bezpieczniejsze parsowanie - szukamy tablicy głębiej, jeśli Spring ją opakował
+                const stationsArray = Array.isArray(data) ? data : (data.content || data.data || data.stations || []);
                 
-                // Zabezpieczenie: sprawdzamy czy backend na pewno zwrócił tablicę
-                if (Array.isArray(data)) {
-                    setStations(data.map((s: any) => s.name));
+                if (stationsArray && Array.isArray(stationsArray) && stationsArray.length > 0) {
+                    // Obsługuje sytuację, gdy backend zwraca obiekty [{name: "Kraków"}] lub od razu stringi ["Kraków"]
+                    setStations(stationsArray.map((s: any) => s.name ? s.name : s));
                 } else {
-                    console.error("Nieoczekiwany format danych stacji:", data);
+                    console.warn("Backend nie zwrócił poprawnej tablicy stacji.");
                 }
             } catch (err) {
-                console.error("Błąd pobierania stacji (sieć/CORS):", err);
+                console.error("Błąd sieci lub parsowania stacji:", err);
             }
         };
         fetchStationsFromDB();
     }, []);
 
-    const handleSearchRoutes = async () => {
+        const handleSearchRoutes = async () => {
         setIsSearching(true); 
         setHasSearched(true); 
         setDepartures([]);
         
         try {
-            const dateStr = selectedDate.toISOString().split('T')[0];
-            // Tu również przechodzimy na authFetch
-            const res = await authFetch(`/api/client/reservations/routes?from=${fromStation}&to=${toStation}&date=${dateStr}`);
+            // POPRAWKA 1: Generujemy datę ściśle w czasie lokalnym urządzenia, ignorując przesunięcie UTC
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const day = String(selectedDate.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`; 
+
             
+            const payload = {
+                from_station: fromStation,
+                to_station: toStation,
+                date: dateStr,
+                tickets: {
+                    adult: passengerCounts.adult,
+                    student: passengerCounts.student,
+                    reduced: passengerCounts.reduced
+                }
+            };
+            const res = await authFetch(`/api/client/reservations/routes/search`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            
+
+
             if (!res.ok) {
-                console.error("Błąd HTTP przy pobieraniu tras:", res.status);
+                console.error("Serwer zwrócił błąd HTTP:", res.status);
                 return;
             }
-
+            
             const data = await res.json();
             
-            if (Array.isArray(data)) {
-                const mappedDepartures = data.map((d: any) => ({
-                    id: String(d.trip_id),
-                    departureTime: d.departure_time,
-                    arrivalTime: d.arrival_time,
+            // DIAGNOSTYKA: Wypisujemy w konsoli dokładnie to, co przyszło
+            console.log(`Odpowiedź API dla trasy ${fromStation} -> ${toStation} (${dateStr}):`, data);
+
+            // POPRAWKA 2: Szukamy tablicy, nawet jeśli Spring spakował ją w dodatkowy obiekt
+            const routesArray = Array.isArray(data) ? data : (data.content || data.data || data.routes);
+
+            if (routesArray && Array.isArray(routesArray)) {
+                if (routesArray.length === 0) {
+                    console.log("Tablica z backendu jest pusta (brak kursów na ten dzień).");
+                }
+                
+                const mappedDepartures = routesArray.map((d: any) => ({
+                    id: String(d.trip_id || d.id || Math.random()), // Zabezpieczenie przed brakiem ID
+                    departureTime: d.departure_time || 'Brak danych',
+                    arrivalTime: d.arrival_time || 'Brak danych',
                     departureStation: fromStation,
                     arrivalStation: toStation,
-                    duration: 'N/A', 
-                    seatsLeft: d.seating_capacity, 
-                    price: 24 
+                    duration: d.duration || 'Brak danych', 
+                    seatsLeft: d.seating_capacity !== undefined ? d.seating_capacity : 'Brak danych', 
+                    price: d.total_price !== undefined ? d.total_price : null 
                 }));
                 setDepartures(mappedDepartures);
             } else {
-                console.error("Nieoczekiwany format danych tras:", data);
+                console.error("Format odpowiedzi jest nieznany. Frontend oczekiwał tablicy, a dostał:", typeof data);
             }
+            
         } catch (err) {
-            console.error("Błąd wyszukiwania tras:", err);
+            console.error("Błąd sieci lub parsowania wyszukiwania tras:", err);
         } finally {
             setIsSearching(false);
         }
     };
 
-        const handleBookTicket = async () => {
+    const handleBookTicket = async () => {
         if (!selectedDep) return;
         setIsBooking(true);
-        const totalSeats = passengerCounts.adult + passengerCounts.student + passengerCounts.reduced;
 
+        const payload = {
+            trip: {
+                id: parseInt(selectedDep.id, 10),
+                from: selectedDep.departureStation,
+                to: selectedDep.arrivalStation
+            },
+            tickets: {
+                adult: passengerCounts.adult,
+                student: passengerCounts.student,
+                reduced: passengerCounts.reduced
+            }
+
+        };
         try {
-            const res = await authFetch('/api/client/reservations/', {
+            const res = await authFetch('/api/client/reservations/checkout', {
                 method: 'POST',
-                body: JSON.stringify({
-                    trip_id: parseInt(selectedDep.id, 10),
-                    seat_count: totalSeats
-                })
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
                 setReservationModalVisible(false);
-                router.push('../user/tickets' as any);
+                Alert.alert("Success", "Ticket booked successfully!");
             } else {
-                const errorText = await res.text();
-                console.error("Serwer zwrócił błąd:", errorText);
-                Alert.alert("Error", "Failed to book the ticket. Check console.");
+                Alert.alert("Error", "Failed to book the ticket.");
             }
         } catch (err) {
             console.error("Booking error:", err);
@@ -175,12 +221,7 @@ export default function PassengerSearch() {
         }
     };
 
-    const openReservationModal = (departure: Departure) => {
-        setSelectedDep(departure);
-        setReservationModalVisible(true);
-    };
-
-    const updateCount = (type: 'adult' | 'student' | 'reduced', delta: number) => {
+    const updateCount = (type: keyof typeof passengerCounts, delta: number) => {
         setPassengerCounts(prev => {
             const newVal = prev[type] + delta;
             if (newVal < 0) return prev;
@@ -199,14 +240,7 @@ export default function PassengerSearch() {
         return parts.length > 0 ? parts.join(', ') : 'Select passengers';
     };
 
-    const handleStationSelect = (station: string) => {
-        if (selectingField === 'from') setFromStation(station);
-        if (selectingField === 'to') setToStation(station);
-        setModalVisible(false);
-    };
-
     const swapStations = () => { const temp = fromStation; setFromStation(toStation); setToStation(temp); };
-    const handleDateSelect = (date: Date) => { setSelectedDate(date); setDateModalVisible(false); };
     const formattedDate = selectedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     const totalSeats = passengerCounts.adult + passengerCounts.student + passengerCounts.reduced;
 
@@ -238,7 +272,7 @@ export default function PassengerSearch() {
                             <Text style={styles.resultsTitle}>Available Departures</Text>
                             <View style={styles.optionsBadge}><Text style={styles.optionsText}>{departures.length} options</Text></View>
                         </View>
-                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => <DepartureCard key={dep.id} departure={dep} onBook={() => openReservationModal(dep)} />)}
+                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => <DepartureCard key={dep.id} departure={dep} onBook={() => { setSelectedDep(dep); setReservationModalVisible(true); }} />)}
                     </View>
                 )}
             </ScrollView>
@@ -253,7 +287,7 @@ export default function PassengerSearch() {
                     <FlatList
                         data={stations} keyExtractor={(item) => item}
                         renderItem={({ item }) => (
-                            <TouchableOpacity style={styles.listItem} onPress={() => handleStationSelect(item)}>
+                            <TouchableOpacity style={styles.listItem} onPress={() => { selectingField === 'from' ? setFromStation(item) : setToStation(item); setModalVisible(false); }}>
                                 <Ionicons name="location-outline" size={20} color="#888" />
                                 <Text style={styles.listItemText}>{item}</Text>
                             </TouchableOpacity>
@@ -273,7 +307,7 @@ export default function PassengerSearch() {
                     <FlatList
                         data={availableDates} keyExtractor={(item) => item.toISOString()}
                         renderItem={({ item, index }) => (
-                            <TouchableOpacity style={styles.listItem} onPress={() => handleDateSelect(item)}>
+                            <TouchableOpacity style={styles.listItem} onPress={() => { setSelectedDate(item); setDateModalVisible(false); }}>
                                 <View style={[styles.iconBg, { backgroundColor: index === 0 ? '#e60000' : '#f3f4f6' }]}>
                                     <Ionicons name="calendar" size={16} color={index === 0 ? '#fff' : '#888'} />
                                 </View>
@@ -296,16 +330,16 @@ export default function PassengerSearch() {
                         <TouchableOpacity onPress={() => setPassengerModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
                     </View>
                     <View style={styles.counterList}>
-                        {['adult', 'student', 'reduced'].map((type) => (
+                        {(['adult', 'student', 'reduced'] as const).map((type) => (
                             <View style={styles.counterRow} key={type}>
                                 <View>
                                     <Text style={styles.counterLabel}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
                                     <Text style={styles.counterSub}>{type === 'adult' ? 'Standard ticket' : type === 'student' ? 'Valid student ID required (-51%)' : 'Children, Seniors (-37%)'}</Text>
                                 </View>
                                 <View style={styles.counterControls}>
-                                    <TouchableOpacity onPress={() => updateCount(type as any, -1)} style={styles.countBtn}><Ionicons name="remove" size={20} color="#111" /></TouchableOpacity>
-                                    <Text style={styles.countText}>{(passengerCounts as any)[type]}</Text>
-                                    <TouchableOpacity onPress={() => updateCount(type as any, 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => updateCount(type, -1)} style={styles.countBtn}><Ionicons name="remove" size={20} color="#111" /></TouchableOpacity>
+                                    <Text style={styles.countText}>{passengerCounts[type]}</Text>
+                                    <TouchableOpacity onPress={() => updateCount(type, 1)} style={styles.countBtn}><Ionicons name="add" size={20} color="#111" /></TouchableOpacity>
                                 </View>
                             </View>
                         ))}
@@ -316,9 +350,9 @@ export default function PassengerSearch() {
                 </SafeAreaView>
             </Modal>
 
-            {/* MODAL: POTWIERDZENIE REZERWACJI */}
+            {/* MODAL: REZERWACJA */}
             <Modal visible={reservationModalVisible} animationType="slide" presentationStyle="pageSheet">
-                <SafeAreaView style={styles.modalContainer}>
+                <SafeAreaView style={styles.modalContainerAlt}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Confirm Reservation</Text>
                         <TouchableOpacity onPress={() => setReservationModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
@@ -326,24 +360,31 @@ export default function PassengerSearch() {
                     
                     {selectedDep && (
                         <View style={{ padding: 20 }}>
-                            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Summary</Text>
-                            <Text>Route: {selectedDep.departureStation} ➝ {selectedDep.arrivalStation}</Text>
-                            <Text>Departure: {selectedDep.departureTime}</Text>
-                            <Text>Tickets: {totalSeats}</Text>
-                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginTop: 20, color: '#e60000' }}>
-                                Total: {(selectedDep.price * totalSeats)} PLN
-                            </Text>
+                            <View style={styles.searchCard}>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Summary</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                                    <Text style={{ color: '#6b7280' }}>Route:</Text>
+                                    <Text style={{ fontWeight: 'bold' }}>{selectedDep.departureStation} ➝ {selectedDep.arrivalStation}</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                                    <Text style={{ color: '#6b7280' }}>Departure:</Text>
+                                    <Text style={{ fontWeight: 'bold' }}>{selectedDep.departureTime}</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                                    <Text style={{ color: '#6b7280' }}>Tickets:</Text>
+                                    <Text style={{ fontWeight: 'bold' }}>{totalSeats}</Text>
+                                </View>
+                                <View style={{ height: 1, backgroundColor: '#e5e7eb', marginVertical: 15 }} />
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Total:</Text>
+                                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#e60000' }}>
+                                        {selectedDep.price !== null ? `${(selectedDep.price)} PLN` : 'Brak danych'}
+                                    </Text>
+                                </View>
+                            </View>
 
-                            <TouchableOpacity 
-                                style={[styles.primaryBtn, { marginTop: 40 }]} 
-                                onPress={handleBookTicket}
-                                disabled={isBooking}
-                            >
-                                {isBooking ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.primaryBtnText}>Confirm and Book</Text>
-                                )}
+                            <TouchableOpacity style={[styles.primaryBtn, { marginTop: 30 }]} onPress={handleBookTicket} disabled={isBooking}>
+                                {isBooking ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Confirm and Book</Text>}
                             </TouchableOpacity>
                         </View>
                     )}

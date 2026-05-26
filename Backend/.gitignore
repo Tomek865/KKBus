@@ -3,6 +3,7 @@
 venv/
 ENV/
 env/
+node_modules/
 
 # Cache Pythona (skompilowane pliki)
 __pycache__/
