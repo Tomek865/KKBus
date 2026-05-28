@@ -90,8 +90,11 @@ def create_trip(current_admin_id):
     # 1. Parse or generate departure_time
     dep_time_str = data.get("departureTime")
     if dep_time_str:
-        # Replace 'Z' with '+00:00' to support Python versions older than 3.11
+        # Utworzenie obiektu świadomego (22:57+02:00)
         departure_time = datetime.fromisoformat(dep_time_str.replace("Z", "+00:00"))
+
+        # ODCINAMY STREFĘ: "22:57+02:00" staje się "gołym" 22:57
+        departure_time = departure_time.replace(tzinfo=None)
     else:
         departure_time = datetime.now() + timedelta(days=1)
 
@@ -99,8 +102,11 @@ def create_trip(current_admin_id):
     arr_time_str = data.get("arrivalTime")
     if arr_time_str:
         arrival_time = datetime.fromisoformat(arr_time_str.replace("Z", "+00:00"))
+
+        # ODCINAMY STREFĘ:
+        arrival_time = arrival_time.replace(tzinfo=None)
     else:
-        # Now this math only happens if arrivalTime is missing AND departure_time is a valid datetime object
+        # Teraz arrival_time automatycznie też będzie obiektem naiwnym
         arrival_time = departure_time + timedelta(hours=4)
 
     conn = get_db_connection()
