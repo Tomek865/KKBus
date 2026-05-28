@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
-import { authFetch, IP_adress } from '../../utils';
+import { authFetch } from '../../utils';
 
 export default function AdminClients() {
     const [users, setUsers] = useState<any[]>([]);

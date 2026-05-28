@@ -37,6 +37,7 @@ def validate_ticket(current_user_id, res_number):
 
         # Zwraca standardową krotkę (tuple), np. (5, 'Pending Payment', 12, 3, '2026-05-26 15:00')
         ticket_info = cur.fetchone()
+        print(ticket_info)
 
         # A. Czy bilet w ogóle istnieje?
         if not ticket_info:

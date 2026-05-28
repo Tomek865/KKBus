@@ -6,6 +6,36 @@ import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authFetch } from '../../utils';
 
+// Funkcja pomocnicza: dokleja datę i "Z", zmuszając JS do przeliczenia UTC -> Europe/Warsaw
+const formatTime = (timeString?: string, searchedDate?: string) => {
+    if (!timeString) return 'Brak danych';
+    
+    try {
+        let isoString = timeString;
+        
+        // Jeśli to jest tylko godzina typu "10:00" albo "10:00:00"
+        if (!timeString.includes('T')) {
+            // Upewniamy się, że mamy format HH:MM:SS
+            const cleanTime = timeString.length === 5 ? `${timeString}:00` : timeString;
+            // Bierzemy datę z wyszukiwania (lub dzisiejszą jako awarię) i doklejamy czas + "Z" (wymusza UTC)
+            const baseDate = searchedDate || new Date().toISOString().split('T')[0];
+            isoString = `${baseDate}T${cleanTime}Z`;
+        }
+
+        const d = new Date(isoString);
+        
+        // Jeśli coś poszło nie tak, zwracamy po prostu 5 znaków z tego co przyszło
+        if (isNaN(d.getTime())) return timeString.substring(0, 5); 
+        
+        return d.toLocaleTimeString('pl-PL', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            timeZone: 'Europe/Warsaw' 
+        });
+    } catch {
+        return timeString.substring(0, 5);
+    }
+};
 export interface Departure {
     id: string; 
     departureTime: string; 
@@ -86,7 +116,9 @@ export default function PassengerSearch() {
     
     const [selectedDep, setSelectedDep] = useState<Departure | null>(null);
     const [isBooking, setIsBooking] = useState(false);
-
+    const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+    const [isCalculating, setIsCalculating] = useState(false);
+    const [useFreeRide, setUseFreeRide] = useState(false);
        useEffect(() => {
         const fetchStationsFromDB = async () => {
             try {
@@ -157,15 +189,18 @@ export default function PassengerSearch() {
             // POPRAWKA 2: Szukamy tablicy, nawet jeśli Spring spakował ją w dodatkowy obiekt
             const routesArray = Array.isArray(data) ? data : (data.content || data.data || data.routes);
 
-            if (routesArray && Array.isArray(routesArray)) {
+                        if (routesArray && Array.isArray(routesArray)) {
                 if (routesArray.length === 0) {
                     console.log("Tablica z backendu jest pusta (brak kursów na ten dzień).");
                 }
                 
                 const mappedDepartures = routesArray.map((d: any) => ({
                     id: String(d.tripId || d.id), 
-                    departureTime: d.departureTime || 'Brak danych',
-                    arrivalTime: d.arrivalTime || 'Brak danych',
+                    
+                    // POPRAWKA: Przeliczanie czasu z backendu na polską strefę czasową
+                    departureTime: formatTime(d.departureTime),
+                    arrivalTime: formatTime(d.arrivalTime),
+                    
                     departureStation: fromStation,
                     arrivalStation: toStation,
                     duration: d.duration || 'Brak danych', 
@@ -182,14 +217,53 @@ export default function PassengerSearch() {
         } finally {
             setIsSearching(false);
         }
+        };
+        const fetchExactPrice = async (departure: Departure, voucherApplied: boolean) => {
+        setIsCalculating(true);
+        try {
+            const payload: any = {
+                trip_id: parseInt(departure.id, 10),
+                from_station: departure.departureStation,
+                to_station: departure.arrivalStation,
+                tickets: {
+                    adult: passengerCounts.adult,
+                    student: passengerCounts.student,
+                    reduced: passengerCounts.reduced
+                }
+            };
+
+            // Jeśli użytkownik zaznaczył darmowy przejazd, dopisujemy to do payloadu.
+            // Upewnij się, że na backendzie dodasz obsługę tego pola w /calculate-price
+            if (voucherApplied) {
+                payload.voucher_id = "FREE_RIDE_1000"; 
+            }
+
+            const res = await authFetch('/api/client/reservations/calculate-price', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setCalculatedPrice(data.total_price);
+            } else {
+                console.error("Błąd kalkulacji ceny");
+                setCalculatedPrice(departure.price); // Fallback do podstawowej ceny z wyszukiwania
+            }
+        } catch (err) {
+            console.error("Błąd sieci przy kalkulacji:", err);
+            setCalculatedPrice(departure.price);
+        } finally {
+            setIsCalculating(false);
+        }
     };
 
-    const handleBookTicket = async () => {
+        const handleBookTicket = async (isVoucherApplied: boolean = false) => {
         if (!selectedDep) return;
         setIsBooking(true);
         console.log("Rezerwacja biletu dla trasy:", selectedDep);
-        const payload = {
-            //ticket_id: generateRandomNumberId(),
+        
+        const payload: any = {
             trip: {
                 id: parseInt(selectedDep.id, 10),
                 from: selectedDep.departureStation,
@@ -200,8 +274,8 @@ export default function PassengerSearch() {
                 student: passengerCounts.student,
                 reduced: passengerCounts.reduced
             }
-
         };
+
         try {
             const res = await authFetch('/api/client/reservations/checkout', {
                 method: 'POST',
@@ -210,13 +284,14 @@ export default function PassengerSearch() {
 
             if (res.ok) {
                 setReservationModalVisible(false);
-                Alert.alert("Success", "Ticket booked successfully!");
+                setUseFreeRide(false); // Reset vouchera po udanej rezerwacji
+                Alert.alert("Sukces", "Bilet został pomyślnie zarezerwowany!");
             } else {
-                Alert.alert("Error", "Failed to book the ticket.");
+                Alert.alert("Błąd", "Nie udało się zarezerwować biletu.");
             }
         } catch (err) {
             console.error("Booking error:", err);
-            Alert.alert("Error", "Something went wrong.");
+            Alert.alert("Błąd", "Wystąpił problem z połączeniem.");
         } finally {
             setIsBooking(false);
         }
@@ -273,7 +348,16 @@ export default function PassengerSearch() {
                             <Text style={styles.resultsTitle}>Available Departures</Text>
                             <View style={styles.optionsBadge}><Text style={styles.optionsText}>{departures.length} options</Text></View>
                         </View>
-                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => <DepartureCard key={dep.id} departure={dep} onBook={() => { setSelectedDep(dep); setReservationModalVisible(true); }} />)}
+                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => <DepartureCard key={dep.id} departure={dep}
+                            onBook={() => {
+                                setSelectedDep(dep);
+                                setUseFreeRide(false); // Resetujemy zaznaczenie vouchera
+                                setCalculatedPrice(dep.price); // Pokazujemy na ułamek sekundy cenę bazową
+                                setReservationModalVisible(true);
+                                fetchExactPrice(dep, false); // Przeliczamy dokładnie przez endpoint
+                            }}
+                        />
+                    )}
                     </View>
                 )}
             </ScrollView>
@@ -359,7 +443,7 @@ export default function PassengerSearch() {
                         <TouchableOpacity onPress={() => setReservationModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
                     </View>
                     
-                    {selectedDep && (
+                                       {selectedDep && (
                         <View style={{ padding: 20 }}>
                             <View style={styles.searchCard}>
                                 <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Summary</Text>
@@ -375,16 +459,28 @@ export default function PassengerSearch() {
                                     <Text style={{ color: '#6b7280' }}>Tickets:</Text>
                                     <Text style={{ fontWeight: 'bold' }}>{totalSeats}</Text>
                                 </View>
+
                                 <View style={{ height: 1, backgroundColor: '#e5e7eb', marginVertical: 15 }} />
+                                
+                                {/* WYNIKOWA CENA Z ENDPOINTU */}
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Total:</Text>
-                                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#e60000' }}>
-                                        {selectedDep.price !== null ? `${(selectedDep.price)} PLN` : 'Brak danych'}
-                                    </Text>
+                                    {isCalculating ? (
+                                        <ActivityIndicator color="#e60000" />
+                                    ) : (
+                                        <Text style={{ fontSize: 24, fontWeight: '900', color: calculatedPrice === 0 ? '#10b981' : '#e60000' }}>
+                                            {calculatedPrice !== null ? `${calculatedPrice.toFixed(2)} PLN` : 'Brak danych'}
+                                        </Text>
+                                    )}
                                 </View>
                             </View>
 
-                            <TouchableOpacity style={[styles.primaryBtn, { marginTop: 30 }]} onPress={handleBookTicket} disabled={isBooking}>
+                            <TouchableOpacity 
+                                style={[styles.primaryBtn, { marginTop: 30 }]} 
+                                // Pamiętaj o dodaniu useFreeRide do finalnego zapytania rezerwacji!
+                                onPress={() => handleBookTicket(useFreeRide)} 
+                                disabled={isBooking || isCalculating}
+                            >
                                 {isBooking ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Confirm and Book</Text>}
                             </TouchableOpacity>
                         </View>
