@@ -1,6 +1,5 @@
 ======================================================
 DOKUMENTACJA API KKBUS (Frontend <-> Backend)
-Baza URL: http://127.0.0.1:5000/api
 ======================================================
 
 UWAGA: Wszystkie endpointy z oznaczeniem [WYMAGA TOKENA] 
@@ -20,12 +19,14 @@ Wysyłamy (Body JSON):
 }
 Odbieramy (200 OK):
 {
-    "token": "eyJhbGci...",
-    "role": "Client" | "Driver" | "Admin" | "Office",
+    "token": token,
+    "role": "Client",
     "data": {
-        "first_name": "Jan",
-        "last_name": "Kowalski"
-    }
+        "first_name": client["first_name"],
+        "last_name": client["last_name"],
+        "email": email,
+        "phone": client["phone_number"],
+    },
 }
 
 

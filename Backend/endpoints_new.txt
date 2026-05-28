@@ -1,0 +1,902 @@
+======================================================
+DOKUMENTACJA API KKBUS (Frontend <-> Backend)
+======================================================
+
+UWAGA: Wszystkie endpointy z oznaczeniem [WYMAGA TOKENA] 
+muszą mieć w nagłówku żądania (Headers):
+Authorization: Bearer <tutaj_token_jwt_z_logowania>
+
+======================================================
+1. AUTORYZACJA (Wspólna dla wszystkich)
+======================================================
+
+[POST] /auth/login
+Cel: Logowanie klienta lub pracownika.
+Wysyłamy (Body JSON):
+{
+    "email": "jan@example.com",
+    "password": "moje_haslo123"
+}
+Odbieramy (200 OK):
+{
+    "token": token,
+    "role": "Client",
+    "data": {
+        "first_name": client["first_name"],
+        "last_name": client["last_name"],
+        "email": email,
+        "phone": client["phone_number"],
+    },
+}
+
+
+[POST] /auth/register
+Cel: Publiczna rejestracja nowego klienta (pasażera) w systemie.
+Wysyłamy (Body JSON):
+{
+    "name": "Jan Kowalski",
+    "email": "jan.kowalski@example.com",
+    "password": "moje_haslo123",
+    "role": "client"
+}
+Odbieramy (201 Created):
+{
+    "message": "Registration successful"
+}
+Możliwe błędy:
+409 Conflict - jeśli "error": "Email is already registered"
+400 Bad Request - jeśli brakuje danych
+
+======================================================
+2. KLIENT (Pasażer)
+======================================================
+
+client_bp.register_blueprint(client_reservation_bp, url_prefix="/reservations")
+client_bp.register_blueprint(client_auth_bp, url_prefix="/auth")
+client_bp.register_blueprint(client_profil_bp, url_prefix="/profile")
+
+
+------------------------------------------------------
+reservations
+------------------------------------------------------
+[GET] /stations
+Cel: Pobranie listy wszystkich stacji posortowanych alfabetycznie.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+    "id": 1,
+    "name": "Kraków",
+    "exact_address": "ul. Bosacka 18"
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd bazy danych
+
+[POST] /routes/search
+Cel: Wyszukuje dostępne kursy na dany dzień, oblicza łączną cenę ze zniżkami oraz czas trwania podróży.
+Wysyłamy (Body JSON):
+{
+    "from_station": "Kraków",
+    "to_station": "Warszawa",
+    "date": "2026-05-30",
+    "tickets": {
+        "adult": 1,
+        "student": 0,
+        "reduced": 0
+    }
+}
+Odbieramy (200 OK):
+[
+    {
+        "trip_id": 1,
+        "route_name": "Kraków - Warszawa",
+        "departure_time": "08:00",
+        "arrival_time": "12:35",
+        "duration": "4h 35m",
+        "base_price_per_adult": 35.0,
+        "total_price": 35.0,
+        "seating_capacity": 50,
+        "status": "Planned"
+    }
+]
+Możliwe błędy:
+400 Bad Request - brakuje parametrów 'date', 'from_station' lub 'to_station'
+500 Internal Server Error - błąd wyszukiwania
+
+[WYMAGA TOKENA]
+[POST] /
+Cel: Tworzenie rezerwacji miejsc na dany przejazd (zapisuje rezerwację jako 'Pending Payment').
+Wysyłamy (Body JSON):
+{
+    "trip_id": 1,
+    "from_station": "Kraków",
+    "to_station": "Warszawa",
+    "tickets": {
+        "adult": 1,
+        "student": 1,
+        "reduced": 0
+    }
+}
+Odbieramy (201 Created):
+{
+    "message": "Reservation created successfully.",
+    "reservation_number": "RES-123-1716885500",
+    "reservation_id": 45,
+    "total_price": 52.15
+}
+Możliwe błędy:
+400 Bad Request - brakuje danych lub liczba miejsc <= 0
+404 Not Found - jeśli kurs nie istnieje
+409 Conflict - brak wystarczającej liczby wolnych miejsc
+500 Internal Server Error - błąd zapisu do bazy
+
+[WYMAGA TOKENA]
+[GET] /journey-details/<res_number>
+Cel: Zwraca szczegóły podróży dla konkretnej rezerwacji. Przygotowane pod komponenty Reacta (śledzenie trasy, udogodnienia w autokarze).
+Wysyłamy:
+Parametr w adresie URL: <res_number> (np. /journey-details/RES-123-1716885500)
+(Brak body)
+Odbieramy (200 OK):
+{
+    "busDetails": {
+        "operator": "KKBus Express",
+        "vehicleName": "Mercedes Tourismo / KR 12345",
+        "amenities": ["wifi", "snow", "flash", "leaf"]
+    },
+    "ticketInfo": {
+        "seat": "TBD",
+        "class": "Standard",
+        "seatCount": 2,
+        "reservationNumber": "RES-123-1716885500"
+},
+    "routeDetails": [
+        {
+            "station": "Kraków",
+            "time": "08:00",
+            "isPassed": true
+        },
+        ...
+    ]
+}
+Możliwe błędy:
+404 Not Found - brak rezerwacji lub brak uprawnień
+500 Internal Server Error - błąd serwera
+
+[WYMAGA TOKENA]
+[POST] /calculate-price
+Cel: Wylicza łączną kwotę za bilety na podstawie przesłanych ilości, typu zniżek i długości trasy.
+Wysyłamy (Body JSON):
+{
+    "trip_id": 1,
+    "from_station": "Kraków",
+    "to_station": "Warszawa",
+    "tickets": {
+        "adult": 1,
+        "student": 2,
+        "reduced": 0
+    }
+}
+Odbieramy (200 OK):
+{
+    "base_price_per_ticket": 35.0,
+    "total_price": 69.30,
+    "total_seats": 3
+}
+Możliwe błędy:
+400 Bad Request - brak wybranych biletów lub nieprawidłowe stacje dla kursu
+500 Internal Server Error - błąd kalkulacji
+
+[WYMAGA TOKENA]
+[POST] /checkout
+Cel: Główny proces zakupu. Rezerwuje miejsca, wylicza bezpiecznie cenę i tworzy od razu grupowy bilet dla pasażera.
+Wysyłamy (Body JSON):
+{
+    "trip": {
+        "id": 1,
+        "from": "Kraków",
+        "to": "Warszawa"
+    },
+    "tickets": {
+        "adult": 1,
+        "student": 2,
+        "reduced": 0
+    }
+}
+Odbieramy (201 Created):
+{
+    "message": "Reservation created successfully.",
+    "reservation_id": 46,
+    "ticket_id": 12,
+    "reservation_number": "RES-123-1716885500",
+    "total_price": 69.30,
+    "received_seats": 3,
+    "route": "Kraków -> Warszawa"
+}
+Możliwe błędy:
+400 Bad Request - brak ID kursu, stacji lub błędna ilość miejsc
+404 Not Found - kurs nie istnieje
+409 Conflict - brak wystarczającej liczby wolnych miejsc
+500 Internal Server Error - błąd po stronie bazy podczas zapisu
+
+[WYMAGA TOKENA]
+[PATCH] /tickets/<ticket_id>/cancel
+Cel: Anuluje bilet grupowy i powiązaną z nim rezerwację, co automatycznie zwalnia zarezerwowane miejsca w autobusie.
+Wysyłamy:
+Parametr w adresie URL: <ticket_id> (np. /tickets/12/cancel)
+(Brak body)
+Odbieramy (200 OK):
+{
+    "message": "Bilet grupowy został anulowany, wszystkie miejsca zostały zwolnione.",
+    "ticket_id": 12,
+    "new_status": "Cancelled"
+}
+Możliwe błędy:
+400 Bad Request - jeśli bilet został już wcześniej anulowany
+404 Not Found - jeśli bilet nie istnieje lub użytkownik nie ma do niego dostępu
+500 Internal Server Error - błąd podczas operacji anulowania
+
+
+------------------------------------------------------
+auth
+------------------------------------------------------
+[POST] /register
+Cel: Rejestracja nowego klienta w systemie (tworzenie konta).
+Wysyłamy (Body JSON):
+{
+    "first_name": "Jan",
+    "last_name": "Kowalski",
+    "email": "jan.kowalski@example.com",
+    "password": "moje_haslo123",
+    "phone_number": "123456789"  // Pole opcjonalne
+}
+Odbieramy (201 Created):
+{
+    "message": "Registration successful!",
+    "client_id": 15
+}
+Możliwe błędy:
+400 Bad Request - "Missing form data" (jeśli brakuje imienia, nazwiska, emaila lub hasła)
+409 Conflict - "User with this email already exists!" (jeśli email jest już w bazie)
+500 Internal Server Error - błąd serwera/bazy danych
+
+[POST] /login
+Cel: Logowanie klienta do systemu i pobranie tokena JWT.
+Wysyłamy (Body JSON):
+{
+    "email": "jan.kowalski@example.com",
+    "password": "moje_haslo123"
+}
+Odbieramy (200 OK):
+{
+    "message": "Logged in successfully",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "client": {
+        "first_name": "Jan",
+        "last_name": "Kowalski"
+    }
+}
+Możliwe błędy:
+400 Bad Request - "Missing email or password" (jeśli brakuje danych w żądaniu)
+401 Unauthorized - "Invalid email or password" (błędne dane logowania)
+500 Internal Server Error - błąd serwera/bazy danych
+
+
+------------------------------------------------------
+profile
+------------------------------------------------------
+[WYMAGA TOKENA]
+[GET] /user/loyalty
+Cel: Pobranie liczby punktów lojalnościowych przypisanych do konta zalogowanego klienta.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+{
+    "points": 150
+}
+Możliwe błędy:
+404 Not Found - "User not found" (jeśli użytkownik nie istnieje w bazie)
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[POST, PUT] /user/update
+Cel: Aktualizacja danych profilowych klienta (imię, nazwisko, numer telefonu). Pola są opcjonalne – zaktualizowane zostaną tylko te przesłane w żądaniu.
+Wysyłamy (Body JSON):
+{
+    "first_name": "Jan",
+    "last_name": "Nowak",
+    "phone_number": "987654321"
+}
+Odbieramy (200 OK):
+{
+    "message": "Profile updated successfully"
+}
+Możliwe błędy:
+400 Bad Request - "No data provided for update" (jeśli przesłano pusty obiekt)
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[GET] /tickets
+Cel: Pobranie historii wszystkich biletów i powiązanych z nimi rezerwacji dla zalogowanego klienta. Lista jest posortowana malejąco od najnowszej daty odjazdu.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "ticket_id": 12,
+        "ticket_status": "Active",
+        "reservation_number": "RES-15-1716885500",
+        "reservation_date": "2026-05-28 10:30",
+        "reservation_status": "Paid",
+        "route": "Kraków - Warszawa",
+        "departure_time": "2026-05-30 08:00"
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+======================================================
+3. KIEROWCA
+======================================================
+
+driver_bp.register_blueprint(driver_tickets_bp, url_prefix="/tickets")
+driver_bp.register_blueprint(driver_reports_bp)
+driver_bp.register_blueprint(driver_auth_bp, url_prefix="/auth")
+driver_bp.register_blueprint(driver_trips_bp, url_prefix="/trips")
+
+
+------------------------------------------------------
+tickets
+------------------------------------------------------
+
+[WYMAGA TOKENA]
+[POST] /<res_number>/validate
+Cel: Walidacja biletu przez kierowcę. Zmienia status rezerwacji na 'Boarded' (na pokładzie) oraz powiązanego z nią biletu grupowego na 'Realized' (zrealizowany).
+Wysyłamy:
+Parametr w adresie URL: <res_number> (np. /RES-123-1716885500/validate)
+(Brak body)
+Odbieramy (200 OK):
+{
+    "message": "Ticket RES-123-1716885500 validated successfully.",
+    "reservation_status": "Boarded",
+    "ticket_status": "Realized"
+}
+Możliwe błędy:
+404 Not Found - "Ticket not found." (jeśli podany numer rezerwacji nie istnieje)
+500 Internal Server Error - błąd serwera/bazy danych podczas zatwierdzania biletu
+
+------------------------------------------------------
+
+------------------------------------------------------
+[WYMAGA TOKENA]
+[POST] /reports
+Cel: Zapisanie raportu z konkretnego odcinka trasy. Rejestruje liczbę wsiadających i wysiadających pasażerów. Jeśli główny raport dla całego kursu jeszcze nie istnieje, tworzy go automatycznie.
+Wysyłamy (Body JSON):
+{
+    "trip_id": 12,        // akceptowane również jako "tripId" lub "id_kursu"
+    "segment_id": 5,      // akceptowane również jako "segmentId" lub "id_odcinka"
+    "boarded": 4,         // opcjonalne, domyślnie 0
+    "alighted": 2         // opcjonalne, domyślnie 0
+}
+Odbieramy (201 Created):
+{
+    "message": "Raport odcinka zapisany poprawnie."
+}
+Możliwe błędy:
+400 Bad Request - "Brak ID kursu (trip_id) lub odcinka (segment_id)"
+500 Internal Server Error - "Wystąpił błąd podczas zapisywania raportu."
+
+[WYMAGA TOKENA]
+[POST] /shift/end
+Cel: Zakończenie zmiany kierowcy. Jeśli w żądaniu zostaną przekazane dane o tankowaniu (objętość i koszt większe od 0 oraz ID pojazdu), system automatycznie wyliczy cenę za litr paliwa i zarejestruje tankowanie w bazie danych.
+Wysyłamy (Body JSON):
+{
+    "vehicle_id": 3,      // akceptowane również jako "vehicleId" lub "id_pojazdu"
+    "volume": 50.5,       // liczba litrów, opcjonalne, domyślnie 0
+    "cost": 320.50        // całkowity koszt paliwa, opcjonalne, domyślnie 0
+}
+Odbieramy (200 OK):
+{
+    "message": "Zmiana zakończona sukcesem. Dane z tankowania zapisane."
+}
+Możliwe błędy:
+500 Internal Server Error - "Wystąpił błąd podczas kończenia zmiany."
+
+------------------------------------------------------
+auth
+------------------------------------------------------
+[POST] /login
+Cel: Logowanie pracownika na stanowisku kierowcy. Zwraca token JWT ważny 12 godzin. Autoryzacja powiedzie się tylko wtedy, gdy użytkownik ma przypisaną rolę 'Driver' oraz aktywne konto (pole is_active = TRUE).
+Wysyłamy (Body JSON):
+{
+    "email": "kierowca@example.com",
+    "password": "moje_haslo123"
+}
+Odbieramy (200 OK):
+{
+    "message": "Logged in successfully as a driver.",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "driver": {
+        "first_name": "Jan",
+        "last_name": "Kowalski"
+    }
+}
+Możliwe błędy:
+400 Bad Request - "Missing email or password" (jeśli brakuje danych w żądaniu)
+401 Unauthorized - "Invalid credentials or account is inactive." (błędne hasło/email, brak roli kierowcy lub konto zostało zablokowane/dezaktywowane)
+500 Internal Server Error - błąd serwera/bazy danych
+
+------------------------------------------------------
+trips
+------------------------------------------------------
+[WYMAGA TOKENA]
+[GET] /
+Cel: Pobranie harmonogramu pracy (listy przypisanych kursów) dla aktualnie zalogowanego kierowcy. Zwraca kursy posortowane rosnąco według czasu odjazdu.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "trip_id": 1,
+        "route_name": "Kraków - Warszawa",
+        "departure_time": "2026-05-30 08:00",
+        "arrival_time": "2026-05-30 12:35",
+        "bus_id": "KR 12345",
+        "status": "Planned"
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[GET] /<trip_id>/stations
+Cel: Pobranie listy przystanków dla konkretnego kursu (wymagane, by kierowca był do niego przypisany). Lista jest posortowana według kolejności na trasie.
+Wysyłamy:
+Parametr w adresie URL: <trip_id> (np. /1/stations)
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "station_id": 1,
+        "name": "Kraków",
+        "exact_address": "ul. Bosacka 18",
+        "order_on_route": 1
+    },
+    ...
+]
+Możliwe błędy:
+404 Not Found - "Trip not found or access denied" (jeśli kurs nie istnieje lub nie jest przypisany do tego kierowcy)
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[GET] /<trip_id>/passengers
+Cel: Pobranie listy pasażerów przypisanych do konkretnego kursu. Zwraca tylko aktywne rezerwacje (status inny niż 'Cancelled'), posortowane alfabetycznie według nazwiska.
+Wysyłamy:
+Parametr w adresie URL: <trip_id> (np. /1/passengers)
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "reservation_id": 45,
+        "reservation_number": "RES-123-1716885500",
+        "first_name": "Jan",
+        "last_name": "Kowalski",
+        "phone_number": "123456789",
+        "seat_count": 2,
+        "status": "Boarded",
+        "payment_status": "Paid"
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[GET] /<trip_id>
+Cel: Pobranie szczegółowych informacji o konkretnym kursie i pojeździe. Klucze w odpowiedzi są zoptymalizowane (camelCase) pod aplikację frontendową.
+Wysyłamy:
+Parametr w adresie URL: <trip_id> (np. /1)
+(Brak body)
+Odbieramy (200 OK):
+{
+    "id": 1,
+    "routeName": "Kraków - Warszawa",
+    "busBrand": "Mercedes",
+    "busModel": "Tourismo",
+    "registrationNumber": "KR 12345",
+    "busNumber": "15",
+    "departureTime": "2026-05-30 08:00",
+    "status": "Planned"
+}
+Możliwe błędy:
+404 Not Found - "Trip not found or you don't have access to it"
+500 Internal Server Error - błąd serwera/bazy danych
+
+
+======================================================
+4. PANEL ADMINA (Właściciel / Sekretariat)
+======================================================
+
+admin_bp.register_blueprint(admin_dashboard_bp)
+admin_bp.register_blueprint(admin_fleet_bp, url_prefix='/fleet')
+admin_bp.register_blueprint(admin_auth_bp, url_prefix='/auth')
+admin_bp.register_blueprint(admin_reports_bp, url_prefix='/reports')
+admin_bp.register_blueprint(admin_management_bp, url_prefix='/management')
+
+
+------------------------------------------------------
+
+------------------------------------------------------
+[WYMAGA TOKENA]
+[GET] /stats
+Cel: Pobranie ogólnych statystyk do głównego panelu administratora (łączny przychód ze sprzedanych biletów, stosunek aktywnych pojazdów do wszystkich w flocie, łączna liczba pasażerów z nieanulowanych rezerwacji oraz całkowita liczba tras).
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+{
+    "revenue": "12,500.50 PLN",
+    "buses": "10 / 12",
+    "passengers": "1,250",
+    "routes": "8"
+}
+Możliwe błędy:
+500 Internal Server Error - błąd serwera lub bazy danych (zwraca treść wyjątku)
+
+[WYMAGA TOKENA]
+[GET] /users
+Cel: Pobranie połączonej listy wszystkich użytkowników w systemie (klientów oraz pracowników). Klienci otrzymują rolę 'Passenger'. Pole id posiada odpowiedni prefiks, aby odróżnić typ konta (C_ dla klientów, E_ dla pracowników). Zwraca listę posortowaną alfabetycznie według imienia i nazwiska.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "id": "C_15",
+        "name": "Anna Nowak",
+        "email": "anna.nowak@example.com",
+        "role": "Passenger",
+        "trips": 2,
+        "is_active": true
+    },
+    {
+        "id": "E_3",
+        "name": "Jan Kowalski",
+        "email": "jan.kowalski@example.com",
+        "role": "Driver",
+        "trips": 0,
+        "is_active": true
+    }
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera lub bazy danych (zwraca treść wyjątku)
+
+------------------------------------------------------
+fleet
+------------------------------------------------------
+PANEL ADMINISTRATORA - ZARZĄDZANIE FLOTĄ I TRASAMI
+[WYMAGA TOKENA]
+[GET] /
+Cel: Pobranie przypisań floty, czyli pełnej listy zaplanowanych kursów z przypisanym pojazdem, trasą i kierowcą. Wyniki są posortowane od najnowszych odjazdów.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "id": 1,
+        "busId": "KR 12345",
+        "route": "Kraków - Warszawa",
+        "status": "Planned",
+        "driver": "Jan K."
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[PATCH] /<assignment_id>
+Cel: Anulowanie wybranego kursu. Automatycznie zmienia status kursu (Trip) i wszystkich powiązanych rezerwacji na 'Cancelled'.
+Wysyłamy:
+Parametr w adresie URL: <assignment_id> (np. /12)
+(Brak body)
+Odbieramy (200 OK):
+{
+    "message": "Trip cancelled successfully"
+}
+Możliwe błędy:
+404 Not Found - "Trip not found" (jeśli podane ID kursu nie istnieje)
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[POST] /
+Cel: Utworzenie nowego kursu. Czas odjazdu jest automatycznie ustawiany na jutro, a czas przyjazdu na +4 godziny od odjazdu.
+Wysyłamy (Body JSON):
+{
+    "busId": 3,
+    "route": 5,
+    "driver": 2,
+    "status": "Planned" // opcjonalnie
+}
+Odbieramy (201 Created):
+{
+    "id": 15,
+    "busId": "KR 12345",
+    "route": "Kraków - Warszawa",
+    "driver": "Jan",
+    "status": "Planned"
+}
+Możliwe błędy:
+400 Bad Request - "All fields are required" (jeśli brakuje któregoś z wymaganych ID)
+500 Internal Server Error - błąd tworzenia kursu
+
+[WYMAGA TOKENA]
+[GET] /buses
+Cel: Pobranie pełnej listy autobusów w systemie wraz ze szczegółowymi parametrami.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "id": 1,
+        "vin": "WBA123456789",
+        "registrationNumber": "KR 12345",
+        "brand": "Mercedes",
+        "model": "Tourismo",
+        "status": "Available",
+        "parkingLocation": "Baza Główna",
+        "seatingCapacity": 50,
+        "isActive": true
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[POST] /buses
+Cel: Dodanie nowego autobusu do floty pojazdów.
+Wysyłamy (Body JSON):
+{
+    "vin": "WBA123456789",
+    "registrationNumber": "WA 54321",
+    "brand": "Volvo",
+    "model": "9700",
+    "seatingCapacity": 55,
+    "status": "Available",         // opcjonalne
+    "parkingLocation": "Depot A",  // opcjonalne
+    "isActive": true               // opcjonalne
+}
+Odbieramy (201 Created):
+{
+    "id": 12,
+    "vin": "WBA123456789",
+    "registrationNumber": "WA 54321",
+    "brand": "Volvo",
+    "model": "9700",
+    "status": "Available",
+    "parkingLocation": "Depot A",
+    "seatingCapacity": 55,
+    "isActive": true
+}
+Możliwe błędy:
+400 Bad Request - brakuje wymaganych pól (VIN, numer rejestracyjny, marka, model, pojemność)
+500 Internal Server Error - błąd zapisu, najczęściej konflikt z istniejącym już numerem VIN
+
+[WYMAGA TOKENA]
+[POST] /routes
+Cel: Utworzenie nowej trasy w systemie (na tym etapie trasa nie posiada jeszcze przystanków).
+Wysyłamy (Body JSON):
+{
+    "name": "Kraków - Zakopane"
+}
+Odbieramy (201 Created):
+{
+    "id": 8,
+    "name": "Kraków - Zakopane"
+}
+Możliwe błędy:
+400 Bad Request - "Route name is required"
+500 Internal Server Error - błąd tworzenia trasy
+
+[WYMAGA TOKENA]
+[GET] /routes
+Cel: Pobranie uproszczonej listy wszystkich tras. Idealne do wykorzystania w polach wyboru (dropdown).
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "id": 1,
+        "name": "Kraków - Warszawa"
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[GET] /drivers
+Cel: Pobranie listy tylko tych pracowników, którzy są przypisani do roli kierowcy ('Driver') i posiadają aktywne konto.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "id": 2,
+        "name": "Jan Kowalski",
+        "email": "jan.kowalski@example.com"
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[GET] /stations
+Cel: Pobranie listy wszystkich przystanków utworzonych w systemie.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "id": 1,
+        "name": "Kraków Główny",
+        "exactAddress": "ul. Bosacka 18"
+    },
+    ...
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[POST] /stations
+Cel: Utworzenie nowego przystanku w bazie danych.
+Wysyłamy (Body JSON):
+{
+    "name": "Warszawa Zachodnia",
+    "exact_address": "Al. Jerozolimskie 144"
+}
+Odbieramy (201 Created):
+{
+    "id": 5,
+    "name": "Warszawa Zachodnia",
+    "exactAddress": "Al. Jerozolimskie 144"
+}
+Możliwe błędy:
+400 Bad Request - brak nazwy lub dokładnego adresu
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[POST] /routes/<route_id>/stations
+Cel: Przypisanie grupy przystanków do wskazanej trasy. Przesłana tablica
+wymusza kolejność (order_on_route) - pierwszy ID na liście staje się stacją
+początkową itd. Operacja nadpisuje dotychczasowe przystanki dla tej trasy!
+Wysyłamy (Body JSON):
+{
+    "stations": [1, 5, 3, 2]
+}
+Odbieramy (200 OK):
+{
+    "message": "Successfully assigned 4 stations to route 1 in order."
+}
+Możliwe błędy:
+400 Bad Request - brak stacji lub nieprawidłowy format (oczekiwana tablica)
+500 Internal Server Error - błąd przypisywania, np. przekazano ID stacji, które nie istnieje w bazie
+
+[WYMAGA TOKENA]
+[GET] /routes/<route_id>/stations
+Cel: Pobranie wszystkich przystanków należących do danej trasy. Zwrócona lista jest automatycznie posortowana według ich właściwej kolejności (order_on_route).
+Wysyłamy:
+Parametr w adresie URL: <route_id> (np. /routes/1/stations)
+(Brak body)
+Odbieramy (200 OK):
+[
+    {
+        "id": 1,
+        "name": "Kraków Główny",
+        "exactAddress": "ul. Bosacka 18",
+        "orderOnRoute": 1
+    },
+    {
+        "id": 5,
+        "name": "Warszawa Zachodnia",
+        "exactAddress": "Al. Jerozolimskie 144",
+        "orderOnRoute": 2
+    }
+]
+Możliwe błędy:
+500 Internal Server Error - błąd serwera/bazy danych
+
+
+------------------------------------------------------
+auth
+------------------------------------------------------
+[POST] /login
+Cel: Logowanie pracownika do panelu administracyjnego. Dostęp mają wyłącznie pracownicy posiadający aktywny profil (is_active = TRUE) oraz przypisaną rolę 'Admin' lub 'Office'. Zwraca token JWT ważny przez 12 godzin.
+Wysyłamy (Body JSON):
+{
+    "email": "admin@example.com",
+    "password": "moje_haslo123"
+}
+Odbieramy (200 OK):
+{
+    "message": "Logged in successfully to the admin panel.",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "admin_info": {
+        "first_name": "Anna",
+        "last_name": "Nowak",
+        "role": "Admin"
+    }
+}
+Możliwe błędy:
+400 Bad Request - "Missing email or password" (jeśli brakuje danych w żądaniu)
+401 Unauthorized - "Invalid credentials or missing permissions." (błędny email/hasło, konto zablokowane lub brak wystarczających uprawnień)
+500 Internal Server Error - błąd serwera/bazy danych
+
+
+------------------------------------------------------
+reports
+------------------------------------------------------
+
+[WYMAGA TOKENA]
+[GET] /financial
+Cel: Pobranie raportu finansowego podsumowującego bieżący miesiąc (na podstawie aktualnej daty systemowej). Oblicza łączne przychody ze sprzedaży biletów, koszty operacyjne (koszty tankowania) oraz zysk netto.
+Wysyłamy:
+(Brak body)
+Odbieramy (200 OK):
+{
+    "ticketSales": 15000.50,
+    "fuelCosts": 4500.00,
+    "grossRevenue": 15000.50,
+    "operatingCosts": 4500.00,
+    "netProfit": 10500.50
+}
+Możliwe błędy:
+500 Internal Server Error - "Błąd podczas generowania raportu" (błąd serwera/bazy danych)
+
+
+------------------------------------------------------
+management
+------------------------------------------------------
+
+[WYMAGA TOKENA]
+[PATCH] /users/<user_id>
+Cel: Dezaktywacja użytkownika (tzw. soft delete) poprzez zmianę jego statusu is_active na FALSE. Rozpoznaje typ konta na podstawie prefiksu w ID (C_ dla klientów, E_ dla pracowników). Administrator nie może dezaktywować własnego konta.
+Wysyłamy:
+Parametr w adresie URL: <user_id> (np. /users/C_15 lub /users/E_3)
+(Brak body)
+Odbieramy (200 OK):
+{
+    "message": "User deactivated successfully"
+}
+Możliwe błędy:
+400 Bad Request - "Invalid user ID format" (jeśli format ID nie zawiera _) lub "Unknown user type" (nieznany prefiks)
+403 Forbidden - "You cannot deactivate your own account" (próba dezaktywacji samego siebie)
+404 Not Found - "User not found" (jeśli użytkownik o podanym ID nie istnieje)
+500 Internal Server Error - błąd serwera/bazy danych
+
+[WYMAGA TOKENA]
+[POST] /users
+Cel: Utworzenie nowego użytkownika z poziomu panelu administratora. W zależności od przekazanej roli (Client lub innej dla pracowników), system automatycznie dodaje rekord do odpowiedniej tabeli, dzieli podane imię i nazwisko oraz nadaje domyślne hasło (haslo123). Zwraca zunifikowane ID (z prefiksem C_ lub E_).
+Wysyłamy (Body JSON):
+{
+    "name": "Piotr Wiśniewski",
+    "email": "piotr.w@example.com",
+    "role": "Client",     // np. "Client", "Driver", "Admin", "Office"
+    "isActive": true      // opcjonalne, domyślnie domyślnie
+}
+Odbieramy (201 Created):
+{
+    "id": "C_18",
+    "name": "Piotr Wiśniewski",
+    "email": "piotr.w@example.com",
+    "role": "Client",
+    "isActive": true,
+    "trips": 0
+}
+Możliwe błędy:
+400 Bad Request - "Name and email are required" (jeśli brakuje wymaganych pól)
+500 Internal Server Error - "Email already exists or server error" (np. gdy podany adres email jest już zajęty)
