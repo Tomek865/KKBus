@@ -15,9 +15,10 @@ export default function AdminReports() {
             setLoading(true);
             try {
                 // Fetch statystyk i jednego, rozbudowanego raportu finansowego
-                const [finRes, statsRes] = await Promise.all([
+                const [finRes, statsRes, routeRevenueRes] = await Promise.all([
                     authFetch('/api/admin/reports/financial'),
-                    authFetch('/api/admin/stats')
+                    authFetch('/api/admin/stats'),
+                    authFetch('/api/admin/reports/route-revenue') // Nowy endpoint dla przychodów z kursów
                 ]);
 
                 if (finRes.ok) {
@@ -25,6 +26,12 @@ export default function AdminReports() {
                     setReportData(finData);
                     // Automatycznie wyciągamy nową tablicę z backendu (lub dajemy pustą, jeśli jej jeszcze nie ma)
                     setTripRevenues(finData.tripRevenues || []);
+                }
+
+                if (routeRevenueRes.ok) {
+                    const routeRevenueData = await routeRevenueRes.json();
+                    setTripRevenues(prev => [...prev, ...routeRevenueData]);
+                    console.log("Fetched route revenue data:", routeRevenueData);
                 }
 
                 if (statsRes.ok) {
@@ -108,19 +115,15 @@ export default function AdminReports() {
 
                     <View style={styles.tableHeader}>
                         <Text style={[styles.headerCell, { flex: 2 }]}>ROUTE</Text>
-                        <Text style={[styles.headerCell, { flex: 1.5 }]}>DATE</Text>
-                        <Text style={[styles.headerCell, { flex: 1, textAlign: 'center' }]}>PASSENGERS</Text>
                         <Text style={[styles.headerCell, { flex: 1, textAlign: 'right' }]}>REVENUE</Text>
                     </View>
                     
                     <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
                         {tripRevenues.map((trip: any, index: number) => (
                             <View key={index} style={styles.tableRow}>
-                                <Text style={[styles.cell, { flex: 2, fontWeight: '500' }]}>{trip.route}</Text>
-                                <Text style={[styles.cell, { flex: 1.5, color: COLORS.grayText, fontSize: 12 }]}>{trip.date}</Text>
-                                <Text style={[styles.cell, { flex: 1, textAlign: 'center' }]}>{trip.passengers}</Text>
+                                <Text style={[styles.cell, { flex: 2, fontWeight: '500' }]}>{trip.routeName}</Text>
                                 <Text style={[styles.cell, { flex: 1, textAlign: 'right', fontWeight: 'bold', color: COLORS.green }]}>
-                                    {trip.revenue} PLN
+                                    {trip.totalRevenue} PLN
                                 </Text>
                             </View>
                         ))}

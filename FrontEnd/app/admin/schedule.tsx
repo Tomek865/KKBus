@@ -4,17 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 import { authFetch } from '../../utils';
 
-// Funkcje pomocnicze do formatowania daty i czasu z formatu ISO
+// Funkcje pomocnicze do formatowania daty i czasu
 const formatTime = (dateString?: string) => {
     if (!dateString) return '--:--';
     try {
         const d = new Date(dateString);
-        return d.toLocaleTimeString('pl-PL', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            timeZone: 'Europe/Warsaw'
-        });
-    } catch {
+        
+        // Wyciągamy godziny i minuty bezpośrednio z czasu UTC
+        // padStart(2, '0') dodaje zero z przodu, jeśli godzina/minuta jest jednocyfrowa
+        const hours = String(d.getUTCHours()).padStart(2, '0');
+        const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+        
+        return `${hours}:${minutes}`;
+    } catch (e) {
         return '--:--';
     }
 };
@@ -23,12 +25,11 @@ const formatDate = (dateString?: string) => {
     if (!dateString) return 'Brak daty';
     try {
         const d = new Date(dateString);
-        return d.toLocaleDateString('pl-PL', { 
-            weekday: 'short', 
-            day: '2-digit', 
-            month: '2-digit' ,
-            year: '2-digit'
-        });
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const year = String(d.getUTCFullYear()).slice(-2); // Ostatnie dwie cyfry roku
+        
+        return `${day}.${month}.${year}`;
     } catch {
         return '';
     }
@@ -110,6 +111,7 @@ export default function AdminSchedule() {
         try {
             const response = await authFetch('/api/admin/fleet/');
             const data = await response.json();
+            console.log("Fetched fleet data:", data);
             setFleet(Array.isArray(data) ? data : []);
         } catch (e) {
             console.error("Błąd pobierania floty:", e);
@@ -210,10 +212,10 @@ export default function AdminSchedule() {
         if (currentDate > endDateObj) return dates;
 
         while (currentDate <= endDateObj) {
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const day = String(currentDate.getDate()).padStart(2, '0');
-        const dateString = `${year}-${month}-${day}`;
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
 
             if (repeatConfig.frequency === 'custom') {
                 if (repeatConfig.customDays.includes(currentDate.getDay())) {
@@ -233,23 +235,6 @@ export default function AdminSchedule() {
             }
         }
         return dates;
-    };
-
-       // Funkcja pomocnicza generująca ISO String z zachowaniem lokalnego offsetu (np. +02:00) zamiast zrzucania do 'Z' (UTC)
-    const toLocalISOString = (dateStr: string, timeStr: string) => {
-        const localDate = new Date(`${dateStr}T${timeStr}`);
-        const offset = localDate.getTimezoneOffset(); // Otrzymujemy offset w minutach względem UTC (dla Polski latem to -120)
-        
-        // Zabezpieczenie: jeśli wprowadzona data jest nieprawidłowa, zwracamy cokolwiek, by reszta kodu złapała błąd
-        if (isNaN(localDate.getTime())) return `${dateStr}T${timeStr}:00.000Z`; 
-
-        const absOffset = Math.abs(offset);
-        // Uwaga: znak w JS offset jest odwrócony (np. -120 dla UTC+2), więc odwracamy go logicznie
-        const sign = offset <= 0 ? '+' : '-'; 
-        const hours = String(Math.floor(absOffset / 60)).padStart(2, '0');
-        const minutes = String(absOffset % 60).padStart(2, '0');
-        
-        return `${dateStr}T${timeStr}:00.000${sign}${hours}:${minutes}`;
     };
 
     const handleAddEntry = async () => {
@@ -274,24 +259,14 @@ export default function AdminSchedule() {
 
         try {
             const requests = datesToSchedule.map(dateStr => {
-                // Używamy nowej funkcji do zachowania wpisanej godziny i polskiej strefy czasowej
-                const departureIso = toLocalISOString(dateStr, newEntry.departureTime);
-                
-                // Obsługa kursów "przez północ" (jeśli przyjazd jest mniejszy niż odjazd)
-                let arrivalDateStr = dateStr;
+                const departureIso = `${dateStr}T${newEntry.departureTime}:00`;
+                console.log("Departure ISO:", departureIso);
+                let arrivalDateObj = new Date(`${dateStr}T${newEntry.arrivalTime}`);
                 if (newEntry.arrivalTime < newEntry.departureTime) {
-                    const nextDay = new Date(`${dateStr}T00:00:00`);
-                    nextDay.setDate(nextDay.getDate() + 1);
-                    const year = nextDay.getFullYear();
-                    const month = String(nextDay.getMonth() + 1).padStart(2, '0');
-                    const day = String(nextDay.getDate()).padStart(2, '0');
-                    arrivalDateStr = `${year}-${month}-${day}`;
+                    arrivalDateObj.setDate(arrivalDateObj.getDate() + 1);
                 }
-                
-                const arrivalIso = toLocalISOString(arrivalDateStr, newEntry.arrivalTime);
-
-                console.log("Wysyłam:", departureIso, arrivalIso);
-
+                const arrivalIso = `${dateStr}T${newEntry.arrivalTime}:00`;
+                console.log("Arrival ISO:", arrivalIso);
                 return authFetch('/api/admin/fleet/', {
                     method: 'POST',
                     body: JSON.stringify({

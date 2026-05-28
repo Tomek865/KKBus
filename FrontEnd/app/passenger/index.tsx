@@ -27,11 +27,7 @@ const formatTime = (timeString?: string, searchedDate?: string) => {
         // Jeśli coś poszło nie tak, zwracamy po prostu 5 znaków z tego co przyszło
         if (isNaN(d.getTime())) return timeString.substring(0, 5); 
         
-        return d.toLocaleTimeString('pl-PL', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            timeZone: 'Europe/Warsaw' 
-        });
+        return d.toISOString().split('T')[1].substring(0, 5); // Format HH:MM
     } catch {
         return timeString.substring(0, 5);
     }
