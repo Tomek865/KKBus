@@ -62,7 +62,7 @@ def get_users(current_admin_id):
                 email, 
                 'Passenger' AS role, 
                 unfulfilled_reservations_count AS trips,
-                loyalty_points,
+                loyalty_points AS loyalty_points,
                 is_active
             FROM Client
             UNION ALL
@@ -72,6 +72,7 @@ def get_users(current_admin_id):
                 email, 
                 role AS role, 
                 0 AS trips,
+                0 AS loyalty_points,
                 is_active
             FROM Employee
             ORDER BY name ASC;
