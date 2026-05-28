@@ -66,6 +66,8 @@ def search_routes():
                 tr.trip_id, 
                 r.name AS route_name, 
                 tr.departure_time AS raw_departure,
+                tr.arrival_time AS raw_arrival,
+                (SELECT MAX(order_on_route) FROM Route_Station WHERE route_id = r.route_id) AS max_order,
                 v.seating_capacity,
                 COALESCE((SELECT SUM(seat_count) FROM Reservation WHERE trip_id = tr.trip_id AND status != 'Cancelled'), 0) AS occupied_seats,
                 tr.status,
@@ -97,7 +99,7 @@ def search_routes():
             # 1. Liczymy dostępne miejsca (pojemność minus zajęte)
             available_seats = dep["seating_capacity"] - dep["occupied_seats"]
 
-            # 2. Liczymy odległość
+            # 2. Liczymy odległość w przystankach (do ceny)
             stops_count = dep["to_order"] - dep["from_order"]
             base_price = 15.00 + (stops_count * 5.00)
 
@@ -108,15 +110,31 @@ def search_routes():
                 + (reduced_count * (base_price * 0.63))
             )
 
-            # 4. Szacujemy czas podróży i godzinę
-            actual_departure = dep["raw_departure"] + timedelta(
-                minutes=25 * (dep["from_order"] - 1)
-            )
-            actual_arrival = dep["raw_departure"] + timedelta(
-                minutes=25 * (dep["to_order"] - 1)
-            )
+            # 4. Wyliczanie dynamicznego czasu podróży
+            raw_dep = dep["raw_departure"]
+            raw_arr = dep["raw_arrival"]
+            max_order = dep["max_order"]
+            from_order = dep["from_order"]
+            to_order = dep["to_order"]
 
-            duration_minutes = 25 * stops_count
+            # Liczba "odcinków" między stacjami to liczba stacji minus 1
+            total_segments = max_order - 1 if max_order > 1 else 1
+
+            # Całkowity czas przejazdu całej trasy
+            total_route_duration = raw_arr - raw_dep
+
+            # Czas na przejechanie jednego odcinka (między dwiema stacjami)
+            time_per_segment = total_route_duration / total_segments
+
+            # Obliczamy rzeczywistą godzinę odjazdu i przyjazdu dla wyszukiwanego połączenia
+            actual_departure = raw_dep + (time_per_segment * (from_order - 1))
+            actual_arrival = raw_dep + (time_per_segment * (to_order - 1))
+
+            # Różnica w czasie dla szukanej podróży (pomiędzy from_station a to_station)
+            trip_duration = actual_arrival - actual_departure
+
+            # Wyciągamy całkowite minuty do sformatowania stringa
+            duration_minutes = int(trip_duration.total_seconds() // 60)
             hours = duration_minutes // 60
             minutes = duration_minutes % 60
             duration_str = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
@@ -130,11 +148,10 @@ def search_routes():
                     "duration": duration_str,
                     "basePricePerAdult": float(base_price),
                     "totalPrice": float(round(total_price, 2)),
-                    "availableSeats": available_seats,  # <--- Zwracamy tylko wolne miejsca!
+                    "availableSeats": available_seats,
                     "status": dep["status"],
                 }
             )
-
         return jsonify(results), 200
 
     except Exception as e:

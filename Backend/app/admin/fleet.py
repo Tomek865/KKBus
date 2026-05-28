@@ -19,7 +19,9 @@ def get_fleet_assignments(current_admin_id):
                 v.registration_number AS "busId", 
                 rt.name AS route, 
                 tr.status, 
-                e.first_name || ' ' || LEFT(e.last_name, 1) || '.' AS driver
+                e.first_name || ' ' || LEFT(e.last_name, 1) || '.' AS driver,
+                tr.departure_time AS "departureTime",
+                tr.arrival_time AS "arrivalTime"
             FROM Trip tr
             JOIN Vehicle v ON tr.vehicle_id = v.vehicle_id
             JOIN Route rt ON tr.route_id = rt.route_id
@@ -74,15 +76,32 @@ def create_trip(current_admin_id):
     from datetime import datetime, timedelta
 
     data = request.get_json()
+
+    print(data)
+
     vehicle_id = data.get("busId")
     route_id = data.get("route")
     employee_id = data.get("driver")
     status = data.get("status", "Planned")
-    departure_time = data.get("departureTime", datetime.now() + timedelta(days=1))
-    arrival_time = data.get("arrivalTime", departure_time + timedelta(hours=4))
 
     if not vehicle_id or not route_id or not employee_id:
         return jsonify({"message": "All fields are required"}), 400
+
+    # 1. Parse or generate departure_time
+    dep_time_str = data.get("departureTime")
+    if dep_time_str:
+        # Replace 'Z' with '+00:00' to support Python versions older than 3.11
+        departure_time = datetime.fromisoformat(dep_time_str.replace("Z", "+00:00"))
+    else:
+        departure_time = datetime.now() + timedelta(days=1)
+
+    # 2. Parse or generate arrival_time
+    arr_time_str = data.get("arrivalTime")
+    if arr_time_str:
+        arrival_time = datetime.fromisoformat(arr_time_str.replace("Z", "+00:00"))
+    else:
+        # Now this math only happens if arrivalTime is missing AND departure_time is a valid datetime object
+        arrival_time = departure_time + timedelta(hours=4)
 
     conn = get_db_connection()
     try:
