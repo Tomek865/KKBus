@@ -857,6 +857,27 @@ Odbieramy (200 OK):
 Możliwe błędy:
 500 Internal Server Error - "Błąd podczas generowania raportu" (błąd serwera/bazy danych)
 
+[GET] /reports/revenue-by-route
+[WYMAGA TOKENA (Administrator)]
+Cel: Zwraca listę wszystkich tras wraz z wygenerowanym przez nie całkowitym dochodem (z pominięciem anulowanych rezerwacji). Idealne do generowania wykresów (np. Recharts) w panelu analitycznym administratora.
+Odbieramy (200 OK):
+[
+  {
+    "routeName": "Kraków - Warszawa",
+    "totalRevenue": 4500.50
+  },
+  {
+    "routeName": "Wrocław - Poznań",
+    "totalRevenue": 3210.00
+  },
+  {
+    "routeName": "Gdańsk - Szczecin",
+    "totalRevenue": 0.00
+  }
+]
+Możliwe błędy:
+500 Internal Server Error - błąd podczas wyliczania statystyk w bazie danych.
+
 
 ------------------------------------------------------
 management
