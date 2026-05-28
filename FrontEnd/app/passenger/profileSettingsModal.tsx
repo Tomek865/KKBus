@@ -13,11 +13,9 @@ interface ProfileSettingsModalProps {
 }
 
 export default function ProfileSettingsModal({ visible, onClose, activeSection }: ProfileSettingsModalProps) {
-    const [userData, setUserData] = useState({ name: '', email: '', phone: '' });
-
-    // Stany dla nowych sekcji
-    const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-    const [isLoadingPayment, setIsLoadingPayment] = useState(false);
+    const [userData, setUserData] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '' });
+    // 1. NOWY STAN DLA POTWIERDZENIA HASŁA
+    const [confirmPassword, setConfirmPassword] = useState('');
 
     const [notifications, setNotifications] = useState({ push: true, email: true });
     const [selectedLanguage, setSelectedLanguage] = useState('pl');
@@ -45,10 +43,13 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         const phone_number = actual_data.phone || '';
 
                         setUserData({
-                            name: `${fName} ${lName}`,
+                            firstName: `${fName}`,
+                            lastName: `${lName}`,
                             email: actual_data.email || 'Brak danych',
-                            phone: phone_number
+                            phone: phone_number,
+                            password: '', // Zostawiamy puste przy ładowaniu
                         });
+                        setConfirmPassword(''); // Czyścimy też powtórzone hasło
                     } else {
                         console.warn("Brak danych użytkownika w Local Storage");
                     }
@@ -56,21 +57,6 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                 } catch (error) {
                     console.error("error while trying to load user session data: ", error);
                 }
-            }
-
-            if (activeSection === 'payment') {
-                setIsLoadingPayment(true);
-                try {
-                    const res = await authFetch('/api/client/profile/payment-methods');
-                    if (res.ok) {
-                        const data = await res.json();
-                        setPaymentMethods(data || []);
-                    } else {
-                        // Jeśli endpoint nie istnieje, zostaw puste
-                        setPaymentMethods([]);
-                    }
-                } catch (err) { console.error("Błąd pobierania kart:", err); }
-                finally { setIsLoadingPayment(false); }
             }
 
             if (activeSection === 'language' || activeSection === 'notifications') {
@@ -81,7 +67,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                     const push = await AsyncStorage.getItem('pushNotifications');
                     const email = await AsyncStorage.getItem('emailNotifications');
                     setNotifications({
-                        push: push !== 'false', // Domyślnie true
+                        push: push !== 'false', 
                         email: email !== 'false'
                     });
                 } catch (err) { }
@@ -92,11 +78,23 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     }, [visible, activeSection]);
 
     const handleSavePersonal = async () => {
+        // 2. SPRAWDZANIE HASŁA (tylko jeśli użytkownik chce je zmienić)
+        if (userData.password || confirmPassword) {
+            if (userData.password !== confirmPassword) {
+                Alert.alert("Błąd", "Podane hasła nie są identyczne.");
+                return;
+            }
+            if (userData.password.length < 6) {
+                Alert.alert("Błąd", "Hasło musi mieć co najmniej 6 znaków.");
+                return;
+            }
+        }
+
         setIsSaving(true);
         try {
             const res = await authFetch('/api/client/profile/user/update', {
                 method: 'PUT',
-                body: JSON.stringify(userData)
+                body: JSON.stringify(userData) // Twój backend powinien zignorować hasło, jeśli string jest pusty
             });
             if (res.ok) {
                 Alert.alert("Sukces", "Zaktualizowano profil.");
@@ -120,7 +118,6 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     const changeLanguage = async (lang: string) => {
         setSelectedLanguage(lang);
         await AsyncStorage.setItem('userLanguage', lang);
-        // Opcjonalnie tutaj można by było wysłać do API preferencję
     };
 
     if (!visible) return null;
@@ -128,7 +125,6 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     const getModalTitle = () => {
         switch (activeSection) {
             case 'personal': return 'Personal Information';
-            case 'payment': return 'Payment Methods';
             case 'notifications': return 'Notifications';
             case 'language': return 'Language';
             case 'help': return 'Help & Support';
@@ -145,9 +141,16 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Full Name</Text>
                         <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16, backgroundColor: '#f9fafb' }}
-                            value={userData.name}
-                            placeholder="Wpisz imię i nazwisko"
-                            onChangeText={(text) => setUserData(prev => ({ ...prev, name: text }))}
+                            value={userData.firstName}
+                            placeholder="Wpisz imię"
+                            onChangeText={(text) => setUserData(prev => ({ ...prev, firstName: text }))}
+                        />
+                         <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Surname</Text>
+                        <TextInput
+                            style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16, backgroundColor: '#f9fafb' }}
+                            value={userData.lastName}
+                            placeholder="Wpisz nazwisko"
+                            onChangeText={(text) => setUserData(prev => ({ ...prev, lastName: text }))}
                         />
 
                         <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Email Address</Text>
@@ -168,33 +171,26 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             keyboardType="phone-pad"
                             onChangeText={(text) => setUserData(prev => ({ ...prev, phone: text }))}
                         />
+                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Password</Text>
+                        <TextInput
+                            style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 24, backgroundColor: '#f9fafb' }}
+                            value={userData.password}
+                            placeholder="Wpisz nowe hasło"
+                            secureTextEntry
+                            onChangeText={(text) => setUserData(prev => ({ ...prev, password: text }))}
+                        />
+                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Confirm Password</Text>
+                        {/* 3. PODPIĘCIE NOWEGO STANU POD DRUGIE POLE HASŁA */}
+                        <TextInput
+                            style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 24, backgroundColor: '#f9fafb' }}
+                            value={confirmPassword}
+                            placeholder="Powtórz nowe hasło"
+                            secureTextEntry
+                            onChangeText={setConfirmPassword}
+                        />
 
                         <TouchableOpacity style={styles.primaryBtn} onPress={handleSavePersonal} disabled={isSaving}>
                             {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Save Changes</Text>}
-                        </TouchableOpacity>
-                    </View>
-                );
-
-            case 'payment':
-                return (
-                    <View style={{ paddingVertical: 10 }}>
-                        {isLoadingPayment ? (
-                            <ActivityIndicator color="#e60000" style={{ marginTop: 20 }} />
-                        ) : paymentMethods.length > 0 ? (
-                            paymentMethods.map((method, index) => (
-                                <View key={index} style={{ flexDirection: 'row', alignItems: 'center', padding: 15, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, marginBottom: 10 }}>
-                                    <Ionicons name="card" size={24} color="#4b5563" />
-                                    <Text style={{ marginLeft: 15, fontSize: 16 }}>**** **** **** {method.last4}</Text>
-                                </View>
-                            ))
-                        ) : (
-                            <View style={{ alignItems: 'center', marginTop: 40 }}>
-                                <Ionicons name="card-outline" size={48} color="#d1d5db" />
-                                <Text style={{ color: '#6b7280', marginTop: 10 }}>No payment methods found.</Text>
-                            </View>
-                        )}
-                        <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }]}>
-                            <Text style={styles.primaryBtnText}>Add Payment Method</Text>
                         </TouchableOpacity>
                     </View>
                 );

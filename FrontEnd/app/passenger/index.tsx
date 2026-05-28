@@ -69,8 +69,8 @@ const DepartureCard = ({ departure, onBook }: { departure: Departure, onBook: ()
 
 export default function PassengerSearch() {
     const [stations, setStations] = useState<string[]>([]);
-    const [fromStation, setFromStation] = useState('Krakow');
-    const [toStation, setToStation] = useState('Warszawa');
+    const [fromStation, setFromStation] = useState('Kraków');
+    const [toStation, setToStation] = useState('Katowice');
     const [availableDates] = useState(generateNext14Days());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [passengerCounts, setPassengerCounts] = useState({ adult: 1, student: 0, reduced: 0 });
@@ -163,14 +163,14 @@ export default function PassengerSearch() {
                 }
                 
                 const mappedDepartures = routesArray.map((d: any) => ({
-                    id: String(d.trip_id || d.id || Math.random()), // Zabezpieczenie przed brakiem ID
-                    departureTime: d.departure_time || 'Brak danych',
-                    arrivalTime: d.arrival_time || 'Brak danych',
+                    id: String(d.tripId || d.id), 
+                    departureTime: d.departureTime || 'Brak danych',
+                    arrivalTime: d.arrivalTime || 'Brak danych',
                     departureStation: fromStation,
                     arrivalStation: toStation,
                     duration: d.duration || 'Brak danych', 
-                    seatsLeft: d.seating_capacity !== undefined ? d.seating_capacity : 'Brak danych', 
-                    price: d.total_price !== undefined ? d.total_price : null 
+                    seatsLeft: d.availableSeats !== undefined ? d.availableSeats : 'Brak danych', 
+                    price: d.totalPrice !== undefined ? d.totalPrice : null 
                 }));
                 setDepartures(mappedDepartures);
             } else {
@@ -187,11 +187,7 @@ export default function PassengerSearch() {
     const handleBookTicket = async () => {
         if (!selectedDep) return;
         setIsBooking(true);
-
-        // const generateRandomNumberId = () => {
-        //     return Date.now() + Math.floor(Math.random() * 1000); 
-        // };
-
+        console.log("Rezerwacja biletu dla trasy:", selectedDep);
         const payload = {
             //ticket_id: generateRandomNumberId(),
             trip: {

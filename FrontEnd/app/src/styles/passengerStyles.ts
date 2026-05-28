@@ -88,7 +88,7 @@ export const passengerStyles = StyleSheet.create({
     seatBadge: { backgroundColor: COLORS.white, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12 },
     seatBadgeText: { color: COLORS.primaryDark, fontSize: 22, fontWeight: '900' },
     ticketBottom: { backgroundColor: COLORS.white, alignItems: 'center', paddingTop: 30, paddingBottom: 24 },
-    qrPlaceholderContainer: { padding: 20, borderWidth: 1, borderColor: '#f3f4f6', borderRadius: 32, marginBottom: 25, backgroundColor: '#fafafa' },
+    qrPlaceholderContainer: { padding: 20, borderWidth: 1, borderColor: '#f3f4f6', borderRadius: 32, marginBottom: 25, backgroundColor: '#fafafa', minWidth: 300, minHeight: 300, ...centerContainer },
     scanText: { color: COLORS.textLight, fontSize: 13, fontWeight: '800', letterSpacing: 1.5 },
     dividerContainer: { flexDirection: 'row', alignItems: 'center', width: '100%', marginVertical: 25, position: 'relative' },
     cutoutLeft: { position: 'absolute', left: -15, width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.bgMain, zIndex: 2 },
@@ -98,6 +98,38 @@ export const passengerStyles = StyleSheet.create({
     viewDetailsBtn: { flex: 1, backgroundColor: COLORS.textDark, paddingVertical: 18, borderRadius: 16, alignItems: 'center', marginRight: 15 },
     viewDetailsText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
     closeTicketBtn: { width: 60, height: 60, backgroundColor: '#fef2f2', borderRadius: 16, ...centerContainer },
+        // NOWE STYLE DLA HISTORII BILETÓW
+    historyContainer: { 
+        flexDirection: 'column', 
+        width: '100%', 
+        opacity: 0.8 
+    },
+    pastTicketWrapper: {
+        width: '100%',
+        marginBottom: 10
+    },
+    pastTicketCard: {
+        backgroundColor: '#f9fafb',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: 12,
+        padding: 16,
+        width: '100%',
+        flexDirection: 'column'
+    },
+    pastTicketHeader: { 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: 12 
+    },
+    pastTicketRoute: { 
+        fontSize: 16, 
+        fontWeight: '700', 
+        color: '#374151', 
+        flexShrink: 1, 
+        marginRight: 10 
+    },
 
     // PROFILE & LOYALTY
     headerTitle: { fontSize: 28, fontWeight: 'bold', color: COLORS.textMain, marginBottom: 20 },
