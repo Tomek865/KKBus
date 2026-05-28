@@ -70,19 +70,24 @@ def get_tickets(current_user_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Wyciągamy szczegóły BILETU (ticket_summary, final_price)
+        # i łączymy je z danymi o trasie i rezerwacji
         query = """
             SELECT 
                 tc.ticket_id,
                 tc.status AS ticket_status,
+                tc.ticket_summary,
+                tc.final_price,
                 r.reservation_number,
                 TO_CHAR(r.reservation_date, 'YYYY-MM-DD HH24:MI') AS reservation_date,
                 r.status AS reservation_status,
                 rt.name AS route,
                 TO_CHAR(tr.departure_time, 'YYYY-MM-DD HH24:MI') AS departure_time
-            FROM Reservation r
+            FROM Ticket tc
+            JOIN Reservation r ON tc.reservation_id = r.reservation_id
             JOIN Trip tr ON r.trip_id = tr.trip_id
             JOIN Route rt ON tr.route_id = rt.route_id
-            JOIN Ticket tc ON r.reservation_id = tc.reservation_id
             WHERE r.client_id = %s
             ORDER BY tr.departure_time DESC
         """
@@ -90,9 +95,29 @@ def get_tickets(current_user_id):
         tickets = cur.fetchall()
         cur.close()
 
-        return jsonify(tickets), 200
+        # Formatujemy klucze na camelCase dla frontendu (React)
+        formatted_tickets = []
+        for t in tickets:
+            formatted_tickets.append(
+                {
+                    "ticketId": t["ticket_id"],
+                    "ticketStatus": t["ticket_status"],
+                    # np. "1x Normalny, 1x Student"
+                    "ticketSummary": t["ticket_summary"],
+                    "finalPrice": float(t["final_price"]),  # np. 45.0
+                    "reservationNumber": t["reservation_number"],
+                    "reservationDate": t["reservation_date"],
+                    "reservationStatus": t["reservation_status"],
+                    "route": t["route"],
+                    "departureTime": t["departure_time"],
+                }
+            )
+
+        return jsonify(formatted_tickets), 200
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"DB Error: {e}")
+        return jsonify({"error": "Wystąpił błąd podczas pobierania biletów"}), 500
     finally:
         if conn:
             conn.close()
