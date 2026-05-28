@@ -4,6 +4,36 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 import { authFetch } from '../../utils';
 
+// Funkcje pomocnicze do formatowania daty i czasu z formatu ISO
+const formatTime = (dateString?: string) => {
+    if (!dateString) return '--:--';
+    try {
+        const d = new Date(dateString);
+        return d.toLocaleTimeString('pl-PL', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            timeZone: 'Europe/Warsaw'
+        });
+    } catch {
+        return '--:--';
+    }
+};
+
+const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Brak daty';
+    try {
+        const d = new Date(dateString);
+        return d.toLocaleDateString('pl-PL', { 
+            weekday: 'short', 
+            day: '2-digit', 
+            month: '2-digit' ,
+            year: '2-digit'
+        });
+    } catch {
+        return '';
+    }
+};
+
 export default function AdminSchedule() {
     const [fleet, setFleet] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -25,7 +55,34 @@ export default function AdminSchedule() {
     const [openDropdown, setOpenDropdown] = useState<'bus' | 'route' | 'driver' | 'editRoute' | null>(null);
 
     // Stany formularzy
-    const [newEntry, setNewEntry] = useState({ busId: '', route: '', driver: '', status: 'Planned' });
+    const [newEntry, setNewEntry] = useState({ 
+        busId: '', 
+        route: '', 
+        driver: '', 
+        date: '', 
+        departureTime: '', 
+        arrivalTime: '', 
+        status: 'Planned' 
+    });
+
+    // Konfiguracja cykliczności
+    const [isRepeating, setIsRepeating] = useState(false);
+    const [repeatConfig, setRepeatConfig] = useState({
+        endDate: '',
+        frequency: 'daily', // 'daily', 'weekly', 'biweekly', 'custom'
+        customDays: [] as number[] // 0 = Ndz, 1 = Pon, itd.
+    });
+
+    const DAYS_OF_WEEK = [
+        { label: 'Pon', value: 1 },
+        { label: 'Wt', value: 2 },
+        { label: 'Śr', value: 3 },
+        { label: 'Czw', value: 4 },
+        { label: 'Pt', value: 5 },
+        { label: 'Sob', value: 6 },
+        { label: 'Ndz', value: 0 },
+    ];
+    
     const [newRoute, setNewRoute] = useState({ name: '' });
     const [newStation, setNewStation] = useState({ name: '', exactAddress: '' });
 
@@ -104,7 +161,6 @@ export default function AdminSchedule() {
             try {
                 const res = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`);
                 const data = await res.json();
-                // Mapujemy odebrane dane z backendu, aby pasowały do stanu lokalnego
                 setRouteStops(Array.isArray(data) ? data.map(st => ({ station_id: st.id?.toString() || st.station_id?.toString() || '' })) : []);
             } catch (e) {
                 setRouteStops([]);
@@ -120,11 +176,9 @@ export default function AdminSchedule() {
         ]);
     };
 
-    // ZAKTUALIZOWANO: Zwraca do backendu czystą tablicę z samymi ID wybranych stacji
     const handleSaveRouteStopsSequence = async () => {
         if (!selectedRouteId) return;
 
-        // Wyciągamy same ID, parsujemy na liczby i filtrujemy puste wartości
         const stationIdsOnly = routeStops
             .map(stop => parseInt(stop.station_id))
             .filter(id => !isNaN(id));
@@ -132,7 +186,7 @@ export default function AdminSchedule() {
         try {
             const response = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`, {
                 method: 'POST',
-                body: JSON.stringify({ stations: stationIdsOnly }) // Wysyła np. { "stations": [1, 3, 12] }
+                body: JSON.stringify({ stations: stationIdsOnly }) 
             });
 
             if (response.ok) {
@@ -148,34 +202,126 @@ export default function AdminSchedule() {
         }
     };
 
+    const generateScheduleDates = () => {
+        const dates: string[] = [];
+        let currentDate = new Date(`${newEntry.date}T00:00:00`);
+        const endDateObj = new Date(`${repeatConfig.endDate}T23:59:59`);
+
+        if (currentDate > endDateObj) return dates;
+
+        while (currentDate <= endDateObj) {
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+
+            if (repeatConfig.frequency === 'custom') {
+                if (repeatConfig.customDays.includes(currentDate.getDay())) {
+                    dates.push(dateString);
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            } else {
+                dates.push(dateString);
+                
+                if (repeatConfig.frequency === 'daily') {
+                    currentDate.setDate(currentDate.getDate() + 1);
+                } else if (repeatConfig.frequency === 'weekly') {
+                    currentDate.setDate(currentDate.getDate() + 7);
+                } else if (repeatConfig.frequency === 'biweekly') {
+                    currentDate.setDate(currentDate.getDate() + 14);
+                }
+            }
+        }
+        return dates;
+    };
+
+       // Funkcja pomocnicza generująca ISO String z zachowaniem lokalnego offsetu (np. +02:00) zamiast zrzucania do 'Z' (UTC)
+    const toLocalISOString = (dateStr: string, timeStr: string) => {
+        const localDate = new Date(`${dateStr}T${timeStr}`);
+        const offset = localDate.getTimezoneOffset(); // Otrzymujemy offset w minutach względem UTC (dla Polski latem to -120)
+        
+        // Zabezpieczenie: jeśli wprowadzona data jest nieprawidłowa, zwracamy cokolwiek, by reszta kodu złapała błąd
+        if (isNaN(localDate.getTime())) return `${dateStr}T${timeStr}:00.000Z`; 
+
+        const absOffset = Math.abs(offset);
+        // Uwaga: znak w JS offset jest odwrócony (np. -120 dla UTC+2), więc odwracamy go logicznie
+        const sign = offset <= 0 ? '+' : '-'; 
+        const hours = String(Math.floor(absOffset / 60)).padStart(2, '0');
+        const minutes = String(absOffset % 60).padStart(2, '0');
+        
+        return `${dateStr}T${timeStr}:00.000${sign}${hours}:${minutes}`;
+    };
+
     const handleAddEntry = async () => {
-        if (!newEntry.busId || !newEntry.route || !newEntry.driver) {
-            showScheduleAlert("Błąd", "Proszę wybrać wszystkie opcji z listy.");
+        if (!newEntry.busId || !newEntry.route || !newEntry.driver || !newEntry.date || !newEntry.departureTime || !newEntry.arrivalTime) {
+            showScheduleAlert("Błąd", "Proszę wypełnić wszystkie podstawowe pola (w tym czas odjazdu i przyjazdu).");
+            return;
+        }
+
+        if (isRepeating && !repeatConfig.endDate) {
+            showScheduleAlert("Błąd", "Wybierz datę końcową dla cyklu.");
+            return;
+        }
+
+        const datesToSchedule = isRepeating 
+            ? generateScheduleDates() 
+            : [newEntry.date];
+
+        if (datesToSchedule.length === 0) {
+            showScheduleAlert("Błąd", "Brak dat do zaplanowania w wybranym przedziale.");
             return;
         }
 
         try {
-            const response = await authFetch('/api/admin/fleet/', {
-                method: 'POST',
-                body: JSON.stringify({
-                    busId: parseInt(newEntry.busId),
-                    route: parseInt(newEntry.route),
-                    driver: parseInt(newEntry.driver),
-                    status: 'Planned'
-                })
-            });
-            const created = await response.json();
+            const requests = datesToSchedule.map(dateStr => {
+                // Używamy nowej funkcji do zachowania wpisanej godziny i polskiej strefy czasowej
+                const departureIso = toLocalISOString(dateStr, newEntry.departureTime);
+                
+                // Obsługa kursów "przez północ" (jeśli przyjazd jest mniejszy niż odjazd)
+                let arrivalDateStr = dateStr;
+                if (newEntry.arrivalTime < newEntry.departureTime) {
+                    const nextDay = new Date(`${dateStr}T00:00:00`);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    const year = nextDay.getFullYear();
+                    const month = String(nextDay.getMonth() + 1).padStart(2, '0');
+                    const day = String(nextDay.getDate()).padStart(2, '0');
+                    arrivalDateStr = `${year}-${month}-${day}`;
+                }
+                
+                const arrivalIso = toLocalISOString(arrivalDateStr, newEntry.arrivalTime);
 
-            if (response.ok) {
-                setFleet(prev => [...prev, created]);
+                console.log("Wysyłam:", departureIso, arrivalIso);
+
+                return authFetch('/api/admin/fleet/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        busId: parseInt(newEntry.busId),
+                        route: parseInt(newEntry.route),
+                        driver: parseInt(newEntry.driver),
+                        departureTime: departureIso,
+                        arrivalTime: arrivalIso,
+                        status: 'Planned'
+                    })
+                });
+            });
+
+            const responses = await Promise.all(requests);
+            const allOk = responses.every(r => r.ok);
+
+            if (allOk) {
+                fetchInitialData(); 
+                
                 setScheduleModalVisible(false);
-                setNewEntry({ busId: '', route: '', driver: '', status: 'Planned' });
-                showScheduleAlert("Sukces", "Kurs został zaplanowany.");
+                setNewEntry({ busId: '', route: '', driver: '', date: '', departureTime: '', arrivalTime: '', status: 'Planned' });
+                setIsRepeating(false);
+                setRepeatConfig({ endDate: '', frequency: 'daily', customDays: [] });
+                
+                showScheduleAlert("Sukces", `Zaplanowano ${datesToSchedule.length} kursów.`);
             } else {
-                showScheduleAlert("Błąd", created.message || "Błąd zapisu.");
+                showScheduleAlert("Ostrzeżenie", "Niektóre kursy mogły nie zostać zapisane.");
             }
         } catch (e) {
-            showScheduleAlert("Błąd", "Błąd połączenia z serwerem.");
+            showScheduleAlert("Błąd", "Błąd połączenia z serwerem podczas planowania.");
         }
     };
 
@@ -366,25 +512,40 @@ export default function AdminSchedule() {
             </View>
 
             <View style={[styles.card, { padding: 0, overflow: 'hidden' }]}>
+                {/* ZAKTUALIZOWANY NAGŁÓWEK TABELI */}
                 <View style={styles.tableHeader}>
                     <Text style={[styles.headerCell, { flex: 1 }]}>BUS ID / REJ</Text>
-                    <Text style={[styles.headerCell, { flex: 2 }]}>ROUTE</Text>
+                    <Text style={[styles.headerCell, { flex: 1.5 }]}>ROUTE</Text>
+                    <Text style={[styles.headerCell, { flex: 1.5 }]}>SCHEDULE</Text>
                     <Text style={[styles.headerCell, { flex: 1, textAlign: 'center' }]}>STATUS</Text>
-                    <Text style={[styles.headerCell, { flex: 1.2, textAlign: 'center' }]}>DRIVER</Text>
+                    <Text style={[styles.headerCell, { flex: 1, textAlign: 'center' }]}>DRIVER</Text>
                     <Text style={{ width: 40 }}></Text>
                 </View>
+
                 {fleet.map((bus) => {
                     const isCancelled = bus.status === 'Cancelled';
                     return (
                         <View key={bus.id} style={[styles.tableRow, isCancelled && { opacity: 0.4 }]}>
                             <Text style={[styles.cell, { flex: 1, fontWeight: 'bold' }]}>{bus.busId}</Text>
-                            <Text style={[styles.cell, { flex: 2 }]}>{bus.route}</Text>
+                            <Text style={[styles.cell, { flex: 1.5 }]}>{bus.route}</Text>
+                            
+                            {/* NOWA KOLUMNA HARMONOGRAMU */}
+                            <View style={{ flex: 1.5 }}>
+                                <Text style={[styles.cell, { fontWeight: 'bold' }]}>
+                                    {formatTime(bus.departureTime)} - {formatTime(bus.arrivalTime)}
+                                </Text>
+                                <Text style={{ fontSize: 11, color: COLORS.grayText, marginTop: 2 }}>
+                                    {formatDate(bus.departureTime)}
+                                </Text>
+                            </View>
+
                             <View style={{ flex: 1, alignItems: 'center' }}>
                                 <View style={[styles.statusBadge, { backgroundColor: bus.status === 'Planned' ? COLORS.greenLight : COLORS.redLight }]}>
                                     <Text style={[styles.statusText, { color: bus.status === 'Planned' ? COLORS.green : COLORS.red }]}>{bus.status}</Text>
                                 </View>
                             </View>
-                            <Text style={[styles.cell, { flex: 1.2, textAlign: 'center' }]}>{bus.driver}</Text>
+                            <Text style={[styles.cell, { flex: 1, textAlign: 'center' }]}>{bus.driver}</Text>
+                            
                             <View style={{ width: 40, alignItems: 'flex-end' }}>
                                 {!isCancelled && (
                                     <TouchableOpacity onPress={() => handleDeleteRoute(bus.id)} style={{ padding: 5 }}>
@@ -460,8 +621,123 @@ export default function AdminSchedule() {
                             </View>
                         )}
 
+                        {/* --- POLA DATY, ODJAZDU I PRZYJAZDU --- */}
+                        <View style={{ marginTop: 15 }}>
+                            <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
+                            <input 
+                                type="date" 
+                                style={{ ...(styles.nativeDateInput as any), marginBottom: 12 }}
+                                value={newEntry.date} 
+                                onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })} 
+                            />
+                            
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>DEPARTURE TIME</Text>
+                                    <input 
+                                        type="time" 
+                                        style={styles.nativeDateInput as any}
+                                        value={newEntry.departureTime} 
+                                        onChange={(e) => setNewEntry({ ...newEntry, departureTime: e.target.value })} 
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>ARRIVAL TIME</Text>
+                                    <input 
+                                        type="time" 
+                                        style={styles.nativeDateInput as any}
+                                        value={newEntry.arrivalTime} 
+                                        onChange={(e) => setNewEntry({ ...newEntry, arrivalTime: e.target.value })} 
+                                    />
+                                </View>
+                            </View>
+                        </View>
+                        {/* ----------------------------- */}
+
+                        {/* --- BLOK POWTARZALNOŚCI --- */}
+                        <TouchableOpacity 
+                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 }}
+                            onPress={() => setIsRepeating(!isRepeating)}
+                        >
+                            <Ionicons name={isRepeating ? "checkbox" : "square-outline"} size={22} color={isRepeating ? COLORS.red : COLORS.grayText} />
+                            <Text style={{ fontWeight: 'bold', color: '#111' }}>Repeat schedule</Text>
+                        </TouchableOpacity>
+
+                        {isRepeating && (
+                            <View style={{ backgroundColor: '#f9fafb', padding: 15, borderRadius: 12, marginTop: 10, borderWidth: 1, borderColor: COLORS.grayBorder }}>
+                                
+                                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>END DATE</Text>
+                                        <input 
+                                            type="date" 
+                                            style={styles.nativeDateInput as any}
+                                            value={repeatConfig.endDate} 
+                                            min={newEntry.date}
+                                            onChange={(e) => setRepeatConfig({ ...repeatConfig, endDate: e.target.value })} 
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>FREQUENCY</Text>
+                                        <select 
+                                            style={styles.nativeDateInput as any}
+                                            value={repeatConfig.frequency}
+                                            onChange={(e) => setRepeatConfig({ ...repeatConfig, frequency: e.target.value as any })}
+                                        >
+                                            <option value="daily">Every day</option>
+                                            <option value="weekly">Every week</option>
+                                            <option value="biweekly">Every 2 weeks</option>
+                                            <option value="custom">Selected days</option>
+                                        </select>
+                                    </View>
+                                </View>
+
+                                {repeatConfig.frequency === 'custom' && (
+                                    <View>
+                                        <Text style={styles.inputLabel}>SELECT DAYS</Text>
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 5 }}>
+                                            {DAYS_OF_WEEK.map(day => {
+                                                const isSelected = repeatConfig.customDays.includes(day.value);
+                                                return (
+                                                    <TouchableOpacity 
+                                                        key={day.value}
+                                                        style={{
+                                                            paddingVertical: 8,
+                                                            paddingHorizontal: 12,
+                                                            borderRadius: 8,
+                                                            backgroundColor: isSelected ? COLORS.red : '#e5e7eb',
+                                                        }}
+                                                        onPress={() => {
+                                                            setRepeatConfig(prev => {
+                                                                const newDays = isSelected 
+                                                                    ? prev.customDays.filter(d => d !== day.value)
+                                                                    : [...prev.customDays, day.value];
+                                                                return { ...prev, customDays: newDays };
+                                                            });
+                                                        }}
+                                                    >
+                                                        <Text style={{ 
+                                                            color: isSelected ? COLORS.white : '#4b5563', 
+                                                            fontWeight: 'bold', fontSize: 12 
+                                                        }}>
+                                                            {day.label}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                )
+                                            })}
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                        )}
+                        {/* ----------------------------- */}
+
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 25 }}>
-                            <TouchableOpacity onPress={() => { setScheduleModalVisible(false); setOpenDropdown(null); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => { 
+                                setScheduleModalVisible(false); 
+                                setOpenDropdown(null); 
+                                setIsRepeating(false); 
+                            }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
                             <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAddEntry}><Text style={styles.primaryBtnText}>Save</Text></TouchableOpacity>
                         </View>
                     </View>
