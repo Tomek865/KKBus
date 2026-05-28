@@ -160,5 +160,23 @@ export const adminStyles = StyleSheet.create({
         borderColor: '#e5e7eb',
         borderStyle: 'dashed',
         borderRadius: 10
-    }
+    },
+        nativeDateInput: {
+        backgroundColor: '#f9fafb',
+        borderWidth: 1,
+        borderColor: COLORS.grayBorder,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        height: 45,
+        fontSize: 14,
+        color: '#111',
+        width: '100%',
+        ...Platform.select({
+            web: { 
+                outline: 'none', 
+                fontFamily: 'inherit', 
+                boxSizing: 'border-box' 
+            } as any
+        })
+    },
 });

@@ -25,7 +25,33 @@ export default function AdminSchedule() {
     const [openDropdown, setOpenDropdown] = useState<'bus' | 'route' | 'driver' | 'editRoute' | null>(null);
 
     // Stany formularzy
-    const [newEntry, setNewEntry] = useState({ busId: '', route: '', driver: '', status: 'Planned' });
+    const [newEntry, setNewEntry] = useState({ 
+        busId: '', 
+        route: '', 
+        driver: '', 
+        date: '', 
+        arrivalTime: '', 
+        status: 'Planned' 
+    });
+
+    // Konfiguracja cykliczności
+    const [isRepeating, setIsRepeating] = useState(false);
+    const [repeatConfig, setRepeatConfig] = useState({
+        endDate: '',
+        frequency: 'daily', // 'daily', 'weekly', 'biweekly', 'custom'
+        customDays: [] as number[] // 0 = Ndz, 1 = Pon, itd.
+    });
+
+    const DAYS_OF_WEEK = [
+        { label: 'Pon', value: 1 },
+        { label: 'Wt', value: 2 },
+        { label: 'Śr', value: 3 },
+        { label: 'Czw', value: 4 },
+        { label: 'Pt', value: 5 },
+        { label: 'Sob', value: 6 },
+        { label: 'Ndz', value: 0 },
+    ];
+    
     const [newRoute, setNewRoute] = useState({ name: '' });
     const [newStation, setNewStation] = useState({ name: '', exactAddress: '' });
 
@@ -104,7 +130,6 @@ export default function AdminSchedule() {
             try {
                 const res = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`);
                 const data = await res.json();
-                // Mapujemy odebrane dane z backendu, aby pasowały do stanu lokalnego
                 setRouteStops(Array.isArray(data) ? data.map(st => ({ station_id: st.id?.toString() || st.station_id?.toString() || '' })) : []);
             } catch (e) {
                 setRouteStops([]);
@@ -120,11 +145,9 @@ export default function AdminSchedule() {
         ]);
     };
 
-    // ZAKTUALIZOWANO: Zwraca do backendu czystą tablicę z samymi ID wybranych stacji
     const handleSaveRouteStopsSequence = async () => {
         if (!selectedRouteId) return;
 
-        // Wyciągamy same ID, parsujemy na liczby i filtrujemy puste wartości
         const stationIdsOnly = routeStops
             .map(stop => parseInt(stop.station_id))
             .filter(id => !isNaN(id));
@@ -132,7 +155,7 @@ export default function AdminSchedule() {
         try {
             const response = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`, {
                 method: 'POST',
-                body: JSON.stringify({ stations: stationIdsOnly }) // Wysyła np. { "stations": [1, 3, 12] }
+                body: JSON.stringify({ stations: stationIdsOnly }) 
             });
 
             if (response.ok) {
@@ -148,34 +171,85 @@ export default function AdminSchedule() {
         }
     };
 
+    const generateScheduleDates = () => {
+        const dates: string[] = [];
+        let currentDate = new Date(`${newEntry.date}T${newEntry.arrivalTime}`);
+        const endDateObj = new Date(`${repeatConfig.endDate}T23:59:59`);
+
+        if (currentDate > endDateObj) return dates;
+
+        while (currentDate <= endDateObj) {
+            if (repeatConfig.frequency === 'custom') {
+                if (repeatConfig.customDays.includes(currentDate.getDay())) {
+                    dates.push(currentDate.toISOString());
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            } else {
+                dates.push(currentDate.toISOString());
+                
+                if (repeatConfig.frequency === 'daily') {
+                    currentDate.setDate(currentDate.getDate() + 1);
+                } else if (repeatConfig.frequency === 'weekly') {
+                    currentDate.setDate(currentDate.getDate() + 7);
+                } else if (repeatConfig.frequency === 'biweekly') {
+                    currentDate.setDate(currentDate.getDate() + 14);
+                }
+            }
+        }
+        return dates;
+    };
+
     const handleAddEntry = async () => {
-        if (!newEntry.busId || !newEntry.route || !newEntry.driver) {
-            showScheduleAlert("Błąd", "Proszę wybrać wszystkie opcji z listy.");
+        if (!newEntry.busId || !newEntry.route || !newEntry.driver || !newEntry.date || !newEntry.arrivalTime) {
+            showScheduleAlert("Błąd", "Proszę wypełnić wszystkie podstawowe pola.");
+            return;
+        }
+
+        if (isRepeating && !repeatConfig.endDate) {
+            showScheduleAlert("Błąd", "Wybierz datę końcową dla cyklu.");
+            return;
+        }
+
+        const datesToSchedule = isRepeating 
+            ? generateScheduleDates() 
+            : [new Date(`${newEntry.date}T${newEntry.arrivalTime}`).toISOString()];
+
+        if (datesToSchedule.length === 0) {
+            showScheduleAlert("Błąd", "Brak dat do zaplanowania w wybranym przedziale.");
             return;
         }
 
         try {
-            const response = await authFetch('/api/admin/fleet/', {
-                method: 'POST',
-                body: JSON.stringify({
-                    busId: parseInt(newEntry.busId),
-                    route: parseInt(newEntry.route),
-                    driver: parseInt(newEntry.driver),
-                    status: 'Planned'
+            const requests = datesToSchedule.map(isoDate => 
+                authFetch('/api/admin/fleet/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        busId: parseInt(newEntry.busId),
+                        route: parseInt(newEntry.route),
+                        driver: parseInt(newEntry.driver),
+                        arrivalTime: isoDate,
+                        status: 'Planned'
+                    })
                 })
-            });
-            const created = await response.json();
+            );
 
-            if (response.ok) {
-                setFleet(prev => [...prev, created]);
+            const responses = await Promise.all(requests);
+            const allOk = responses.every(r => r.ok);
+
+            if (allOk) {
+                fetchInitialData(); 
+                
                 setScheduleModalVisible(false);
-                setNewEntry({ busId: '', route: '', driver: '', status: 'Planned' });
-                showScheduleAlert("Sukces", "Kurs został zaplanowany.");
+                setNewEntry({ busId: '', route: '', driver: '', date: '', arrivalTime: '', status: 'Planned' });
+                setIsRepeating(false);
+                setRepeatConfig({ endDate: '', frequency: 'daily', customDays: [] });
+                
+                showScheduleAlert("Sukces", `Zaplanowano ${datesToSchedule.length} kursów.`);
             } else {
-                showScheduleAlert("Błąd", created.message || "Błąd zapisu.");
+                showScheduleAlert("Ostrzeżenie", "Niektóre kursy mogły nie zostać zapisane.");
             }
         } catch (e) {
-            showScheduleAlert("Błąd", "Błąd połączenia z serwerem.");
+            showScheduleAlert("Błąd", "Błąd połączenia z serwerem podczas planowania.");
         }
     };
 
@@ -460,8 +534,113 @@ export default function AdminSchedule() {
                             </View>
                         )}
 
+                        {/* --- POLA DATY I CZASU --- */}
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 15 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
+                                <input 
+                                    type="date" 
+                                    style={styles.nativeDateInput as any}
+                                    value={newEntry.date} 
+                                    onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })} 
+                                />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.inputLabel}>ARRIVE TIME</Text>
+                                <input 
+                                    type="time" 
+                                    style={styles.nativeDateInput as any}
+                                    value={newEntry.arrivalTime} 
+                                    onChange={(e) => setNewEntry({ ...newEntry, arrivalTime: e.target.value })} 
+                                />
+                            </View>
+                        </View>
+                        {/* ----------------------------- */}
+
+                        {/* --- BLOK POWTARZALNOŚCI --- */}
+                        <TouchableOpacity 
+                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 }}
+                            onPress={() => setIsRepeating(!isRepeating)}
+                        >
+                            <Ionicons name={isRepeating ? "checkbox" : "square-outline"} size={22} color={isRepeating ? COLORS.red : COLORS.grayText} />
+                            <Text style={{ fontWeight: 'bold', color: '#111' }}>Repeat schedule</Text>
+                        </TouchableOpacity>
+
+                        {isRepeating && (
+                            <View style={{ backgroundColor: '#f9fafb', padding: 15, borderRadius: 12, marginTop: 10, borderWidth: 1, borderColor: COLORS.grayBorder }}>
+                                
+                                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>END DATE</Text>
+                                        <input 
+                                            type="date" 
+                                            style={styles.nativeDateInput as any}
+                                            value={repeatConfig.endDate} 
+                                            min={newEntry.date}
+                                            onChange={(e) => setRepeatConfig({ ...repeatConfig, endDate: e.target.value })} 
+                                        />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>FREQUENCY</Text>
+                                        <select 
+                                            style={styles.nativeDateInput as any}
+                                            value={repeatConfig.frequency}
+                                            onChange={(e) => setRepeatConfig({ ...repeatConfig, frequency: e.target.value as any })}
+                                        >
+                                            <option value="daily">Every day</option>
+                                            <option value="weekly">Every week</option>
+                                            <option value="biweekly">Every 2 weeks</option>
+                                            <option value="custom">Selected days</option>
+                                        </select>
+                                    </View>
+                                </View>
+
+                                {repeatConfig.frequency === 'custom' && (
+                                    <View>
+                                        <Text style={styles.inputLabel}>SELECT DAYS</Text>
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 5 }}>
+                                            {DAYS_OF_WEEK.map(day => {
+                                                const isSelected = repeatConfig.customDays.includes(day.value);
+                                                return (
+                                                    <TouchableOpacity 
+                                                        key={day.value}
+                                                        style={{
+                                                            paddingVertical: 8,
+                                                            paddingHorizontal: 12,
+                                                            borderRadius: 8,
+                                                            backgroundColor: isSelected ? COLORS.red : '#e5e7eb',
+                                                        }}
+                                                        onPress={() => {
+                                                            setRepeatConfig(prev => {
+                                                                const newDays = isSelected 
+                                                                    ? prev.customDays.filter(d => d !== day.value)
+                                                                    : [...prev.customDays, day.value];
+                                                                return { ...prev, customDays: newDays };
+                                                            });
+                                                        }}
+                                                    >
+                                                        <Text style={{ 
+                                                            color: isSelected ? COLORS.white : '#4b5563', 
+                                                            fontWeight: 'bold', fontSize: 12 
+                                                        }}>
+                                                            {day.label}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                )
+                                            })}
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                        )}
+                        {/* ----------------------------- */}
+
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 25 }}>
-                            <TouchableOpacity onPress={() => { setScheduleModalVisible(false); setOpenDropdown(null); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => { 
+                                setScheduleModalVisible(false); 
+                                setOpenDropdown(null); 
+                                setIsRepeating(false); 
+                            }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
                             <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAddEntry}><Text style={styles.primaryBtnText}>Save</Text></TouchableOpacity>
                         </View>
                     </View>

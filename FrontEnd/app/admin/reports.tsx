@@ -56,7 +56,7 @@ export default function AdminReports() {
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#eee', marginTop: 10, paddingTop: 10 }}>
                     <Text style={{ fontWeight: 'bold' }}>Net Profit</Text>
-                    <Text style={{ fontWeight: 'bold', color: COLORS.green, fontSize: 18 }}>{reportData?.netProfit || '0'} PLN</Text>
+                    <Text style={{ fontWeight: 'bold', color: reportData?.netProfit < 0 ? COLORS.red : COLORS.green , fontSize: 18 }}>{reportData?.netProfit || '0'} PLN</Text>
                 </View>
             </View>
         </ScrollView>
