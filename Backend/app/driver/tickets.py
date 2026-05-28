@@ -1,12 +1,12 @@
 from flask import Blueprint, jsonify, request
 from db import get_db_connection
-from app.utils import token_required
+from app.utils import driver_required
 
 driver_tickets_bp = Blueprint("driver_tickets", __name__)
 
 
 @driver_tickets_bp.route("/<string:res_number>/validate", methods=["POST"])
-@token_required
+@driver_required
 def validate_ticket(current_user_id, res_number):
     data = request.get_json(silent=True) or {}
     active_trip_id = data.get("trip_id")

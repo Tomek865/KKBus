@@ -435,7 +435,6 @@ def calculate_price(current_user_id):
                 "total_price": round(total_price, 2),
                 "total_seats": total_seats,
                 "current_points": loyalty_points,
-                # <-- Frontend wie, że ma narysować złotą ramkę
                 "is_gold_eligible": is_gold_eligible,
             }
         ), 200
