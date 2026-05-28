@@ -18,16 +18,17 @@ def validate_ticket(current_user_id, res_number):
 
     conn = get_db_connection()
     try:
-        # ZWYKŁY KURSOR (bez parametrów dodatkowych)
+        # ZWYKŁY KURSOR
         cur = conn.cursor()
 
         # --- 1. WERYFIKACJA BILETU (SELECT) ---
+        # POPRAWKA: Używamy tr.employee_id zamiast tr.driver_id
         query_check = """
             SELECT 
                 r.reservation_id,
                 r.status,
                 tr.trip_id,
-                tr.driver_id,
+                tr.employee_id, 
                 TO_CHAR(tr.departure_time, 'YYYY-MM-DD HH24:MI')
             FROM Reservation r
             JOIN Trip tr ON r.trip_id = tr.trip_id
@@ -61,7 +62,7 @@ def validate_ticket(current_user_id, res_number):
                 }
             ), 403
 
-        # E. Czy ten kurs na pewno obsługuje TEN kierowca? (Sprawdzamy indeks 3)
+        # E. Czy ten kurs na pewno obsługuje TEN kierowca? (Sprawdzamy indeks 3 - to nasze employee_id)
         if ticket_info[3] != current_user_id:
             return jsonify(
                 {"error": "Brak uprawnień. Ten kurs obsługuje inny kierowca."}
