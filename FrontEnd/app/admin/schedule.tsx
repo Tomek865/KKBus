@@ -4,6 +4,36 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 import { authFetch } from '../../utils';
 
+// Funkcje pomocnicze do formatowania daty i czasu z formatu ISO
+const formatTime = (dateString?: string) => {
+    if (!dateString) return '--:--';
+    try {
+        const d = new Date(dateString);
+        return d.toLocaleTimeString('pl-PL', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            timeZone: 'Europe/Warsaw'
+        });
+    } catch {
+        return '--:--';
+    }
+};
+
+const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Brak daty';
+    try {
+        const d = new Date(dateString);
+        return d.toLocaleDateString('pl-PL', { 
+            weekday: 'short', 
+            day: '2-digit', 
+            month: '2-digit' ,
+            year: '2-digit'
+        });
+    } catch {
+        return '';
+    }
+};
+
 export default function AdminSchedule() {
     const [fleet, setFleet] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,6 +60,7 @@ export default function AdminSchedule() {
         route: '', 
         driver: '', 
         date: '', 
+        departureTime: '', 
         arrivalTime: '', 
         status: 'Planned' 
     });
@@ -173,19 +204,24 @@ export default function AdminSchedule() {
 
     const generateScheduleDates = () => {
         const dates: string[] = [];
-        let currentDate = new Date(`${newEntry.date}T${newEntry.arrivalTime}`);
+        let currentDate = new Date(`${newEntry.date}T00:00:00`);
         const endDateObj = new Date(`${repeatConfig.endDate}T23:59:59`);
 
         if (currentDate > endDateObj) return dates;
 
         while (currentDate <= endDateObj) {
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+
             if (repeatConfig.frequency === 'custom') {
                 if (repeatConfig.customDays.includes(currentDate.getDay())) {
-                    dates.push(currentDate.toISOString());
+                    dates.push(dateString);
                 }
                 currentDate.setDate(currentDate.getDate() + 1);
             } else {
-                dates.push(currentDate.toISOString());
+                dates.push(dateString);
                 
                 if (repeatConfig.frequency === 'daily') {
                     currentDate.setDate(currentDate.getDate() + 1);
@@ -199,9 +235,26 @@ export default function AdminSchedule() {
         return dates;
     };
 
+       // Funkcja pomocnicza generująca ISO String z zachowaniem lokalnego offsetu (np. +02:00) zamiast zrzucania do 'Z' (UTC)
+    const toLocalISOString = (dateStr: string, timeStr: string) => {
+        const localDate = new Date(`${dateStr}T${timeStr}`);
+        const offset = localDate.getTimezoneOffset(); // Otrzymujemy offset w minutach względem UTC (dla Polski latem to -120)
+        
+        // Zabezpieczenie: jeśli wprowadzona data jest nieprawidłowa, zwracamy cokolwiek, by reszta kodu złapała błąd
+        if (isNaN(localDate.getTime())) return `${dateStr}T${timeStr}:00.000Z`; 
+
+        const absOffset = Math.abs(offset);
+        // Uwaga: znak w JS offset jest odwrócony (np. -120 dla UTC+2), więc odwracamy go logicznie
+        const sign = offset <= 0 ? '+' : '-'; 
+        const hours = String(Math.floor(absOffset / 60)).padStart(2, '0');
+        const minutes = String(absOffset % 60).padStart(2, '0');
+        
+        return `${dateStr}T${timeStr}:00.000${sign}${hours}:${minutes}`;
+    };
+
     const handleAddEntry = async () => {
-        if (!newEntry.busId || !newEntry.route || !newEntry.driver || !newEntry.date || !newEntry.arrivalTime) {
-            showScheduleAlert("Błąd", "Proszę wypełnić wszystkie podstawowe pola.");
+        if (!newEntry.busId || !newEntry.route || !newEntry.driver || !newEntry.date || !newEntry.departureTime || !newEntry.arrivalTime) {
+            showScheduleAlert("Błąd", "Proszę wypełnić wszystkie podstawowe pola (w tym czas odjazdu i przyjazdu).");
             return;
         }
 
@@ -212,7 +265,7 @@ export default function AdminSchedule() {
 
         const datesToSchedule = isRepeating 
             ? generateScheduleDates() 
-            : [new Date(`${newEntry.date}T${newEntry.arrivalTime}`).toISOString()];
+            : [newEntry.date];
 
         if (datesToSchedule.length === 0) {
             showScheduleAlert("Błąd", "Brak dat do zaplanowania w wybranym przedziale.");
@@ -220,18 +273,37 @@ export default function AdminSchedule() {
         }
 
         try {
-            const requests = datesToSchedule.map(isoDate => 
-                authFetch('/api/admin/fleet/', {
+            const requests = datesToSchedule.map(dateStr => {
+                // Używamy nowej funkcji do zachowania wpisanej godziny i polskiej strefy czasowej
+                const departureIso = toLocalISOString(dateStr, newEntry.departureTime);
+                
+                // Obsługa kursów "przez północ" (jeśli przyjazd jest mniejszy niż odjazd)
+                let arrivalDateStr = dateStr;
+                if (newEntry.arrivalTime < newEntry.departureTime) {
+                    const nextDay = new Date(`${dateStr}T00:00:00`);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    const year = nextDay.getFullYear();
+                    const month = String(nextDay.getMonth() + 1).padStart(2, '0');
+                    const day = String(nextDay.getDate()).padStart(2, '0');
+                    arrivalDateStr = `${year}-${month}-${day}`;
+                }
+                
+                const arrivalIso = toLocalISOString(arrivalDateStr, newEntry.arrivalTime);
+
+                console.log("Wysyłam:", departureIso, arrivalIso);
+
+                return authFetch('/api/admin/fleet/', {
                     method: 'POST',
                     body: JSON.stringify({
                         busId: parseInt(newEntry.busId),
                         route: parseInt(newEntry.route),
                         driver: parseInt(newEntry.driver),
-                        arrivalTime: isoDate,
+                        departureTime: departureIso,
+                        arrivalTime: arrivalIso,
                         status: 'Planned'
                     })
-                })
-            );
+                });
+            });
 
             const responses = await Promise.all(requests);
             const allOk = responses.every(r => r.ok);
@@ -240,7 +312,7 @@ export default function AdminSchedule() {
                 fetchInitialData(); 
                 
                 setScheduleModalVisible(false);
-                setNewEntry({ busId: '', route: '', driver: '', date: '', arrivalTime: '', status: 'Planned' });
+                setNewEntry({ busId: '', route: '', driver: '', date: '', departureTime: '', arrivalTime: '', status: 'Planned' });
                 setIsRepeating(false);
                 setRepeatConfig({ endDate: '', frequency: 'daily', customDays: [] });
                 
@@ -440,25 +512,40 @@ export default function AdminSchedule() {
             </View>
 
             <View style={[styles.card, { padding: 0, overflow: 'hidden' }]}>
+                {/* ZAKTUALIZOWANY NAGŁÓWEK TABELI */}
                 <View style={styles.tableHeader}>
                     <Text style={[styles.headerCell, { flex: 1 }]}>BUS ID / REJ</Text>
-                    <Text style={[styles.headerCell, { flex: 2 }]}>ROUTE</Text>
+                    <Text style={[styles.headerCell, { flex: 1.5 }]}>ROUTE</Text>
+                    <Text style={[styles.headerCell, { flex: 1.5 }]}>SCHEDULE</Text>
                     <Text style={[styles.headerCell, { flex: 1, textAlign: 'center' }]}>STATUS</Text>
-                    <Text style={[styles.headerCell, { flex: 1.2, textAlign: 'center' }]}>DRIVER</Text>
+                    <Text style={[styles.headerCell, { flex: 1, textAlign: 'center' }]}>DRIVER</Text>
                     <Text style={{ width: 40 }}></Text>
                 </View>
+
                 {fleet.map((bus) => {
                     const isCancelled = bus.status === 'Cancelled';
                     return (
                         <View key={bus.id} style={[styles.tableRow, isCancelled && { opacity: 0.4 }]}>
                             <Text style={[styles.cell, { flex: 1, fontWeight: 'bold' }]}>{bus.busId}</Text>
-                            <Text style={[styles.cell, { flex: 2 }]}>{bus.route}</Text>
+                            <Text style={[styles.cell, { flex: 1.5 }]}>{bus.route}</Text>
+                            
+                            {/* NOWA KOLUMNA HARMONOGRAMU */}
+                            <View style={{ flex: 1.5 }}>
+                                <Text style={[styles.cell, { fontWeight: 'bold' }]}>
+                                    {formatTime(bus.departureTime)} - {formatTime(bus.arrivalTime)}
+                                </Text>
+                                <Text style={{ fontSize: 11, color: COLORS.grayText, marginTop: 2 }}>
+                                    {formatDate(bus.departureTime)}
+                                </Text>
+                            </View>
+
                             <View style={{ flex: 1, alignItems: 'center' }}>
                                 <View style={[styles.statusBadge, { backgroundColor: bus.status === 'Planned' ? COLORS.greenLight : COLORS.redLight }]}>
                                     <Text style={[styles.statusText, { color: bus.status === 'Planned' ? COLORS.green : COLORS.red }]}>{bus.status}</Text>
                                 </View>
                             </View>
-                            <Text style={[styles.cell, { flex: 1.2, textAlign: 'center' }]}>{bus.driver}</Text>
+                            <Text style={[styles.cell, { flex: 1, textAlign: 'center' }]}>{bus.driver}</Text>
+                            
                             <View style={{ width: 40, alignItems: 'flex-end' }}>
                                 {!isCancelled && (
                                     <TouchableOpacity onPress={() => handleDeleteRoute(bus.id)} style={{ padding: 5 }}>
@@ -534,25 +621,35 @@ export default function AdminSchedule() {
                             </View>
                         )}
 
-                        {/* --- POLA DATY I CZASU --- */}
-                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 15 }}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
-                                <input 
-                                    type="date" 
-                                    style={styles.nativeDateInput as any}
-                                    value={newEntry.date} 
-                                    onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })} 
-                                />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.inputLabel}>ARRIVE TIME</Text>
-                                <input 
-                                    type="time" 
-                                    style={styles.nativeDateInput as any}
-                                    value={newEntry.arrivalTime} 
-                                    onChange={(e) => setNewEntry({ ...newEntry, arrivalTime: e.target.value })} 
-                                />
+                        {/* --- POLA DATY, ODJAZDU I PRZYJAZDU --- */}
+                        <View style={{ marginTop: 15 }}>
+                            <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
+                            <input 
+                                type="date" 
+                                style={{ ...(styles.nativeDateInput as any), marginBottom: 12 }}
+                                value={newEntry.date} 
+                                onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })} 
+                            />
+                            
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>DEPARTURE TIME</Text>
+                                    <input 
+                                        type="time" 
+                                        style={styles.nativeDateInput as any}
+                                        value={newEntry.departureTime} 
+                                        onChange={(e) => setNewEntry({ ...newEntry, departureTime: e.target.value })} 
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>ARRIVAL TIME</Text>
+                                    <input 
+                                        type="time" 
+                                        style={styles.nativeDateInput as any}
+                                        value={newEntry.arrivalTime} 
+                                        onChange={(e) => setNewEntry({ ...newEntry, arrivalTime: e.target.value })} 
+                                    />
+                                </View>
                             </View>
                         </View>
                         {/* ----------------------------- */}
