@@ -9,138 +9,56 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { authFetch } from '../../utils';
 
 export interface TicketData {
-    id: string; ticketNumber: string; seatCount: string; depTime: string; arrTime: string;
-    depStation: string; arrStation: string; duration: string; seats: number; price: number | string; isPast: boolean; isCancelled: boolean;
+    id: string;             
+    ticketNumber: string;   
+    depTime: string;
+    depStation: string;
+    arrStation: string;
+    seats: string | number; 
+    status: string;
+    isPast: boolean;
 }
 
 // ------------------------------------------------------------------
-// NOWY KOMPONENT: Dedykowana karta dla historii podróży
+// KOMPONENT 1: Karta aktywnego biletu (posiada własną animację)
 // ------------------------------------------------------------------
-const PastTicketCard = ({ ticket }: { ticket: TicketData }) => {
-    return (
-        <View style={{
-            backgroundColor: '#f9fafb',
-            borderWidth: 1,
-            borderColor: '#e5e7eb',
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 10
-        }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#374151' }}>
-                    {ticket.depStation} - {ticket.arrStation}
-                </Text>
-                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '600' }}>
-                    {ticket.depTime}
-                </Text>
-            </View>
-            
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ backgroundColor: '#e5e7eb', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                    <Text style={{ fontSize: 12, color: '#4b5563', fontWeight: '700' }}>
-                        TICKETS: {ticket.seatCount}
-                    </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="checkmark-circle" size={16} color="#9ca3af" style={{ marginRight: 4 }} />
-                    <Text style={{ fontSize: 14, color: '#9ca3af', fontWeight: '600' }}>
-                        Archived
-                    </Text>
-                </View>
-            </View>
-        </View>
-    );
-};
-// ------------------------------------------------------------------
-
-export default function PassengerTickets() {
-    const [tickets, setTickets] = useState<TicketData[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
-
+const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket: TicketData, onViewDetails: (t: TicketData) => void, onArchiveSuccess: (id: string) => void }) => {
     const opacityAnim = useRef(new Animated.Value(1)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
-    useFocusEffect(
-        useCallback(() => {
-            const fetchTickets = async () => {
-                setIsLoading(true);
-                try {
-                    const res = await authFetch('/api/client/profile/tickets');
-                    if (!res.ok) {
-                        console.error("Błąd pobierania biletów, status HTTP:", res.status);
-                        return;
-                    }
-                    const data = await res.json();
-                    console.log("Pobrane bilety:", data);
-                    const mappedTickets = data.map((t: any) => ({
-                        id: String(t.ticket_id),
-                        ticketNumber: String(t.reservation_number || t.id),
-                        seatCount: t.seat_count || 'Brak danych', 
-                        depTime: t.departure_time ? (t.departure_time.includes(' ') ? t.departure_time.split(' ')[1] : t.departure_time) : 'Brak danych',
-                        arrTime: t.arrival_time ? (t.arrival_time.includes(' ') ? t.arrival_time.split(' ')[1] : t.arrival_time) : 'Brak danych',
-                        depStation: t.route?.split('-')[0]?.trim() || 'Brak danych', 
-                        arrStation: t.route?.split('-')[1]?.trim() || 'Brak danych',
-                        duration: t.duration || 'Brak danych',
-                        seats: t.seat_count || 1,
-                        price: t.total_price !== undefined ? t.total_price : (t.price !== undefined ? t.price : 'Brak danych'),
-                        isPast: t.departure_time ? new Date(t.departure_time) < new Date() : false,
-                        isCancelled: t.is_cancelled || false
-                    }));
-                    setTickets(mappedTickets);
-                } catch (err) {
-                    console.error("Błąd pobierania biletów:", err);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchTickets();
-        }, [])
-    );
-
-    const handleOpenDetails = (ticket: TicketData) => { setSelectedTicket(ticket); setModalVisible(true); };
-
     const showNotification = (title: string, message: string) => {
-        if (Platform.OS === 'web') {
-            window.alert(`${title}\n${message}`);
-        } else {
-            Alert.alert(title, message);
-        }
+        if (Platform.OS === 'web') window.alert(`${title}\n${message}`);
+        else Alert.alert(title, message);
     };
 
-    const handleArchiveTicket = (ticketId: string) => {
+    const handleArchiveTicket = () => {
         const executeCancellation = async () => {
             try {
-                const res = await authFetch(`/api/client/reservations/tickets/${ticketId}/cancel`, {
+                const res = await authFetch(`/api/client/reservations/tickets/${ticket.id}/cancel`, {
                     method: 'PATCH', 
                 });
 
                 if (res.ok) {
+                    // Odpalamy animację tylko dla tego konkretnego biletu
                     Animated.parallel([
                         Animated.timing(opacityAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
                         Animated.timing(scaleAnim, { toValue: 0.9, duration: 300, useNativeDriver: true })
                     ]).start(() => {
-                        setTickets(prevTickets => prevTickets.map(ticket => ticket.id === ticketId ? { ...ticket, isPast: true } : ticket));
-                        opacityAnim.setValue(1);
-                        scaleAnim.setValue(1);
+                        // Po zakończeniu animacji informujemy rodzica, żeby zaktualizował stan
+                        onArchiveSuccess(ticket.id);
                     });
                     showNotification("Sukces", "Bilet został pomyślnie anulowany.");
                 } else {
-                    console.error("Błąd usuwania biletu, status:", res.status);
                     showNotification("Błąd", "Nie udało się anulować biletu. Spróbuj ponownie.");
                 }
             } catch (err) {
-                console.error("Błąd sieci podczas usuwania:", err);
                 showNotification("Błąd połączenia", "Wystąpił problem z siecią.");
             }
         };
 
         if (Platform.OS === 'web') {
             const confirmed = window.confirm("Czy na pewno chcesz anulować ten bilet? Tej akcji nie można cofnąć.");
-            if (confirmed) {
-                executeCancellation();
-            }
+            if (confirmed) executeCancellation();
         } else {
             Alert.alert(
                 "Anuluj bilet",
@@ -153,7 +71,180 @@ export default function PassengerTickets() {
         }
     };
 
-    const activeTicket = tickets.find(t => !t.isPast);
+    return (
+        <Animated.View style={[(styles as any).ticketWrapper, { opacity: opacityAnim, transform: [{ scale: scaleAnim }], marginBottom: 20 }]}>
+            <View style={(styles as any).ticketTop}>
+                <View style={(styles as any).ticketTopRow}>
+                    <Text style={(styles as any).ticketRoute}>{ticket.depStation.toUpperCase()} - {ticket.arrStation.toUpperCase()}</Text>
+                </View>
+                <View style={(styles as any).ticketTopRow}>
+                    <Text style={(styles as any).ticketTime}>Today, {ticket.depTime}</Text>
+                </View>
+            </View>
+
+            <View style={(styles as any).ticketBottom}>
+                <View style={(styles as any).qrPlaceholderContainer}>
+                    {ticket.ticketNumber && ticket.ticketNumber !== 'Brak' ? (
+                        <QRCode
+                            value={ticket.ticketNumber}
+                            size={240}
+                            color="#111827"
+                            backgroundColor="transparent"
+                        />
+                    ) : (
+                        <Ionicons name="qr-code-outline" size={240} color="#111827" />
+                    )}
+                </View>
+                <Text style={(styles as any).scanText}>SCAN WHEN BOARDING</Text>
+                <View style={(styles as any).dividerContainer}>
+                    <View style={(styles as any).cutoutLeft} />
+                    <View style={(styles as any).dashedLine} />
+                    <View style={(styles as any).cutoutRight} />
+                </View>
+                <View style={(styles as any).ticketActions}>
+                    <TouchableOpacity style={(styles as any).viewDetailsBtn} onPress={() => onViewDetails(ticket)}>
+                        <Text style={(styles as any).viewDetailsText}>View Details</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={(styles as any).closeTicketBtn} onPress={handleArchiveTicket}>
+                        <Ionicons name="close" size={26} color="#d32f2f" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Animated.View>
+    );
+};
+
+// ------------------------------------------------------------------
+// KOMPONENT 2: Karta historii podróży
+// ------------------------------------------------------------------
+const PastTicketCard = ({ ticket }: { ticket: TicketData }) => {
+    const statusNormalized = ticket.status.toLowerCase();
+    
+    let statusLabel = 'Archived';
+    let statusColor = '#9ca3af';
+    let iconName: any = 'checkmark-circle';
+
+    if (statusNormalized.includes('cancel')) {
+        statusLabel = 'Cancelled';
+        statusColor = '#ef4444';
+        iconName = 'close-circle';
+    } else if (statusNormalized.includes('realized')) {
+        statusLabel = 'Realized';
+        statusColor = '#10b981';
+        iconName = 'checkmark-done-circle';
+    }
+
+    return (
+        <View style={(styles as any).pastTicketCard}>
+            <View style={(styles as any).pastTicketHeader}>
+                <Text style={(styles as any).pastTicketRoute}>
+                    {ticket.depStation} - {ticket.arrStation}
+                </Text>
+                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '600' }}>
+                    {ticket.depTime}
+                </Text>
+            </View>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ backgroundColor: '#e5e7eb', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 12, color: '#4b5563', fontWeight: '700' }}>
+                        TICKETS: {ticket.seats}
+                    </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name={iconName} size={16} color={statusColor} style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 14, color: statusColor, fontWeight: '600', textTransform: 'capitalize' }}>
+                        {statusLabel}
+                    </Text>
+                </View>
+            </View>
+        </View>
+    );
+};
+
+// ------------------------------------------------------------------
+// GŁÓWNY WIDOK: PassengerTickets
+// ------------------------------------------------------------------
+export default function PassengerTickets() {
+    const [tickets, setTickets] = useState<TicketData[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
+
+    useFocusEffect(
+        useCallback(() => {
+            const fetchTickets = async () => {
+                setIsLoading(true);
+                try {
+                    const res = await authFetch('/api/client/profile/tickets');
+                    if (!res.ok) {
+                        console.error("Błąd pobierania biletów, status HTTP:", res.status);
+                        return;
+                    }
+                    const data = await res.json();
+                    
+                    const mappedTickets = data.map((t: any) => {
+                        const rawTicketStatus = (t.ticketStatus || '').toLowerCase();
+                        const rawReservationStatus = (t.reservationStatus || '').toLowerCase();
+                        const combinedStatus = rawTicketStatus || rawReservationStatus;
+
+                        const validDateString = t.departureTime ? t.departureTime.replace(' ', 'T') : null;
+                        const isTimePast = validDateString ? new Date(validDateString) < new Date() : false;
+
+                        const isCancelled = combinedStatus.includes('cancel');
+                        const isRealized = combinedStatus.includes('realized');
+    
+                        const isPast = isTimePast || isCancelled || isRealized;
+
+                        let displayStatus = 'Paid';
+                        if (isCancelled) displayStatus = 'Cancelled';
+                        else if (isRealized || isTimePast) displayStatus = 'Realized';
+                        else if (t.ticketStatus) displayStatus = t.ticketStatus;
+
+                        const routeParts = t.route ? t.route.split('-') : [];
+                        const depStation = routeParts[0] ? routeParts[0].trim() : 'Brak danych';
+                        const arrStation = routeParts[1] ? routeParts[1].trim() : 'Brak danych';
+                        const timeOnly = t.departureTime ? (t.departureTime.includes(' ') ? t.departureTime.split(' ')[1] : t.departureTime) : 'Brak danych';
+
+                        return {
+                            id: String(t.ticketId || Math.random()), 
+                            ticketNumber: String(t.reservationNumber || 'Brak'),
+                            depTime: timeOnly,
+                            depStation: depStation, 
+                            arrStation: arrStation,
+                            seats: t.ticketsSummary || 1, 
+                            status: displayStatus,
+                            isPast: isPast
+                        };
+                    });
+                    
+                    setTickets(mappedTickets);
+                } catch (err) {
+                    console.error("Błąd pobierania biletów:", err);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchTickets();
+        }, [])
+    );
+
+    const handleOpenDetails = (ticket: TicketData) => { 
+        setSelectedTicket(ticket); 
+        setModalVisible(true); 
+    };
+
+    // Callback odpalany z wnętrza ActiveTicketCard po udanej animacji anulowania
+    const handleArchiveSuccess = (ticketId: string) => {
+        setTickets(prevTickets => 
+            prevTickets.map(ticket => 
+                ticket.id === ticketId ? { ...ticket, isPast: true, status: 'Cancelled' } : ticket
+            )
+        );
+    };
+
+    // Zmiana na .filter() żeby chwycić wszystkie aktywne bilety
+    const activeTickets = tickets.filter(t => !t.isPast);
     const pastTickets = tickets.filter(t => t.isPast);
 
     return (
@@ -168,52 +259,16 @@ export default function PassengerTickets() {
                             <Text style={styles.activeTitle}>Active Tickets</Text>
                         </View>
 
-                        {activeTicket ? (
-                            <Animated.View style={[styles.ticketWrapper, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}>
-                                <View style={styles.ticketTop}>
-                                    <View style={styles.ticketTopRow}>
-                                        <Text style={styles.ticketRoute}>{activeTicket.depStation.toUpperCase()} - {activeTicket.arrStation.toUpperCase()}</Text>
-                                        <Text style={styles.ticketSeatLabel}>SEAT</Text>
-                                    </View>
-                                    <View style={styles.ticketTopRow}>
-                                        <Text style={styles.ticketTime}>Today, {activeTicket.depTime}</Text>
-                                        <View style={styles.seatBadge}>
-                                            <Text style={styles.seatBadgeText}>
-                                                {activeTicket.seatCount}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                </View>
-
-                                <View style={styles.ticketBottom}>
-                                    <View style={styles.qrPlaceholderContainer}>
-                                        {activeTicket.ticketNumber ? (
-                                            <QRCode
-                                                value={activeTicket.ticketNumber}
-                                                size={120}
-                                                color="#111827"
-                                                backgroundColor="transparent"
-                                            />
-                                        ) : (
-                                            <Ionicons name="qr-code-outline" size={120} color="#111827" />
-                                        )}
-                                    </View>
-                                    <Text style={styles.scanText}>SCAN WHEN BOARDING</Text>
-                                    <View style={styles.dividerContainer}>
-                                        <View style={styles.cutoutLeft} />
-                                        <View style={styles.dashedLine} />
-                                        <View style={styles.cutoutRight} />
-                                    </View>
-                                    <View style={styles.ticketActions}>
-                                        <TouchableOpacity style={styles.viewDetailsBtn} onPress={() => handleOpenDetails(activeTicket)}>
-                                            <Text style={styles.viewDetailsText}>View Details</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={styles.closeTicketBtn} onPress={() => handleArchiveTicket(activeTicket.id)}>
-                                            <Ionicons name="close" size={26} color="#d32f2f" />
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            </Animated.View>
+                        {/* Listujemy wszystkie aktywne bilety */}
+                        {activeTickets.length > 0 ? (
+                            activeTickets.map(ticket => (
+                                <ActiveTicketCard 
+                                    key={ticket.id} 
+                                    ticket={ticket} 
+                                    onViewDetails={handleOpenDetails}
+                                    onArchiveSuccess={handleArchiveSuccess}
+                                />
+                            ))
                         ) : (
                             <View style={styles.emptyStateContainer}>
                                 <Ionicons name="ticket" size={48} color="#d1d5db" />
@@ -224,10 +279,13 @@ export default function PassengerTickets() {
                     </View>
 
                     <Text style={styles.sectionTitle}>Travel History</Text>
-                    <View style={{ opacity: 0.6 }}>
+                    <View style={(styles as any).historyContainer}>
                         {pastTickets.map(ticket => (
-                            <TouchableOpacity key={ticket.id} onPress={() => handleOpenDetails(ticket)}>
-                                {/* Używamy nowego, dedykowanego komponentu */}
+                            <TouchableOpacity 
+                                key={ticket.id} 
+                                onPress={() => handleOpenDetails(ticket)}
+                                style={(styles as any).pastTicketWrapper}
+                            >
                                 <PastTicketCard ticket={ticket} />
                             </TouchableOpacity>
                         ))}

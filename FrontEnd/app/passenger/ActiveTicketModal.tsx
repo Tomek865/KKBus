@@ -7,7 +7,7 @@ import { TicketData } from './tickets';
 
 export interface BusDetails { busNumber: string; operator: string; amenities: string[]; }
 export interface RouteStop { station: string; time?: string; isPassed: boolean; }
-export interface TicketInfo { class: string; reservationNumber: string; seat: string; seatCount: number; }
+export interface TicketInfo { class: string; reservationNumber: string; seat: string; seatCount: string | number; }
 export interface ActiveTicketModalProps { visible: boolean; onClose: () => void; ticket: TicketData | null; }
 
 export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTicketModalProps) {
@@ -22,7 +22,8 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
             
             const fetchJourneyDetails = async () => {
                 try {
-                    const res = await authFetch(`/api/client/reservations/journey-details/${ticket.id}`);
+                    // Zmiana na ticket.ticketNumber zgodnie z nowym interfejsem w tickets.tsx
+                    const res = await authFetch(`/api/client/reservations/journey-details/${ticket.ticketNumber}`);
                  
                     if (res.ok) {
                         const data = await res.json();
@@ -46,14 +47,13 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                                 class: data.ticketInfo.class || "Standard",
                                 reservationNumber: data.ticketInfo.reservationNumber || ticket.ticketNumber,
                                 seat: data.ticketInfo.seat || "TBD",
-                                seatCount: data.ticketInfo.seatCount || 1
+                                seatCount: data.ticketInfo.seatCount !== undefined ? data.ticketInfo.seatCount : 1
                             });
                         } else {
                              setTicketInfo(null);
                         }
 
                     } else {
-                        // Backend nie zwrócił danych - czyścimy stany
                         setBusDetails(null); 
                         setRouteDetails([]);
                         setTicketInfo(null);
@@ -119,7 +119,10 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                         <View style={styles.infoGrid}>
                             <View style={styles.infoBox}>
                                 <Text style={styles.infoLabel}>SEATS</Text>
-                                <Text style={styles.infoValue}>{ticketInfo ? ticketInfo.seatCount : ticket.seats}</Text>
+                                {/* Posiada bezpieczny fallback do ticket.seats w nowym formacie */}
+                                <Text style={styles.infoValue}>
+                                    {ticketInfo ? ticketInfo.seatCount : ticket.seats}
+                                </Text>
                             </View>
                             <View style={styles.infoBox}>
                                 <Text style={styles.infoLabel}>CLASS</Text>
@@ -127,7 +130,9 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                             </View>
                             <View style={[styles.infoBox, { borderRightWidth: 0 }]}>
                                 <Text style={styles.infoLabel}>TICKET</Text>
-                                <Text style={[styles.infoValue, { fontSize: 14 }]}>{ticketInfo ? ticketInfo.reservationNumber : ticket.ticketNumber}</Text>
+                                <Text style={[styles.infoValue, { fontSize: 13 }]}>
+                                    {ticketInfo ? ticketInfo.reservationNumber : ticket.ticketNumber}
+                                </Text>
                             </View>
                         </View>
 

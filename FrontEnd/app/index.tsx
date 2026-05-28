@@ -14,7 +14,7 @@ export default function LoginScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
-    const handleLogin = async () => {
+        const handleLogin = async () => {
         if (!email || !password) {
             Alert.alert("Błąd", "Proszę wypełnić wszystkie pola.");
             return;
@@ -23,7 +23,18 @@ export default function LoginScreen() {
         setIsLoading(true);
 
         try {
-            // fetch - Logowanie do API TransRegion
+            // 1. TWARDY RESET STORAGE'U PRZED ZALOGOWANIEM (Nowość)
+            const keysToRemove = ['userToken', 'userData'];
+            if (Platform.OS === 'web') {
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+            } else {
+                // Dla bezpieczeństwa nie rzucamy błędem, jeśli klucza nie ma w SecureStore
+                try {
+                    await Promise.all(keysToRemove.map(key => SecureStore.deleteItemAsync(key)));
+                } catch (e) { console.log("Brak starych danych do usunięcia"); }
+            }
+
+            // 2. STRZAŁ DO BACKENDU
             const response = await fetch(`${IP_adress}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -37,18 +48,18 @@ export default function LoginScreen() {
             if (response.ok) {
                 console.log('dane z logowania', data)
                 const role = data.role?.toLowerCase();
+                
                 if (data.token) {
                     try {
+                        // 3. ZAPIS NOWYCH, ŚWIEŻYCH DANYCH
                         if (Platform.OS === 'web') {
                             localStorage.setItem('userToken', String(data.token));
-                            // Zapis profilu do localStorage na potrzeby sesji webowej
                             if (data.data) {
                                 localStorage.setItem('userData', JSON.stringify(data.data));
                             }
                         } else {
                             await SecureStore.setItemAsync('userToken', String(data.token));
-                            // Zapis profilu do SecureStore na telefonie
-                            if (data.user) {
+                            if (data.data) { // Poprawiony bug: było data.user
                                 await SecureStore.setItemAsync('userData', JSON.stringify(data.data));
                             }
                         }

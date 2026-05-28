@@ -157,7 +157,6 @@ export default function PassengerProfile() {
                 <Text style={styles.sectionTitle}>Account</Text>
                 <View style={styles.menuContainer}>
                     <ProfileMenuItem icon="person-outline" title="Personal Information" onPress={() => openSettings('personal')} />
-                    <ProfileMenuItem icon="card-outline" title="Payment Methods" onPress={() => openSettings('payment')} />
                     <ProfileMenuItem icon="notifications-outline" title="Notifications" onPress={() => openSettings('notifications')} />
                 </View>
                 <Text style={styles.sectionTitle}>Preferences</Text>
