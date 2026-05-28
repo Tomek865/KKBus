@@ -71,16 +71,15 @@ def cancel_fleet_assignment(current_admin_id, assignment_id):
 @admin_fleet_bp.route("/", methods=["POST"])
 @admin_required
 def create_trip(current_admin_id):
+    from datetime import datetime, timedelta
+
     data = request.get_json()
     vehicle_id = data.get("busId")
     route_id = data.get("route")
     employee_id = data.get("driver")
     status = data.get("status", "Planned")
-
-    from datetime import datetime, timedelta
-
-    departure_time = datetime.now() + timedelta(days=1)
-    arrival_time = departure_time + timedelta(hours=4)
+    departure_time = data.get("departureTime", datetime.now() + timedelta(days=1))
+    arrival_time = data.get("arrivalTime", departure_time + timedelta(hours=4))
 
     if not vehicle_id or not route_id or not employee_id:
         return jsonify({"message": "All fields are required"}), 400
