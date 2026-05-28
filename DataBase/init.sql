@@ -15,6 +15,7 @@ CREATE TABLE Client (
     is_student BOOLEAN DEFAULT FALSE,
     unfulfilled_reservations_count INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
+    gold_tier_count INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
