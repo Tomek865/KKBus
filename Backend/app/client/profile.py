@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from app.utils import token_required
+from werkzeug.security import generate_password_hash
 
 client_profil_bp = Blueprint("client_profile", __name__)
 
@@ -38,27 +39,56 @@ def update_profile(current_user_id):
     if not data:
         return jsonify({"error": "No data provided for update"}), 400
 
-    first_name = data.get("first_name")
-    last_name = data.get("last_name")
-    phone_number = data.get("phone_number")
+    # 1. Pobieramy dane z JSON-a
+    first_name = data.get("firstName")
+    last_name = data.get("lastName")
+    email = data.get("email")
+    phone_number = data.get("phoneNumber")
+
+    # 2. Bezpieczne hashowanie hasła (tylko jeśli użytkownik je podał!)
+    raw_password = data.get("password")
+    hashed_password = None
+    if raw_password:  # Użytkownik podał nowe hasło
+        hashed_password = generate_password_hash(raw_password)
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
+
+        # 3. Poprawione zapytanie (używamy dokładnych nazw kolumn z bazy)
         query = """
             UPDATE Client 
             SET first_name = COALESCE(%s, first_name), 
                 last_name = COALESCE(%s, last_name), 
+                email = COALESCE(%s, email),
+                password = COALESCE(%s, password),
                 phone_number = COALESCE(%s, phone_number)
-            WHERE client_id = %s
+            WHERE client_id = %s;
         """
-        cur.execute(query, (first_name, last_name, phone_number, current_user_id))
+
+        # 4. Przekazujemy DOKŁADNIE 6 argumentów do 6 znaczników %s
+        cur.execute(
+            query,
+            (
+                first_name,
+                last_name,
+                email,
+                hashed_password,
+                phone_number,
+                current_user_id,
+            ),
+        )
+
         conn.commit()
         cur.close()
 
         return jsonify({"message": "Profile updated successfully"}), 200
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"DB Error w /user/update: {e}")
+        if conn:
+            conn.rollback()
+        return jsonify({"error": "Server error while updating profile"}), 500
     finally:
         if conn:
             conn.close()
