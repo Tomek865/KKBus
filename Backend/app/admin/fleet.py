@@ -90,12 +90,16 @@ def create_trip(current_admin_id):
     dep_time_str = data.get("departureTime")
     if dep_time_str:
         departure_time = datetime.fromisoformat(dep_time_str.replace("Z", "+00:00"))
+
+        departure_time = departure_time.replace(tzinfo=None)
     else:
         departure_time = datetime.now() + timedelta(days=1)
 
     arr_time_str = data.get("arrivalTime")
     if arr_time_str:
         arrival_time = datetime.fromisoformat(arr_time_str.replace("Z", "+00:00"))
+
+        arrival_time = arrival_time.replace(tzinfo=None)
     else:
         arrival_time = departure_time + timedelta(hours=4)
 

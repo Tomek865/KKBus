@@ -18,10 +18,6 @@ export interface TicketData {
     status: string;
     isPast: boolean;
 }
-
-// ------------------------------------------------------------------
-// KOMPONENT 1: Karta aktywnego biletu (posiada własną animację)
-// ------------------------------------------------------------------
 const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket: TicketData, onViewDetails: (t: TicketData) => void, onArchiveSuccess: (id: string) => void }) => {
     const opacityAnim = useRef(new Animated.Value(1)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -39,12 +35,10 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
                 });
 
                 if (res.ok) {
-                    // Odpalamy animację tylko dla tego konkretnego biletu
                     Animated.parallel([
                         Animated.timing(opacityAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
                         Animated.timing(scaleAnim, { toValue: 0.9, duration: 300, useNativeDriver: true })
                     ]).start(() => {
-                        // Po zakończeniu animacji informujemy rodzica, żeby zaktualizował stan
                         onArchiveSuccess(ticket.id);
                     });
                     showNotification("Sukces", "Bilet został pomyślnie anulowany.");
@@ -114,9 +108,6 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
     );
 };
 
-// ------------------------------------------------------------------
-// KOMPONENT 2: Karta historii podróży
-// ------------------------------------------------------------------
 const PastTicketCard = ({ ticket }: { ticket: TicketData }) => {
     const statusNormalized = ticket.status.toLowerCase();
     
@@ -162,9 +153,6 @@ const PastTicketCard = ({ ticket }: { ticket: TicketData }) => {
     );
 };
 
-// ------------------------------------------------------------------
-// GŁÓWNY WIDOK: PassengerTickets
-// ------------------------------------------------------------------
 export default function PassengerTickets() {
     const [tickets, setTickets] = useState<TicketData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -234,7 +222,6 @@ export default function PassengerTickets() {
         setModalVisible(true); 
     };
 
-    // Callback odpalany z wnętrza ActiveTicketCard po udanej animacji anulowania
     const handleArchiveSuccess = (ticketId: string) => {
         setTickets(prevTickets => 
             prevTickets.map(ticket => 
@@ -242,8 +229,6 @@ export default function PassengerTickets() {
             )
         );
     };
-
-    // Zmiana na .filter() żeby chwycić wszystkie aktywne bilety
     const activeTickets = tickets.filter(t => !t.isPast);
     const pastTickets = tickets.filter(t => t.isPast);
 

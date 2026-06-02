@@ -330,7 +330,7 @@ def get_journey_details(current_client_id, res_number):
             conn.close()
 
 
-@client_reservation_bp.route("/calculate-price", methods=["POST"])
+@client_reservation_bp.route("/calculate-price", methods=["POST", "OPTIONS"])
 @token_required
 def calculate_price(current_user_id):
     data = request.get_json()
@@ -350,6 +350,16 @@ def calculate_price(current_user_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute(
+            "SELECT loyalty_points FROM Client WHERE client_id = %s", (current_user_id,)
+        )
+        client_data = cur.fetchone()
+        loyalty_points = (
+            client_data["loyalty_points"]
+            if client_data and client_data["loyalty_points"]
+            else 0
+        )
 
         query_stops = """
             SELECT 
@@ -371,6 +381,12 @@ def calculate_price(current_user_id):
         total_price += student_count * (base_price * 0.49)
         total_price += reduced_count * (base_price * 0.63)
 
+        is_gold_eligible = loyalty_points >= 2000
+        if is_gold_eligible:
+            total_price = (
+                total_price * 0.40
+            ) 
+
         cur.close()
 
         return jsonify(
@@ -378,6 +394,8 @@ def calculate_price(current_user_id):
                 "base_price_per_ticket": round(base_price, 2),
                 "total_price": round(total_price, 2),
                 "total_seats": total_seats,
+                "current_points": loyalty_points,
+                "is_gold_eligible": is_gold_eligible,
             }
         ), 200
 
@@ -456,6 +474,42 @@ def process_checkout(current_user_id):
             + (student_count * (base_price * 0.49))
             + (reduced_count * (base_price * 0.63))
         )
+
+        # --- ZŁOTA ZNIŻKA I AKTUALIZACJA PUNKTÓW ---
+        cur.execute(
+            "SELECT loyalty_points FROM Client WHERE client_id = %s", (current_user_id,)
+        )
+        client_data = cur.fetchone()
+        loyalty_points = (
+            client_data["loyalty_points"]
+            if client_data and client_data["loyalty_points"]
+            else 0
+        )
+
+        is_gold_eligible = loyalty_points >= 2000
+        earned_points = seat_count * 40  # Punkty z nowej podróży
+
+        if is_gold_eligible:
+            # Nakładamy zniżkę 60%
+            total_price = total_price * 0.40
+
+            # Odbieramy 2000 punktów za użycie zniżki, dodajemy punkty za obecną trasę
+            # i podbijamy statystykę gold_tier_count o 1
+            query_update_points = """
+                UPDATE Client 
+                SET loyalty_points = loyalty_points - 2000 + %s,
+                    gold_tier_count = gold_tier_count + 1
+                WHERE client_id = %s;
+            """
+            cur.execute(query_update_points, (earned_points, current_user_id))
+        else:
+            # Standardowe dodanie punktów bez zniżki (tak jak miałeś wcześniej)
+            query_update_points = """
+                UPDATE Client 
+                SET loyalty_points = loyalty_points + %s 
+                WHERE client_id = %s;
+            """
+            cur.execute(query_update_points, (earned_points, current_user_id))
 
         total_price = round(total_price, 2)
 

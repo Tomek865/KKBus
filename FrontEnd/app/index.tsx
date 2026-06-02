@@ -14,7 +14,7 @@ export default function LoginScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
-        const handleLogin = async () => {
+    const handleLogin = async () => {
         if (!email || !password) {
             Alert.alert("Błąd", "Proszę wypełnić wszystkie pola.");
             return;
@@ -23,18 +23,15 @@ export default function LoginScreen() {
         setIsLoading(true);
 
         try {
-            // 1. TWARDY RESET STORAGE'U PRZED ZALOGOWANIEM (Nowość)
             const keysToRemove = ['userToken', 'userData'];
             if (Platform.OS === 'web') {
                 keysToRemove.forEach(key => localStorage.removeItem(key));
             } else {
-                // Dla bezpieczeństwa nie rzucamy błędem, jeśli klucza nie ma w SecureStore
                 try {
                     await Promise.all(keysToRemove.map(key => SecureStore.deleteItemAsync(key)));
                 } catch (e) { console.log("Brak starych danych do usunięcia"); }
             }
 
-            // 2. STRZAŁ DO BACKENDU
             const response = await fetch(`${IP_adress}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -48,10 +45,9 @@ export default function LoginScreen() {
             if (response.ok) {
                 console.log('dane z logowania', data)
                 const role = data.role?.toLowerCase();
-                
+
                 if (data.token) {
                     try {
-                        // 3. ZAPIS NOWYCH, ŚWIEŻYCH DANYCH
                         if (Platform.OS === 'web') {
                             localStorage.setItem('userToken', String(data.token));
                             if (data.data) {
@@ -59,7 +55,7 @@ export default function LoginScreen() {
                             }
                         } else {
                             await SecureStore.setItemAsync('userToken', String(data.token));
-                            if (data.data) { // Poprawiony bug: było data.user
+                            if (data.data) {
                                 await SecureStore.setItemAsync('userData', JSON.stringify(data.data));
                             }
                         }
@@ -139,7 +135,6 @@ export default function LoginScreen() {
                         {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Zaloguj się</Text>}
                     </TouchableOpacity>
 
-                    {/* NOWOŚĆ: Sekcja przekierowania do tworzenia konta klienta */}
                     <View style={styles.registerContainer}>
                         <Text style={styles.registerText}>Nie masz konta? </Text>
                         <TouchableOpacity onPress={() => router.push('/register')}>
@@ -170,7 +165,6 @@ const styles = StyleSheet.create({
     loginBtn: { backgroundColor: '#111827', height: 60, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginTop: 15, elevation: 4 },
     loginBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 
-    // NOWE STYLE STWORZONE DLA ODNOŚNIKA REJESTRACJI
     registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 25 },
     registerText: { color: '#6b7280', fontSize: 14 },
     registerLink: { color: '#e60000', fontSize: 14, fontWeight: 'bold' },

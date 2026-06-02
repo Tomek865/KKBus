@@ -1,13 +1,19 @@
 import React, { useState, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import ProfileSettingsModal from './profileSettingsModal';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { authFetch } from '../../utils';
 
-interface LoyaltyData { points: number; currentTier: string; nextTier: string; nextTierPoints: number; }
+interface LoyaltyData { 
+    points: number; 
+    currentTier: string; 
+    nextTier: string; 
+    nextTierPoints: number; 
+    goldTier: number;
+}
 interface UserData { first_name: string; last_name: string; email: string; initials: string }
 
 const ProfileMenuItem = ({ icon, title, onPress, isDestructive = false }: any) => (
@@ -22,25 +28,54 @@ const ProfileMenuItem = ({ icon, title, onPress, isDestructive = false }: any) =
 
 const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading: boolean }) => {
     if (isLoading || !data) return (<View style={[styles.loyaltyCard, styles.loyaltyCardLoading]}><Text style={styles.loadingText}>Loading loyalty points...</Text></View>);
-    const progressPercentage = (data.points / data.nextTierPoints) * 100;
+    
+    const isGold = data.points >= 2000;
+    const progressPercentage = Math.min((data.points / data.nextTierPoints) * 100, 100);
+    
     return (
-        <View style={styles.loyaltyCard}>
+        <View style={[
+            styles.loyaltyCard, 
+            isGold ? localStyles.goldCardBackground : {} 
+        ]}>
+            <View style={localStyles.chartBackgroundContainer}>
+                <View style={[localStyles.chartLineSegment, { backgroundColor: isGold ? 'rgba(0,0,0,0.1)' : '#22c55e', bottom: 12, left: '5%', width: '25%', transform: [{ rotate: '15deg' }] }]} />
+                <View style={[localStyles.chartLineSegment, { backgroundColor: isGold ? 'rgba(0,0,0,0.1)' : '#22c55e', bottom: 20, left: '29%', width: '20%', transform: [{ rotate: '-8deg' }] }]} />
+                <View style={[localStyles.chartLineSegment, { backgroundColor: isGold ? 'rgba(0,0,0,0.1)' : '#22c55e', bottom: 17, left: '48%', width: '25%', transform: [{ rotate: '35deg' }] }]} />
+                <View style={[localStyles.chartLineSegment, { backgroundColor: isGold ? 'rgba(0,0,0,0.1)' : '#22c55e', bottom: 31, left: '72%', width: '25%', transform: [{ rotate: '12deg' }] }]} />
+            </View>
+
             <View style={styles.loyaltyHeader}>
-                <View>
+                <View style={{ flex: 1, zIndex: 2 }}>
                     <View style={styles.loyaltyTitleRow}>
-                        <Ionicons name="star" size={14} color="#facc15" />
-                        <Text style={styles.loyaltyTitleText}>LOYALTY POINTS</Text>
+                        <Ionicons name={isGold ? "star" : "star-outline"} size={14} color={isGold ? "#000" : "#facc15"} />
+                        <Text style={[styles.loyaltyTitleText, isGold && { color: '#000' }]}>LOYALTY POINTS</Text>
                     </View>
-                    <Text style={styles.pointsValue}>{data.points.toLocaleString('en-US')}<Text style={styles.pointsSuffix}> pts</Text></Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+                        <Text style={[styles.pointsValue, isGold && { color: '#000' }]}>
+                            {data.points.toLocaleString('en-US')}
+                            <Text style={[styles.pointsSuffix, isGold && { color: 'rgba(0,0,0,0.6)' }]}> pts</Text>
+                        </Text>
+                        <View style={[localStyles.stockTrendBadge, isGold && { backgroundColor: 'rgba(0,0,0,0.1)' }]}>
+                            <Ionicons name="arrow-up" size={10} color={isGold ? "#000" : "#22c55e"} />
+                            <Text style={[localStyles.stockTrendText, isGold && { color: '#000' }]}>+15%</Text>
+                        </View>
+                    </View>
                 </View>
-                <TouchableOpacity style={styles.trendButton}><Ionicons name="trending-up" size={24} color="#4ade80" /></TouchableOpacity>
+                <View style={[localStyles.goldBadge, isGold && { backgroundColor: '#000' }, { zIndex: 2 }]}>
+                    <Ionicons name="trophy" size={16} color="#facc15" />
+                    <Text style={localStyles.goldBadgeText}>{data.goldTier}x</Text>
+                </View>
             </View>
-            <View style={styles.tierInfoRow}>
-                <Text style={styles.tierText}>{data.currentTier}</Text>
-                <Text style={styles.nextTierText}>{data.nextTier} ({data.nextTierPoints})</Text>
+
+            <View style={[styles.tierInfoRow, { zIndex: 2 }]}>
+                <Text style={[styles.tierText, isGold && { color: '#000' }]}>{data.currentTier}</Text>
+                <Text style={[styles.nextTierText, isGold && { color: 'rgba(0,0,0,0.6)' }]}>
+                    {isGold ? 'VIP LEVEL' : `${data.nextTier} (${data.nextTierPoints})`}
+                </Text>
             </View>
-            <View style={styles.progressBarBackground}>
-                <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+
+            <View style={[styles.progressBarBackground, isGold && { backgroundColor: 'rgba(0,0,0,0.15)' }, { zIndex: 2 }]}>
+                <View style={[styles.progressBarFill, isGold && { backgroundColor: '#000' }, { width: `${progressPercentage}%` }]} />
             </View>
         </View>
     );
@@ -60,22 +95,21 @@ export default function PassengerProfile() {
                 setIsLoadingLoyalty(true);
                 setIsLoadingProfile(true);
                 try {
-                    // 1. Fetch Loyalty z API
                     const resLoyalty = await authFetch('/api/client/profile/user/loyalty');
                     if (resLoyalty.ok) {
                         const dataLoyalty = await resLoyalty.json();
                         if (dataLoyalty.points !== undefined) {
                             setLoyaltyData({
                                 points: dataLoyalty.points,
-                                currentTier: dataLoyalty.points > 2000 ? 'GOLD' : 'STANDARD',
+                                currentTier: dataLoyalty.points >= 2000 ? 'GOLD' : 'STANDARD',
                                 nextTier: 'GOLD',
-                                nextTierPoints: 2000
+                                nextTierPoints: 2000,
+                                goldTier: dataLoyalty.goldTier || 0
                             });
                         }
                     }
 
                     let user_data_string;
-
                     try {
                         if (Platform.OS === 'web') {
                             user_data_string = localStorage.getItem('userData');
@@ -97,10 +131,7 @@ export default function PassengerProfile() {
                                 email: actual_data.email || 'Brak danych',
                                 initials: (initF + initL) || '?'
                             });
-                        } else {
-                            console.warn("Brak danych użytkownika w Local Storage");
                         }
-
                     } catch (error) {
                         console.error("error while trying to load user session data: ", error);
                     }
@@ -117,17 +148,11 @@ export default function PassengerProfile() {
     const handleLogout = async () => {
         try {
             const keysToRemove = ['userToken', 'userData'];
-
             if (Platform.OS === 'web') {
-                keysToRemove.forEach(key => {
-                    localStorage.removeItem(key);
-                });
+                keysToRemove.forEach(key => localStorage.removeItem(key));
             } else {
-                await Promise.all(
-                    keysToRemove.map(key => SecureStore.deleteItemAsync(key))
-                );
+                await Promise.all(keysToRemove.map(key => SecureStore.deleteItemAsync(key)));
             }
-
             router.replace('/');
         } catch (error) {
             console.error("Błąd podczas wylogowywania: ", error);
@@ -173,3 +198,57 @@ export default function PassengerProfile() {
         </SafeAreaView>
     );
 }
+
+const localStyles = StyleSheet.create({
+    goldCardBackground: {
+        backgroundColor: '#f59e0b',
+        shadowColor: '#f59e0b',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: '#fbbf24',
+    },
+    goldBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#334155', 
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        gap: 6,
+    },
+    goldBadgeText: {
+        color: '#ffffff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    chartBackgroundContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 50,
+        overflow: 'hidden',
+        opacity: 0.15,
+    },
+    chartLineSegment: {
+        position: 'absolute',
+        height: 2.5,
+        borderRadius: 2,
+    },
+    stockTrendBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(34, 197, 94, 0.15)', 
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        gap: 2,
+    },
+    stockTrendText: {
+        fontSize: 11,
+        fontWeight: 'bold',
+    }
+});

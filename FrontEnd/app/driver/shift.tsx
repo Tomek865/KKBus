@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { driverStyles as styles } from '../src/styles/driverStyles';
-import { authFetch, IP_adress } from '../../utils';
+import { authFetch } from '../../utils';
 
 export default function DriverEndShift() {
     const [volume, setVolume] = useState('');
@@ -10,31 +11,26 @@ export default function DriverEndShift() {
     const [focusedField, setFocusedField] = useState<'volume' | 'cost' | null>(null);
 
     const handleComplete = async () => {
-        if (!volume || !cost) {
-            Alert.alert("Błąd", "Uzupełnij dane tankowania.");
-            return;
-        }
-
         setIsSubmitting(true);
         try {
-            // Dostosowano klucze obiektu do struktury: volume, cost, vehicle_id
             const response = await authFetch('/api/driver/shift/end', {
                 method: 'POST',
                 body: JSON.stringify({
-                    volume: parseFloat(volume),
-                    cost: parseFloat(cost),
+                    volume: volume ? parseFloat(volume) : 0,
+                    cost: cost ? parseFloat(cost) : 0,
                     vehicle_id: 1
                 })
             });
 
             if (response.ok) {
-                Alert.alert("Sukces", "Zmiana zakończona. Dane zapisane.");
-                setVolume(''); setCost('');
+                Alert.alert("Sukces", "Zmiana zakończona. System wyliczył cenę za litr i zapisał dane z tankowania.");
+                setVolume('');
+                setCost('');
             } else {
                 throw new Error();
             }
         } catch (error) {
-            Alert.alert("Błąd", "Nie udało się zapisać danych zmiany.");
+            Alert.alert("Błąd", "Wystąpił błąd podczas kończenia zmiany.");
         } finally {
             setIsSubmitting(false);
         }
@@ -42,17 +38,37 @@ export default function DriverEndShift() {
 
     return (
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-            <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+            <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}>
                 <View style={styles.card}>
-                    <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 25, color: '#111827' }}>Koniec Zmiany</Text>
+                    <View style={{ alignItems: 'center', marginBottom: 25 }}>
+                        <Ionicons name="water-outline" size={50} color="#e60000" />
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#111827', marginTop: 10 }}>Koniec Zmiany</Text>
+                        <Text style={{ color: '#6b7280', textAlign: 'center', marginTop: 5 }}>Jeśli tankowałeś, przepisz dane z dystrybutora. Średnia cena zostanie wyliczona automatycznie.</Text>
+                    </View>
 
-                    <View style={[styles.inputWrapper, focusedField === 'volume' && styles.inputWrapperActive]}>
-                        <TextInput style={styles.textInput} value={volume} onChangeText={setVolume} keyboardType="decimal-pad" onFocus={() => setFocusedField('volume')} onBlur={() => setFocusedField(null)} placeholder="0.00" />
+                    <View style={[styles.inputWrapper, focusedField === 'volume' && styles.inputWrapperActive, { backgroundColor: '#f9fafb' }]}>
+                        <TextInput
+                            style={styles.textInput}
+                            value={volume}
+                            onChangeText={setVolume}
+                            keyboardType="decimal-pad"
+                            onFocus={() => setFocusedField('volume')}
+                            onBlur={() => setFocusedField(null)}
+                            placeholder="Zatankowane litry (np. 50.5)"
+                        />
                         <Text style={{ fontWeight: 'bold', color: '#9ca3af' }}>LITRY</Text>
                     </View>
 
-                    <View style={[styles.inputWrapper, focusedField === 'cost' && styles.inputWrapperActive]}>
-                        <TextInput style={styles.textInput} value={cost} onChangeText={setCost} keyboardType="decimal-pad" onFocus={() => setFocusedField('cost')} onBlur={() => setFocusedField(null)} placeholder="0.00" />
+                    <View style={[styles.inputWrapper, focusedField === 'cost' && styles.inputWrapperActive, { backgroundColor: '#f9fafb' }]}>
+                        <TextInput
+                            style={styles.textInput}
+                            value={cost}
+                            onChangeText={setCost}
+                            keyboardType="decimal-pad"
+                            onFocus={() => setFocusedField('cost')}
+                            onBlur={() => setFocusedField(null)}
+                            placeholder="Całkowity koszt (np. 320.50)"
+                        />
                         <Text style={{ fontWeight: 'bold', color: '#9ca3af' }}>PLN</Text>
                     </View>
 

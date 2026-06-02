@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
-import { authFetch, IP_adress } from '../../utils';
+import { authFetch } from '../../utils';
 
 export default function AdminClients() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
-
-    // Formularz nowego użytkownika
     const [newUser, setNewUser] = useState({
         name: '',
         email: '',
@@ -42,7 +40,6 @@ export default function AdminClients() {
         }
 
         try {
-            // fetch - Dodawanie użytkownika z tokenem (POST)
             const response = await authFetch('/api/admin/management/users', {
                 method: 'POST',
                 body: JSON.stringify(newUser)
