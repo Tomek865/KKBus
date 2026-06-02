@@ -9,9 +9,6 @@ driver_trips_bp = Blueprint("driver_trips", __name__)
 @driver_trips_bp.route("/", methods=["GET"])
 @driver_required
 def get_assigned_trips(current_driver_id):
-    """
-    Zwraca wszystkie kursy przypisane do zalogowanego kierowcy (harmonogram pracy).
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -34,7 +31,6 @@ def get_assigned_trips(current_driver_id):
         trips = cur.fetchall()
         cur.close()
 
-        # Zwracamy listę kursów (nawet jeśli jest pusta, to frontend sobie z tym poradzi)
         return jsonify(trips), 200
 
     except Exception as e:
@@ -48,14 +44,10 @@ def get_assigned_trips(current_driver_id):
 @driver_trips_bp.route("/<int:trip_id>/stations", methods=["GET"])
 @driver_required
 def get_trip_stations(current_driver_id, trip_id):
-    """
-    Zwraca wszystkie przystanki na trasie w odpowiedniej kolejności dla danego kursu.
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Pobieramy stacje, ale tylko jeśli ten kurs jest przypisany do zalogowanego kierowcy
         query = """
             SELECT 
                 s.station_id, 
@@ -88,14 +80,10 @@ def get_trip_stations(current_driver_id, trip_id):
 @driver_trips_bp.route("/<int:trip_id>/passengers", methods=["GET"])
 @driver_required
 def get_trip_passengers(current_driver_id, trip_id):
-    """
-    Zwraca listę pasażerów przypisanych do tego kursu.
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Pobieramy dane z rezerwacji. Znów sprawdzamy, czy kurs należy do tego kierowcy.
         query = """
             SELECT 
                 r.reservation_id,
@@ -118,7 +106,6 @@ def get_trip_passengers(current_driver_id, trip_id):
         passengers = cur.fetchall()
         cur.close()
 
-        # Zwracamy pustą listę jeśli nikogo nie ma, nie traktujemy tego jako błąd
         return jsonify(passengers), 200
 
     except Exception as e:
@@ -132,15 +119,10 @@ def get_trip_passengers(current_driver_id, trip_id):
 @driver_trips_bp.route("/<int:trip_id>", methods=["GET"])
 @driver_required
 def get_trip_details(current_driver_id, trip_id):
-    """
-    Zwraca szczegółowe informacje o konkretnym kursie.
-    Kierowca ma dostęp tylko do swoich własnych kursów.
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Łączymy wybrane kolumny z tabel Trip, Route i Vehicle
         query = """
             SELECT 
                 tr.trip_id,
@@ -165,7 +147,6 @@ def get_trip_details(current_driver_id, trip_id):
                 {"error": "Trip not found or you don't have access to it"}
             ), 404
 
-        # Formatujemy klucze na camelCase zgodnie z wymaganiami frontendu
         return jsonify(
             {
                 "id": trip["trip_id"],
@@ -173,7 +154,6 @@ def get_trip_details(current_driver_id, trip_id):
                 "busBrand": trip["brand"],
                 "busModel": trip["model"],
                 "registrationNumber": trip["registration_number"],
-                # Używamy vehicle_id jako numeru bocznego
                 "busNumber": str(trip["vehicle_id"]),
                 "departureTime": trip["departure_time"],
                 "status": trip["status"],

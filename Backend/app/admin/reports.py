@@ -41,7 +41,6 @@ def get_financial_reports(current_admin_id):
 
         return jsonify(
             {
-                # Można uformować walutę we frontendzie
                 "ticketSales": float(gross_revenue),
                 "fuelCosts": float(operating_costs),
                 "grossRevenue": float(gross_revenue),

@@ -24,10 +24,10 @@ CREATE TABLE Employee (
     last_name VARCHAR(50) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL, -- Driver, Office, Admin
+    role VARCHAR(50) NOT NULL,
     driving_license_number VARCHAR(50),
     medical_exam_validity DATE,
-    assigned_base VARCHAR(50), -- e.g., Krakow, Katowice
+    assigned_base VARCHAR(50),
     is_active BOOLEAN DEFAULT TRUE
 );
 
@@ -73,7 +73,7 @@ CREATE TABLE Fare_Segment (
 CREATE TABLE Refueling (
     refueling_id SERIAL PRIMARY KEY,
     vehicle_id INTEGER NOT NULL REFERENCES Vehicle(vehicle_id),
-    employee_id INTEGER NOT NULL REFERENCES Employee(employee_id), -- Driver refueling
+    employee_id INTEGER NOT NULL REFERENCES Employee(employee_id),
     refueling_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     liters_volume FLOAT NOT NULL,
     price_per_liter FLOAT NOT NULL,
@@ -87,7 +87,7 @@ CREATE TABLE Trip (
     employee_id INTEGER NOT NULL REFERENCES Employee(employee_id),
     departure_time TIMESTAMP NOT NULL,
     arrival_time TIMESTAMP,
-    status VARCHAR(50) -- e.g., Planned, In Progress, Completed, Cancelled
+    status VARCHAR(50)
 );
 
 CREATE TABLE Trip_Report (

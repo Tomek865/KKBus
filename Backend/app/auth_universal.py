@@ -102,27 +102,22 @@ def register():
     password = data.get("password")
     role = data.get("role", "client")
 
-    # 1. Walidacja podstawowych danych
     if not name or not email or not password:
         return jsonify({"error": "Missing required fields"}), 400
 
-    # 2. BEZPIECZEŃSTWO: Publiczny endpoint służy TYLKO do rejestracji pasażerów
     if role.lower() != "client":
         return jsonify({"error": "Invalid role for public registration"}), 403
 
-    # Rozdzielamy imię i nazwisko
     name_parts = name.strip().split(" ", 1)
     first_name = name_parts[0]
     last_name = name_parts[1] if len(name_parts) > 1 else ""
 
-    # Szyfrujemy hasło przed zapisem
     hashed_password = generate_password_hash(password)
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
 
-        # 3. Sprawdzamy, czy taki email już przypadkiem nie istnieje (w klientach i pracownikach)
         cur.execute("SELECT client_id FROM Client WHERE email = %s", (email,))
         if cur.fetchone():
             return jsonify({"error": "Email is already registered"}), 409
@@ -131,7 +126,6 @@ def register():
         if cur.fetchone():
             return jsonify({"error": "Email is already registered"}), 409
 
-        # 4. Zapis nowego klienta do bazy
         query = """
             INSERT INTO Client (first_name, last_name, email, password, is_active)
             VALUES (%s, %s, %s, %s, TRUE) RETURNING client_id;

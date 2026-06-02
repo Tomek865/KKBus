@@ -8,10 +8,6 @@ admin_management_bp = Blueprint('admin_management', __name__)
 @admin_management_bp.route('/users/<string:user_id>', methods=['PATCH'])
 @admin_required
 def deactivate_user(current_admin_id, user_id):
-    """
-    Endpoint dezaktywuje użytkownika (soft delete) na podstawie jego ID z frontendu 
-    (np. 'C_1' dla klienta, 'E_2' dla pracownika).
-    """
     if not user_id or '_' not in user_id:
         return jsonify({"error": "Invalid user ID format"}), 400
 

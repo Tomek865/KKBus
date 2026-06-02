@@ -39,23 +39,20 @@ def update_profile(current_user_id):
     if not data:
         return jsonify({"error": "No data provided for update"}), 400
 
-    # 1. Pobieramy dane z JSON-a
     first_name = data.get("firstName")
     last_name = data.get("lastName")
     email = data.get("email")
     phone_number = data.get("phoneNumber")
 
-    # 2. Bezpieczne hashowanie hasła (tylko jeśli użytkownik je podał!)
     raw_password = data.get("password")
     hashed_password = None
-    if raw_password:  # Użytkownik podał nowe hasło
+    if raw_password:
         hashed_password = generate_password_hash(raw_password)
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
 
-        # 3. Poprawione zapytanie (używamy dokładnych nazw kolumn z bazy)
         query = """
             UPDATE Client 
             SET first_name = COALESCE(%s, first_name), 
@@ -66,7 +63,6 @@ def update_profile(current_user_id):
             WHERE client_id = %s;
         """
 
-        # 4. Przekazujemy DOKŁADNIE 6 argumentów do 6 znaczników %s
         cur.execute(
             query,
             (
@@ -101,8 +97,6 @@ def get_tickets(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Wyciągamy szczegóły BILETU (ticket_summary, final_price)
-        # i łączymy je z danymi o trasie i rezerwacji
         query = """
             SELECT 
                 tc.ticket_id,
@@ -125,16 +119,14 @@ def get_tickets(current_user_id):
         tickets = cur.fetchall()
         cur.close()
 
-        # Formatujemy klucze na camelCase dla frontendu (React)
         formatted_tickets = []
         for t in tickets:
             formatted_tickets.append(
                 {
                     "ticketId": t["ticket_id"],
                     "ticketStatus": t["ticket_status"],
-                    # np. "1x Normalny, 1x Student"
                     "ticketSummary": t["ticket_summary"],
-                    "finalPrice": float(t["final_price"]),  # np. 45.0
+                    "finalPrice": float(t["final_price"]),
                     "reservationNumber": t["reservation_number"],
                     "reservationDate": t["reservation_date"],
                     "reservationStatus": t["reservation_status"],
