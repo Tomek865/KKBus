@@ -14,7 +14,6 @@ interface ProfileSettingsModalProps {
 
 export default function ProfileSettingsModal({ visible, onClose, activeSection }: ProfileSettingsModalProps) {
     const [userData, setUserData] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '' });
-    // 1. NOWY STAN DLA POTWIERDZENIA HASŁA
     const [confirmPassword, setConfirmPassword] = useState('');
 
     const [notifications, setNotifications] = useState({ push: true, email: true });
@@ -47,9 +46,9 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             lastName: `${lName}`,
                             email: actual_data.email || 'Brak danych',
                             phone: phone_number,
-                            password: '', // Zostawiamy puste przy ładowaniu
+                            password: ''
                         });
-                        setConfirmPassword(''); // Czyścimy też powtórzone hasło
+                        setConfirmPassword('');
                     } else {
                         console.warn("Brak danych użytkownika w Local Storage");
                     }
@@ -78,7 +77,6 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
     }, [visible, activeSection]);
 
     const handleSavePersonal = async () => {
-        // 2. SPRAWDZANIE HASŁA (tylko jeśli użytkownik chce je zmienić)
         if (userData.password || confirmPassword) {
             if (userData.password !== confirmPassword) {
                 Alert.alert("Błąd", "Podane hasła nie są identyczne.");
@@ -94,7 +92,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
         try {
             const res = await authFetch('/api/client/profile/user/update', {
                 method: 'PUT',
-                body: JSON.stringify(userData) // Twój backend powinien zignorować hasło, jeśli string jest pusty
+                body: JSON.stringify(userData) 
             });
             if (res.ok) {
                 Alert.alert("Sukces", "Zaktualizowano profil.");

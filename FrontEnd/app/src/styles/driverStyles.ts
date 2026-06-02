@@ -252,7 +252,6 @@ export const driverStyles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#000',
     },
-
     selectRouteHeaderBtn: {
         backgroundColor: COLORS.dark,
         flexDirection: 'row',
