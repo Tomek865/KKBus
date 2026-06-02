@@ -74,12 +74,10 @@ export default function RegisterScreen() {
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     <View style={styles.loginCard}>
 
-                        {/* NOWOŚĆ: PRZYCISK COFANIA W LEWYM GÓRNYM ROGU KARTY */}
                         <TouchableOpacity style={styles.backButtonTop} onPress={() => router.replace('/')}>
                             <Ionicons name="arrow-back" size={22} color="#4b5563" />
                         </TouchableOpacity>
 
-                        {/* Logo */}
                         <View style={styles.logoWrapper}>
                             <View style={styles.logoIcon}><Ionicons name="bus" size={18} color="#fff" /></View>
                             <Text style={styles.logoText}>KK<Text style={{ color: '#e60000' }}>Bus</Text></Text>
@@ -88,7 +86,6 @@ export default function RegisterScreen() {
                         <Text style={styles.welcomeTitle}>Rejestracja Klienta</Text>
                         <Text style={styles.welcomeSub}>Załóż darmowe konto, aby rezerwować bilety</Text>
 
-                        {/* Imię i Nazwisko */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>IMIĘ I NAZWISKO</Text>
                             <View style={[styles.inputWrapper, focusedField === 'name' && styles.inputWrapperActive]}>
@@ -104,7 +101,6 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Email */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>ADRES E-MAIL</Text>
                             <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputWrapperActive]}>
@@ -122,7 +118,6 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Hasło */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>HASŁO</Text>
                             <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperActive]}>
@@ -139,7 +134,6 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Powtórz Hasło */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>POWTÓRZ HASŁO</Text>
                             <View style={[styles.inputWrapper, focusedField === 'confirmPassword' && styles.inputWrapperActive]}>
@@ -156,7 +150,6 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Przycisk Zarejestruj */}
                         <TouchableOpacity
                             style={[styles.loginBtn, isLoading && { opacity: 0.7 }]}
                             onPress={handleRegister}
@@ -165,7 +158,6 @@ export default function RegisterScreen() {
                             {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Zarejestruj się</Text>}
                         </TouchableOpacity>
 
-                        {/* Powrót do logowania na dole */}
                         <View style={styles.registerContainer}>
                             <Text style={styles.registerText}>Masz już konto? </Text>
                             <TouchableOpacity onPress={() => router.replace('/')}>

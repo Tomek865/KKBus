@@ -253,7 +253,6 @@ export const driverStyles = StyleSheet.create({
         backgroundColor: '#000',
     },
 
-    // NOWE STYLE DLA MODALA WYBORU TRASY KIEROWCY
     selectRouteHeaderBtn: {
         backgroundColor: COLORS.dark,
         flexDirection: 'row',

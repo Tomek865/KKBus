@@ -6,14 +6,12 @@ export const COLORS = {
     textLight: '#9ca3af', border: '#e5e7eb', success: '#10b981', warning: '#f59e0b',
 };
 
-// Pomocnicze miksy stylów dla zmniejszenia powtarzalności kodu
 const baseCard = { backgroundColor: COLORS.white, borderRadius: 24, padding: 20 };
 const cardShadow = { elevation: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 };
 const flexRowSpaced = { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const };
 const centerContainer = { justifyContent: 'center' as const, alignItems: 'center' as const };
 
 export const passengerStyles = StyleSheet.create({
-    // UTILS & SHARED
     safeArea: { flex: 1, backgroundColor: COLORS.bgMain },
     container: { padding: 20 },
     scrollContent: { padding: 20 },
@@ -22,18 +20,15 @@ export const passengerStyles = StyleSheet.create({
     loadingText: { textAlign: 'center', marginTop: 20, color: '#888' },
     loadingContainer: { flex: 1, ...centerContainer },
 
-    // BUTTONS
     primaryBtn: { backgroundColor: COLORS.primary, borderRadius: 16, padding: 18, alignItems: 'center', marginTop: 10 },
     primaryBtnText: { color: COLORS.white, fontWeight: 'bold', fontSize: 18 },
 
-    // MODALS
     modalContainer: { flex: 1, backgroundColor: COLORS.white },
     modalContainerAlt: { flex: 1, backgroundColor: COLORS.bgMain },
     modalHeader: { ...flexRowSpaced, padding: 20, backgroundColor: COLORS.white, borderBottomWidth: 1, borderColor: COLORS.border },
     modalTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.textMain },
     closeBtnIcon: { padding: 8, backgroundColor: '#f3f4f6', borderRadius: 20 },
 
-    // SEARCH (INDEX.TSX) & DEPARTURES
     logo: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
     logoRed: { color: COLORS.primary },
     searchCard: { ...baseCard, ...cardShadow },
@@ -75,7 +70,6 @@ export const passengerStyles = StyleSheet.create({
     priceText: { fontSize: 20, fontWeight: '900', color: COLORS.primary, marginRight: 15 },
     actionIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fcecec', ...centerContainer },
 
-    // TICKETS
     activeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
     activeTitle: { fontSize: 24, fontWeight: '900', color: COLORS.textDark, marginLeft: 10, letterSpacing: -0.5 },
     activeSection: { marginBottom: 40 },
@@ -98,11 +92,10 @@ export const passengerStyles = StyleSheet.create({
     viewDetailsBtn: { flex: 1, backgroundColor: COLORS.textDark, paddingVertical: 18, borderRadius: 16, alignItems: 'center', marginRight: 15 },
     viewDetailsText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
     closeTicketBtn: { width: 60, height: 60, backgroundColor: '#fef2f2', borderRadius: 16, ...centerContainer },
-        // NOWE STYLE DLA HISTORII BILETÓW
-    historyContainer: { 
-        flexDirection: 'column', 
-        width: '100%', 
-        opacity: 0.8 
+    historyContainer: {
+        flexDirection: 'column',
+        width: '100%',
+        opacity: 0.8
     },
     pastTicketWrapper: {
         width: '100%',
@@ -117,21 +110,20 @@ export const passengerStyles = StyleSheet.create({
         width: '100%',
         flexDirection: 'column'
     },
-    pastTicketHeader: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 12 
+    pastTicketHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12
     },
-    pastTicketRoute: { 
-        fontSize: 16, 
-        fontWeight: '700', 
-        color: '#374151', 
-        flexShrink: 1, 
-        marginRight: 10 
+    pastTicketRoute: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#374151',
+        flexShrink: 1,
+        marginRight: 10
     },
 
-    // PROFILE & LOYALTY
     headerTitle: { fontSize: 28, fontWeight: 'bold', color: COLORS.textMain, marginBottom: 20 },
     profileCard: { ...baseCard, ...cardShadow, flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
     avatarContainer: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#fee2e2', ...centerContainer, marginRight: 20 },
@@ -160,7 +152,6 @@ export const passengerStyles = StyleSheet.create({
     menuItemText: { fontSize: 16, fontWeight: '600', color: COLORS.textMain, marginLeft: 15 },
     destructiveText: { color: COLORS.primary },
 
-    // SETTINGS MODAL & ACTIVE TICKET MODAL SPLIT
     detailCard: { ...baseCard, marginBottom: 20, ...cardShadow },
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
     busIconContainer: { width: 50, height: 50, borderRadius: 15, backgroundColor: '#fcecec', ...centerContainer, marginRight: 15 },
@@ -193,9 +184,6 @@ export const passengerStyles = StyleSheet.create({
     emptyStateContainer: { backgroundColor: '#f9fafb', borderWidth: 2, borderColor: '#e5e7eb', borderStyle: 'dashed', borderRadius: 24, padding: 40, alignItems: 'center', justifyContent: 'center' },
     emptyStateTitle: { fontSize: 20, fontWeight: 'bold', color: '#6b7280', marginTop: 15, marginBottom: 8 },
     emptyStateSub: { fontSize: 14, color: '#9ca3af', textAlign: 'center', lineHeight: 20, paddingHorizontal: 10 },
-        // ==========================================
-    // INPUTS & SEARCH COMPONENTS
-    // ==========================================
     inputGroup: { marginBottom: 20 },
     inputLabel: { fontSize: 13, fontWeight: 'bold', color: COLORS.textMuted, marginBottom: 8, textTransform: 'uppercase' },
     textInput: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 15, fontSize: 16, color: COLORS.textMain },

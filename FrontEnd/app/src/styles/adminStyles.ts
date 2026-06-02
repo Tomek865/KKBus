@@ -18,7 +18,6 @@ export const adminStyles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: COLORS.white },
     container: { flex: 1, flexDirection: 'row' },
 
-    // Sidebar & Navigation
     sidebar: { width: 260, backgroundColor: COLORS.white, borderRightWidth: 1, borderColor: COLORS.grayBorder, padding: 20 },
     logoContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 40 },
     logoIcon: { width: 32, height: 32, backgroundColor: COLORS.red, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
@@ -31,26 +30,22 @@ export const adminStyles = StyleSheet.create({
     menuLabel: { marginLeft: 15, fontSize: 14, color: '#4b5563', fontWeight: '500' },
     menuLabelActive: { color: COLORS.red, fontWeight: 'bold' },
 
-    // Profile & Logout
     profileSection: { flexDirection: 'row', alignItems: 'center', marginTop: 'auto', paddingTop: 20, borderTopWidth: 1, borderColor: COLORS.grayBorder },
     profileAvatar: { width: 40, height: 40, backgroundColor: '#f3f4f6', borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
     logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     logoutText: { fontSize: 14, fontWeight: '500', color: '#111' },
 
-    // Topbar
     mainArea: { flex: 1, backgroundColor: COLORS.grayBg },
     topbar: { height: 70, backgroundColor: COLORS.white, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 30, borderBottomWidth: 1, borderColor: COLORS.grayBorder },
     searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', paddingHorizontal: 15, borderRadius: 12, width: 400, height: 45, borderWidth: 1, borderColor: COLORS.grayBorder },
     searchInput: { flex: 1, fontSize: 14, marginLeft: 10 },
     content: { flex: 1, padding: 30 },
 
-    // Cards & Headers
     card: { backgroundColor: COLORS.white, borderRadius: 16, padding: 24, elevation: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
     pageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
     title: { fontSize: 28, fontWeight: 'bold', color: COLORS.dark },
     subtitle: { fontSize: 12, color: COLORS.grayText, letterSpacing: 1 },
 
-    // Tables
     tableHeader: { flexDirection: 'row', backgroundColor: '#f9fafb', padding: 18, borderBottomWidth: 1, borderColor: COLORS.grayBorder },
     tableRow: { flexDirection: 'row', padding: 18, borderBottomWidth: 1, borderColor: '#f4f4f4', alignItems: 'center' },
     headerCell: { fontWeight: 'bold', color: COLORS.grayText, fontSize: 11 },
@@ -58,7 +53,6 @@ export const adminStyles = StyleSheet.create({
     statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, minWidth: 90, alignItems: 'center' },
     statusText: { fontSize: 11, fontWeight: 'bold' },
 
-    // Modals & Forms (Standardowe)
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
     modalContent: { backgroundColor: COLORS.white, padding: 30, borderRadius: 24, width: 450, elevation: 20 },
     input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: COLORS.grayBorder, borderRadius: 10, padding: 12, marginBottom: 15 },
@@ -66,11 +60,6 @@ export const adminStyles = StyleSheet.create({
     primaryBtn: { backgroundColor: COLORS.red, flexDirection: 'row', padding: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
     primaryBtnText: { color: COLORS.white, marginLeft: 6, fontWeight: 'bold' },
 
-    // =========================================================================
-    // NOWE PRZENIESIONE STYLE (Z KOŃCA PLIKU SCHEDULE) DLA ODCHUDZENIA KODU KARTY
-    // =========================================================================
-
-    // Rozwijane Dropdowny (Wybór Auta / Trasy / Kierowcy)
     dropdownTrigger: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -94,7 +83,6 @@ export const adminStyles = StyleSheet.create({
         right: 30,
         top: 'auto',
         zIndex: 999,
-        // Cień warstwy webowej zapobiegający nakładaniu
         ...Platform.select({
             web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.05)' } as any,
             default: { elevation: 5 }
@@ -107,7 +95,6 @@ export const adminStyles = StyleSheet.create({
         borderBottomColor: '#f3f4f6',
     },
 
-    // Kompaktowy układ formularzy (Dwukolumnowy układ floty autobusów)
     compactLabel: {
         fontSize: 9,
         fontWeight: 'bold',
@@ -126,7 +113,6 @@ export const adminStyles = StyleSheet.create({
         color: '#111'
     },
 
-    // Kreator sekwencji linii i przystanków pośrednich
     indexBadge: {
         width: 24,
         height: 24,
@@ -161,7 +147,7 @@ export const adminStyles = StyleSheet.create({
         borderStyle: 'dashed',
         borderRadius: 10
     },
-        nativeDateInput: {
+    nativeDateInput: {
         backgroundColor: '#f9fafb',
         borderWidth: 1,
         borderColor: COLORS.grayBorder,
@@ -172,10 +158,10 @@ export const adminStyles = StyleSheet.create({
         color: '#111',
         width: '100%',
         ...Platform.select({
-            web: { 
-                outline: 'none', 
-                fontFamily: 'inherit', 
-                boxSizing: 'border-box' 
+            web: {
+                outline: 'none',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box'
             } as any
         })
     },

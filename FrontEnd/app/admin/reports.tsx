@@ -14,17 +14,15 @@ export default function AdminReports() {
         const fetchReports = async () => {
             setLoading(true);
             try {
-                // Fetch statystyk i jednego, rozbudowanego raportu finansowego
                 const [finRes, statsRes, routeRevenueRes] = await Promise.all([
                     authFetch('/api/admin/reports/financial'),
                     authFetch('/api/admin/stats'),
-                    authFetch('/api/admin/reports/route-revenue') // Nowy endpoint dla przychodów z kursów
+                    authFetch('/api/admin/reports/route-revenue')
                 ]);
 
                 if (finRes.ok) {
                     const finData = await finRes.json();
                     setReportData(finData);
-                    // Automatycznie wyciągamy nową tablicę z backendu (lub dajemy pustą, jeśli jej jeszcze nie ma)
                     setTripRevenues(finData.tripRevenues || []);
                 }
 
@@ -59,7 +57,6 @@ export default function AdminReports() {
                 </View>
             </View>
 
-            {/* GÓRNY RZĄD: KLUCZOWE METRYKI */}
             <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>
                 <View style={[styles.card, { flex: 1, alignItems: 'center', paddingVertical: 30 }]}>
                     <View style={localStyles.iconWrapperGreen}>
@@ -77,7 +74,6 @@ export default function AdminReports() {
                     <Text style={styles.subtitle}>Fuel Costs (MTD)</Text>
                 </View>
 
-                {/* Info z endpointu /stats */}
                 <View style={[styles.card, { flex: 1, alignItems: 'center', paddingVertical: 30 }]}>
                     <View style={localStyles.iconWrapperBlue}>
                         <Ionicons name="people-outline" size={28} color={COLORS.blue} />
@@ -88,7 +84,6 @@ export default function AdminReports() {
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20 }}>
-                {/* LEWA KOLUMNA: WYNIK FINANSOWY */}
                 <View style={[styles.card, { flex: 1 }]}>
                     <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>Monthly P&L Summary</Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
@@ -107,7 +102,6 @@ export default function AdminReports() {
                     </View>
                 </View>
 
-                {/* PRAWA KOLUMNA: TABELA PRZYCHODÓW Z KURSÓW */}
                 <View style={[styles.card, { flex: 2 }]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                         <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Revenue by Trip</Text>

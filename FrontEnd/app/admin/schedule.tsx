@@ -4,14 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 import { authFetch } from '../../utils';
 
-// Funkcje pomocnicze do formatowania daty i czasu
 const formatTime = (dateString?: string) => {
     if (!dateString) return '--:--';
     try {
         const d = new Date(dateString);
         
-        // Wyciągamy godziny i minuty bezpośrednio z czasu UTC
-        // padStart(2, '0') dodaje zero z przodu, jeśli godzina/minuta jest jednocyfrowa
         const hours = String(d.getUTCHours()).padStart(2, '0');
         const minutes = String(d.getUTCMinutes()).padStart(2, '0');
         
@@ -27,7 +24,7 @@ const formatDate = (dateString?: string) => {
         const d = new Date(dateString);
         const day = String(d.getUTCDate()).padStart(2, '0');
         const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const year = String(d.getUTCFullYear()).slice(-2); // Ostatnie dwie cyfry roku
+        const year = String(d.getUTCFullYear()).slice(-2);
         
         return `${day}.${month}.${year}`;
     } catch {
@@ -39,23 +36,19 @@ export default function AdminSchedule() {
     const [fleet, setFleet] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Widoczność okien modalnych
     const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
     const [busModalVisible, setBusModalVisible] = useState(false);
     const [routeModalVisible, setRouteModalVisible] = useState(false);
     const [stationModalVisible, setStationModalVisible] = useState(false);
     const [routeStopsModalVisible, setRouteStopsModalVisible] = useState(false);
 
-    // Dynamiczne opcje z backendu
     const [availableBuses, setAvailableBuses] = useState<any[]>([]);
     const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
     const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
     const [availableStations, setAvailableStations] = useState<any[]>([]);
 
-    // Kontrola dropdownów
     const [openDropdown, setOpenDropdown] = useState<'bus' | 'route' | 'driver' | 'editRoute' | null>(null);
 
-    // Stany formularzy
     const [newEntry, setNewEntry] = useState({ 
         busId: '', 
         route: '', 
@@ -66,12 +59,11 @@ export default function AdminSchedule() {
         status: 'Planned' 
     });
 
-    // Konfiguracja cykliczności
     const [isRepeating, setIsRepeating] = useState(false);
     const [repeatConfig, setRepeatConfig] = useState({
         endDate: '',
-        frequency: 'daily', // 'daily', 'weekly', 'biweekly', 'custom'
-        customDays: [] as number[] // 0 = Ndz, 1 = Pon, itd.
+        frequency: 'daily',
+        customDays: [] as number[]
     });
 
     const DAYS_OF_WEEK = [
@@ -98,7 +90,6 @@ export default function AdminSchedule() {
         isActive: true
     });
 
-    // Stan zaawansowanej edycji przystanków w trasie
     const [selectedRouteId, setSelectedRouteId] = useState<string>('');
     const [routeStops, setRouteStops] = useState<any[]>([]);
 
@@ -487,7 +478,6 @@ export default function AdminSchedule() {
             </View>
 
             <View style={[styles.card, { padding: 0, overflow: 'hidden' }]}>
-                {/* ZAKTUALIZOWANY NAGŁÓWEK TABELI */}
                 <View style={styles.tableHeader}>
                     <Text style={[styles.headerCell, { flex: 1 }]}>BUS ID / REJ</Text>
                     <Text style={[styles.headerCell, { flex: 1.5 }]}>ROUTE</Text>
@@ -504,7 +494,6 @@ export default function AdminSchedule() {
                             <Text style={[styles.cell, { flex: 1, fontWeight: 'bold' }]}>{bus.busId}</Text>
                             <Text style={[styles.cell, { flex: 1.5 }]}>{bus.route}</Text>
                             
-                            {/* NOWA KOLUMNA HARMONOGRAMU */}
                             <View style={{ flex: 1.5 }}>
                                 <Text style={[styles.cell, { fontWeight: 'bold' }]}>
                                     {formatTime(bus.departureTime)} - {formatTime(bus.arrivalTime)}
@@ -533,7 +522,6 @@ export default function AdminSchedule() {
                 })}
             </View>
 
-            {/* MODAL 1: NOWY KURS */}
             <Modal visible={scheduleModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { overflow: 'visible', zIndex: 10 }]}>
@@ -596,7 +584,6 @@ export default function AdminSchedule() {
                             </View>
                         )}
 
-                        {/* --- POLA DATY, ODJAZDU I PRZYJAZDU --- */}
                         <View style={{ marginTop: 15 }}>
                             <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
                             <input 
@@ -627,9 +614,6 @@ export default function AdminSchedule() {
                                 </View>
                             </View>
                         </View>
-                        {/* ----------------------------- */}
-
-                        {/* --- BLOK POWTARZALNOŚCI --- */}
                         <TouchableOpacity 
                             style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 }}
                             onPress={() => setIsRepeating(!isRepeating)}
@@ -705,7 +689,6 @@ export default function AdminSchedule() {
                                 )}
                             </View>
                         )}
-                        {/* ----------------------------- */}
 
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 25 }}>
                             <TouchableOpacity onPress={() => { 
@@ -719,7 +702,6 @@ export default function AdminSchedule() {
                 </View>
             </Modal>
 
-            {/* MODAL 2: NOWY AUTOBUS */}
             <Modal visible={busModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 500, paddingHorizontal: 25, paddingTop: 25, paddingBottom: 20 }]}>
@@ -766,7 +748,6 @@ export default function AdminSchedule() {
                 </View>
             </Modal>
 
-            {/* MODAL 3: STWORZENIE LINII TRASY */}
             <Modal visible={routeModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -783,7 +764,6 @@ export default function AdminSchedule() {
                 </View>
             </Modal>
 
-            {/* MODAL 4: DODAWANIE NOWEGO PRZYSTANKU SŁOWNIKOWEGO */}
             <Modal visible={stationModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -803,7 +783,6 @@ export default function AdminSchedule() {
                 </View>
             </Modal>
 
-            {/* MODAL 5: EDYCJA SEKWENCJI PRZYSTANKÓW NA TRASIE */}
             <Modal visible={routeStopsModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 550, overflow: 'visible' }]}>
