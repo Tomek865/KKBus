@@ -22,7 +22,6 @@ export default function AdminLayout() {
     const pathname = usePathname();
     const [adminData, setAdminData] = useState({ name: 'Administrator', email: 'admin@kkbus.pl' });
 
-    // Pobranie danych zalogowanego admina przy uruchomieniu panelu (Web / Mobile)
     useEffect(() => {
         const loadAdminProfile = async () => {
             try {
@@ -43,7 +42,6 @@ export default function AdminLayout() {
         loadAdminProfile();
     }, []);
 
-    // Czyszczenie sesji w zależności od platformy przy wylogowaniu
     const handleLogout = async () => {
         try {
             if (Platform.OS === 'web') {

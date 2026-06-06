@@ -8,12 +8,10 @@ services:
       POSTGRES_USER: kkbus_admin
       POSTGRES_PASSWORD: secretpassword
       POSTGRES_DB: kkbus_db
-      # Wymuszenie kodowania UTF-8 przy tworzeniu bazy
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C.UTF-8 --lc-ctype=C.UTF-8"
     ports:
       - "5432:5432"
     volumes:
-      # Skrypty w tym folderze wykonują się alfabetycznie podczas pierwszego uruchomienia
       - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ./seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
     restart: unless-stopped

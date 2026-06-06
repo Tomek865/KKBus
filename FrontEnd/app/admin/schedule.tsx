@@ -4,17 +4,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 import { authFetch } from '../../utils';
 
-// Funkcje pomocnicze do formatowania daty i czasu z formatu ISO
 const formatTime = (dateString?: string) => {
     if (!dateString) return '--:--';
     try {
         const d = new Date(dateString);
-        return d.toLocaleTimeString('pl-PL', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            timeZone: 'Europe/Warsaw'
-        });
-    } catch {
+        
+        const hours = String(d.getUTCHours()).padStart(2, '0');
+        const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+        
+        return `${hours}:${minutes}`;
+    } catch (e) {
         return '--:--';
     }
 };
@@ -23,12 +22,11 @@ const formatDate = (dateString?: string) => {
     if (!dateString) return 'Brak daty';
     try {
         const d = new Date(dateString);
-        return d.toLocaleDateString('pl-PL', { 
-            weekday: 'short', 
-            day: '2-digit', 
-            month: '2-digit' ,
-            year: '2-digit'
-        });
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const year = String(d.getUTCFullYear()).slice(-2);
+        
+        return `${day}.${month}.${year}`;
     } catch {
         return '';
     }
@@ -38,23 +36,19 @@ export default function AdminSchedule() {
     const [fleet, setFleet] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Widoczność okien modalnych
     const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
     const [busModalVisible, setBusModalVisible] = useState(false);
     const [routeModalVisible, setRouteModalVisible] = useState(false);
     const [stationModalVisible, setStationModalVisible] = useState(false);
     const [routeStopsModalVisible, setRouteStopsModalVisible] = useState(false);
 
-    // Dynamiczne opcje z backendu
     const [availableBuses, setAvailableBuses] = useState<any[]>([]);
     const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
     const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
     const [availableStations, setAvailableStations] = useState<any[]>([]);
 
-    // Kontrola dropdownów
     const [openDropdown, setOpenDropdown] = useState<'bus' | 'route' | 'driver' | 'editRoute' | null>(null);
 
-    // Stany formularzy
     const [newEntry, setNewEntry] = useState({ 
         busId: '', 
         route: '', 
@@ -65,12 +59,11 @@ export default function AdminSchedule() {
         status: 'Planned' 
     });
 
-    // Konfiguracja cykliczności
     const [isRepeating, setIsRepeating] = useState(false);
     const [repeatConfig, setRepeatConfig] = useState({
         endDate: '',
-        frequency: 'daily', // 'daily', 'weekly', 'biweekly', 'custom'
-        customDays: [] as number[] // 0 = Ndz, 1 = Pon, itd.
+        frequency: 'daily',
+        customDays: [] as number[]
     });
 
     const DAYS_OF_WEEK = [
@@ -97,7 +90,6 @@ export default function AdminSchedule() {
         isActive: true
     });
 
-    // Stan zaawansowanej edycji przystanków w trasie
     const [selectedRouteId, setSelectedRouteId] = useState<string>('');
     const [routeStops, setRouteStops] = useState<any[]>([]);
 
@@ -110,6 +102,7 @@ export default function AdminSchedule() {
         try {
             const response = await authFetch('/api/admin/fleet/');
             const data = await response.json();
+            console.log("Fetched fleet data:", data);
             setFleet(Array.isArray(data) ? data : []);
         } catch (e) {
             console.error("Błąd pobierania floty:", e);
@@ -210,10 +203,10 @@ export default function AdminSchedule() {
         if (currentDate > endDateObj) return dates;
 
         while (currentDate <= endDateObj) {
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const day = String(currentDate.getDate()).padStart(2, '0');
-        const dateString = `${year}-${month}-${day}`;
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
 
             if (repeatConfig.frequency === 'custom') {
                 if (repeatConfig.customDays.includes(currentDate.getDay())) {
@@ -233,23 +226,6 @@ export default function AdminSchedule() {
             }
         }
         return dates;
-    };
-
-       // Funkcja pomocnicza generująca ISO String z zachowaniem lokalnego offsetu (np. +02:00) zamiast zrzucania do 'Z' (UTC)
-    const toLocalISOString = (dateStr: string, timeStr: string) => {
-        const localDate = new Date(`${dateStr}T${timeStr}`);
-        const offset = localDate.getTimezoneOffset(); // Otrzymujemy offset w minutach względem UTC (dla Polski latem to -120)
-        
-        // Zabezpieczenie: jeśli wprowadzona data jest nieprawidłowa, zwracamy cokolwiek, by reszta kodu złapała błąd
-        if (isNaN(localDate.getTime())) return `${dateStr}T${timeStr}:00.000Z`; 
-
-        const absOffset = Math.abs(offset);
-        // Uwaga: znak w JS offset jest odwrócony (np. -120 dla UTC+2), więc odwracamy go logicznie
-        const sign = offset <= 0 ? '+' : '-'; 
-        const hours = String(Math.floor(absOffset / 60)).padStart(2, '0');
-        const minutes = String(absOffset % 60).padStart(2, '0');
-        
-        return `${dateStr}T${timeStr}:00.000${sign}${hours}:${minutes}`;
     };
 
     const handleAddEntry = async () => {
@@ -274,24 +250,14 @@ export default function AdminSchedule() {
 
         try {
             const requests = datesToSchedule.map(dateStr => {
-                // Używamy nowej funkcji do zachowania wpisanej godziny i polskiej strefy czasowej
-                const departureIso = toLocalISOString(dateStr, newEntry.departureTime);
-                
-                // Obsługa kursów "przez północ" (jeśli przyjazd jest mniejszy niż odjazd)
-                let arrivalDateStr = dateStr;
+                const departureIso = `${dateStr}T${newEntry.departureTime}:00`;
+                console.log("Departure ISO:", departureIso);
+                let arrivalDateObj = new Date(`${dateStr}T${newEntry.arrivalTime}`);
                 if (newEntry.arrivalTime < newEntry.departureTime) {
-                    const nextDay = new Date(`${dateStr}T00:00:00`);
-                    nextDay.setDate(nextDay.getDate() + 1);
-                    const year = nextDay.getFullYear();
-                    const month = String(nextDay.getMonth() + 1).padStart(2, '0');
-                    const day = String(nextDay.getDate()).padStart(2, '0');
-                    arrivalDateStr = `${year}-${month}-${day}`;
+                    arrivalDateObj.setDate(arrivalDateObj.getDate() + 1);
                 }
-                
-                const arrivalIso = toLocalISOString(arrivalDateStr, newEntry.arrivalTime);
-
-                console.log("Wysyłam:", departureIso, arrivalIso);
-
+                const arrivalIso = `${dateStr}T${newEntry.arrivalTime}:00`;
+                console.log("Arrival ISO:", arrivalIso);
                 return authFetch('/api/admin/fleet/', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -512,7 +478,6 @@ export default function AdminSchedule() {
             </View>
 
             <View style={[styles.card, { padding: 0, overflow: 'hidden' }]}>
-                {/* ZAKTUALIZOWANY NAGŁÓWEK TABELI */}
                 <View style={styles.tableHeader}>
                     <Text style={[styles.headerCell, { flex: 1 }]}>BUS ID / REJ</Text>
                     <Text style={[styles.headerCell, { flex: 1.5 }]}>ROUTE</Text>
@@ -529,7 +494,6 @@ export default function AdminSchedule() {
                             <Text style={[styles.cell, { flex: 1, fontWeight: 'bold' }]}>{bus.busId}</Text>
                             <Text style={[styles.cell, { flex: 1.5 }]}>{bus.route}</Text>
                             
-                            {/* NOWA KOLUMNA HARMONOGRAMU */}
                             <View style={{ flex: 1.5 }}>
                                 <Text style={[styles.cell, { fontWeight: 'bold' }]}>
                                     {formatTime(bus.departureTime)} - {formatTime(bus.arrivalTime)}
@@ -558,7 +522,6 @@ export default function AdminSchedule() {
                 })}
             </View>
 
-            {/* MODAL 1: NOWY KURS */}
             <Modal visible={scheduleModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { overflow: 'visible', zIndex: 10 }]}>
@@ -621,7 +584,6 @@ export default function AdminSchedule() {
                             </View>
                         )}
 
-                        {/* --- POLA DATY, ODJAZDU I PRZYJAZDU --- */}
                         <View style={{ marginTop: 15 }}>
                             <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
                             <input 
@@ -652,9 +614,6 @@ export default function AdminSchedule() {
                                 </View>
                             </View>
                         </View>
-                        {/* ----------------------------- */}
-
-                        {/* --- BLOK POWTARZALNOŚCI --- */}
                         <TouchableOpacity 
                             style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 }}
                             onPress={() => setIsRepeating(!isRepeating)}
@@ -730,7 +689,6 @@ export default function AdminSchedule() {
                                 )}
                             </View>
                         )}
-                        {/* ----------------------------- */}
 
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 25 }}>
                             <TouchableOpacity onPress={() => { 
@@ -744,7 +702,6 @@ export default function AdminSchedule() {
                 </View>
             </Modal>
 
-            {/* MODAL 2: NOWY AUTOBUS */}
             <Modal visible={busModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 500, paddingHorizontal: 25, paddingTop: 25, paddingBottom: 20 }]}>
@@ -791,7 +748,6 @@ export default function AdminSchedule() {
                 </View>
             </Modal>
 
-            {/* MODAL 3: STWORZENIE LINII TRASY */}
             <Modal visible={routeModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -808,7 +764,6 @@ export default function AdminSchedule() {
                 </View>
             </Modal>
 
-            {/* MODAL 4: DODAWANIE NOWEGO PRZYSTANKU SŁOWNIKOWEGO */}
             <Modal visible={stationModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -828,7 +783,6 @@ export default function AdminSchedule() {
                 </View>
             </Modal>
 
-            {/* MODAL 5: EDYCJA SEKWENCJI PRZYSTANKÓW NA TRASIE */}
             <Modal visible={routeStopsModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 550, overflow: 'visible' }]}>

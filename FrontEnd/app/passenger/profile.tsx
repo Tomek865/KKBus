@@ -29,16 +29,14 @@ const ProfileMenuItem = ({ icon, title, onPress, isDestructive = false }: any) =
 const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading: boolean }) => {
     if (isLoading || !data) return (<View style={[styles.loyaltyCard, styles.loyaltyCardLoading]}><Text style={styles.loadingText}>Loading loyalty points...</Text></View>);
     
-    // Sprawdzamy czy użytkownik osiągnął status GOLD (2000 pkt)
     const isGold = data.points >= 2000;
     const progressPercentage = Math.min((data.points / data.nextTierPoints) * 100, 100);
     
     return (
         <View style={[
             styles.loyaltyCard, 
-            isGold ? localStyles.goldCardBackground : {} // Aplikujemy złoty motyw, jeśli jest isGold
+            isGold ? localStyles.goldCardBackground : {} 
         ]}>
-            {/* WIZUALIZACJA GIEŁDOWA w tle */}
             <View style={localStyles.chartBackgroundContainer}>
                 <View style={[localStyles.chartLineSegment, { backgroundColor: isGold ? 'rgba(0,0,0,0.1)' : '#22c55e', bottom: 12, left: '5%', width: '25%', transform: [{ rotate: '15deg' }] }]} />
                 <View style={[localStyles.chartLineSegment, { backgroundColor: isGold ? 'rgba(0,0,0,0.1)' : '#22c55e', bottom: 20, left: '29%', width: '20%', transform: [{ rotate: '-8deg' }] }]} />
@@ -52,23 +50,17 @@ const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading:
                         <Ionicons name={isGold ? "star" : "star-outline"} size={14} color={isGold ? "#000" : "#facc15"} />
                         <Text style={[styles.loyaltyTitleText, isGold && { color: '#000' }]}>LOYALTY POINTS</Text>
                     </View>
-                    
-                    {/* Wartość punktowa */}
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
                         <Text style={[styles.pointsValue, isGold && { color: '#000' }]}>
                             {data.points.toLocaleString('en-US')}
                             <Text style={[styles.pointsSuffix, isGold && { color: 'rgba(0,0,0,0.6)' }]}> pts</Text>
                         </Text>
-                        
-                        {/* Wskaźnik wzrostu z różnymi kolorami w zależności od karty */}
                         <View style={[localStyles.stockTrendBadge, isGold && { backgroundColor: 'rgba(0,0,0,0.1)' }]}>
                             <Ionicons name="arrow-up" size={10} color={isGold ? "#000" : "#22c55e"} />
                             <Text style={[localStyles.stockTrendText, isGold && { color: '#000' }]}>+15%</Text>
                         </View>
                     </View>
                 </View>
-                
-                {/* Odznaka z licznikiem Goldów */}
                 <View style={[localStyles.goldBadge, isGold && { backgroundColor: '#000' }, { zIndex: 2 }]}>
                     <Ionicons name="trophy" size={16} color="#facc15" />
                     <Text style={localStyles.goldBadgeText}>{data.goldTier}x</Text>
@@ -209,7 +201,7 @@ export default function PassengerProfile() {
 
 const localStyles = StyleSheet.create({
     goldCardBackground: {
-        backgroundColor: '#f59e0b', // Złoty/Bursztynowy kolor tła
+        backgroundColor: '#f59e0b',
         shadowColor: '#f59e0b',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.4,

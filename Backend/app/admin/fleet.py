@@ -87,26 +87,20 @@ def create_trip(current_admin_id):
     if not vehicle_id or not route_id or not employee_id:
         return jsonify({"message": "All fields are required"}), 400
 
-    # 1. Parse or generate departure_time
     dep_time_str = data.get("departureTime")
     if dep_time_str:
-        # Utworzenie obiektu świadomego (22:57+02:00)
         departure_time = datetime.fromisoformat(dep_time_str.replace("Z", "+00:00"))
 
-        # ODCINAMY STREFĘ: "22:57+02:00" staje się "gołym" 22:57
         departure_time = departure_time.replace(tzinfo=None)
     else:
         departure_time = datetime.now() + timedelta(days=1)
 
-    # 2. Parse or generate arrival_time
     arr_time_str = data.get("arrivalTime")
     if arr_time_str:
         arrival_time = datetime.fromisoformat(arr_time_str.replace("Z", "+00:00"))
 
-        # ODCINAMY STREFĘ:
         arrival_time = arrival_time.replace(tzinfo=None)
     else:
-        # Teraz arrival_time automatycznie też będzie obiektem naiwnym
         arrival_time = departure_time + timedelta(hours=4)
 
     conn = get_db_connection()
@@ -161,9 +155,6 @@ def create_trip(current_admin_id):
 @admin_fleet_bp.route("/buses", methods=["GET"])
 @admin_required
 def get_all_buses(current_admin_id):
-    """
-    Pobiera pełną listę wszystkich autobusów ze szczegółami.
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -212,9 +203,6 @@ def get_all_buses(current_admin_id):
 @admin_fleet_bp.route("/buses", methods=["POST"])
 @admin_required
 def create_bus(current_admin_id):
-    """
-    Dodaje nowy autobus ze wszystkimi wymaganymi polami.
-    """
     data = request.get_json()
 
     vin = data.get("vin")
@@ -288,9 +276,6 @@ def create_bus(current_admin_id):
 @admin_fleet_bp.route("/routes", methods=["POST"])
 @admin_required
 def create_route(current_admin_id):
-    """
-    Tworzy nową, pustą trasę (bez przypisanych jeszcze przystanków).
-    """
     data = request.get_json()
     name = data.get("name")
 
@@ -319,9 +304,6 @@ def create_route(current_admin_id):
 @admin_fleet_bp.route("/routes", methods=["GET"])
 @admin_required
 def get_all_routes(current_admin_id):
-    """
-    Pobiera listę wszystkich tras w systemie (przydatne do dropdowna).
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -341,9 +323,6 @@ def get_all_routes(current_admin_id):
 @admin_fleet_bp.route("/drivers", methods=["GET"])
 @admin_required
 def get_all_drivers(current_admin_id):
-    """
-    Pobiera listę tylko tych pracowników, którzy są kierowcami i są aktywni.
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -369,17 +348,9 @@ def get_all_drivers(current_admin_id):
             conn.close()
 
 
-# ==========================================
-# ZARZĄDZANIE PRZYSTANKAMI (Stations)
-# ==========================================
-
-
 @admin_fleet_bp.route("/stations", methods=["GET"])
 @admin_required
 def get_fleet_stations(current_admin_id):
-    """
-    Pobiera listę wszystkich przystanków w systemie.
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -389,7 +360,6 @@ def get_fleet_stations(current_admin_id):
         stations = cur.fetchall()
         cur.close()
 
-        # Formatujemy na camelCase dla frontendu
         formatted = [
             {"id": s["id"], "name": s["name"], "exactAddress": s["exact_address"]}
             for s in stations
@@ -407,9 +377,6 @@ def get_fleet_stations(current_admin_id):
 @admin_fleet_bp.route("/stations", methods=["POST"])
 @admin_required
 def create_station(current_admin_id):
-    """
-    Tworzy nowy przystanek (stację) w bazie danych.
-    """
     data = request.get_json()
     name = data.get("name")
     exact_address = data.get("exact_address")
@@ -435,22 +402,12 @@ def create_station(current_admin_id):
             conn.close()
 
 
-# ==========================================
-# PRZYPISYWANIE PRZYSTANKÓW DO TRASY
-# ==========================================
-
-
 @admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["POST"])
 @admin_required
 def assign_stations_to_route(current_admin_id, route_id):
-    """
-    Przyjmuje tablicę z ID przystanków (np. [1, 5, 3, 2])
-    i zapisuje je w bazie w podanej kolejności dla danej trasy.
-    """
     data = request.get_json()
-    station_ids = data.get("stations")  # Oczekujemy tablicy: [1, 5, 3, 2]
+    station_ids = data.get("stations")
 
-    # Sprawdzamy, czy w ogóle dostaliśmy dane i czy faktycznie są one listą (tablicą)
     if not station_ids or not isinstance(station_ids, list):
         return jsonify(
             {"error": "No stations provided. Expected an array of IDs."}
@@ -460,19 +417,15 @@ def assign_stations_to_route(current_admin_id, route_id):
     try:
         cur = conn.cursor()
 
-        # 1. Czyścimy obecne przystanki przypisane do tej trasy
         cur.execute("DELETE FROM Route_Station WHERE route_id = %s", (route_id,))
 
-        # 2. Wrzucamy przystanki po kolei z otrzymanej listy
         query = """
             INSERT INTO Route_Station (route_id, station_id, order_on_route)
             VALUES (%s, %s, %s);
         """
 
         for index, station_id in enumerate(station_ids):
-            # Pierwszy element w tablicy dostanie numer 1, drugi 2, itd.
             order = index + 1
-            # Rzutujemy station_id na int, by uniknąć błędów jeśli frontend wyśle np. ["1", "2"]
             cur.execute(query, (route_id, int(station_id), order))
 
         conn.commit()
@@ -486,7 +439,7 @@ def assign_stations_to_route(current_admin_id, route_id):
 
     except Exception as e:
         if conn:
-            conn.rollback()  # Cofamy operację, jeśli któraś stacja np. nie istnieje w bazie
+            conn.rollback()
         print(f"DB Error: {e}")
         return jsonify(
             {"error": "Server error occurred. Make sure all station IDs exist."}
@@ -499,16 +452,10 @@ def assign_stations_to_route(current_admin_id, route_id):
 @admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["GET"])
 @admin_required
 def get_route_stations(current_admin_id, route_id):
-    """
-    Pobiera listę wszystkich przystanków przypisanych do danej trasy
-    w odpowiedniej kolejności (order_on_route).
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Łączymy tabelę łącznikową Route_Station z tabelą Station,
-        # aby wyciągnąć pełne dane o przystankach dla konkretnej trasy
         query = """
             SELECT 
                 s.station_id AS id,
@@ -524,7 +471,6 @@ def get_route_stations(current_admin_id, route_id):
         stations = cur.fetchall()
         cur.close()
 
-        # Formatujemy klucze na camelCase dla spójności z frontendem Reacta
         formatted_stations = [
             {
                 "id": s["id"],

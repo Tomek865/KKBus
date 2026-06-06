@@ -5,7 +5,7 @@ import { Sidebar } from '../../components/driver/Sidebar';
 
 export default function DriverLayout() {
     const { width } = useWindowDimensions();
-    const isMobile = width < 768; // Próg dla urządzeń mobilnych
+    const isMobile = width < 768;
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -13,12 +13,10 @@ export default function DriverLayout() {
                 styles.container,
                 { flexDirection: isMobile ? 'column' : 'row' }
             ]}>
-                {/* Główna zawartość ekranu */}
                 <View style={styles.content}>
                     <Slot />
                 </View>
 
-                {/* Menu: Boczny pasek na tablecie / Dolny pasek na telefonie */}
                 <Sidebar />
             </View>
         </SafeAreaView>

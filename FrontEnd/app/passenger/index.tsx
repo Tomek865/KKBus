@@ -6,32 +6,23 @@ import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authFetch } from '../../utils';
 
-// Funkcja pomocnicza: dokleja datę i "Z", zmuszając JS do przeliczenia UTC -> Europe/Warsaw
 const formatTime = (timeString?: string, searchedDate?: string) => {
     if (!timeString) return 'Brak danych';
     
     try {
         let isoString = timeString;
         
-        // Jeśli to jest tylko godzina typu "10:00" albo "10:00:00"
         if (!timeString.includes('T')) {
-            // Upewniamy się, że mamy format HH:MM:SS
             const cleanTime = timeString.length === 5 ? `${timeString}:00` : timeString;
-            // Bierzemy datę z wyszukiwania (lub dzisiejszą jako awarię) i doklejamy czas + "Z" (wymusza UTC)
             const baseDate = searchedDate || new Date().toISOString().split('T')[0];
             isoString = `${baseDate}T${cleanTime}Z`;
         }
 
         const d = new Date(isoString);
         
-        // Jeśli coś poszło nie tak, zwracamy po prostu 5 znaków z tego co przyszło
         if (isNaN(d.getTime())) return timeString.substring(0, 5); 
         
-        return d.toLocaleTimeString('pl-PL', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            timeZone: 'Europe/Warsaw' 
-        });
+        return d.toISOString().split('T')[1].substring(0, 5);
     } catch {
         return timeString.substring(0, 5);
     }
@@ -128,13 +119,10 @@ export default function PassengerSearch() {
                     return;
                 }
                 const data = await res.json();
-                console.log("Pobrane stacje z API:", data); // Zobacz w konsoli co przyszło
-
-                // Bezpieczniejsze parsowanie - szukamy tablicy głębiej, jeśli Spring ją opakował
+                console.log("Pobrane stacje z API:", data);
                 const stationsArray = Array.isArray(data) ? data : (data.content || data.data || data.stations || []);
                 
                 if (stationsArray && Array.isArray(stationsArray) && stationsArray.length > 0) {
-                    // Obsługuje sytuację, gdy backend zwraca obiekty [{name: "Kraków"}] lub od razu stringi ["Kraków"]
                     setStations(stationsArray.map((s: any) => s.name ? s.name : s));
                 } else {
                     console.warn("Backend nie zwrócił poprawnej tablicy stacji.");
@@ -152,7 +140,6 @@ export default function PassengerSearch() {
         setDepartures([]);
         
         try {
-            // POPRAWKA 1: Generujemy datę ściśle w czasie lokalnym urządzenia, ignorując przesunięcie UTC
             const year = selectedDate.getFullYear();
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const day = String(selectedDate.getDate()).padStart(2, '0');
@@ -182,11 +169,7 @@ export default function PassengerSearch() {
             }
             
             const data = await res.json();
-            
-            // DIAGNOSTYKA: Wypisujemy w konsoli dokładnie to, co przyszło
             console.log(`Odpowiedź API dla trasy ${fromStation} -> ${toStation} (${dateStr}):`, data);
-
-            // POPRAWKA 2: Szukamy tablicy, nawet jeśli Spring spakował ją w dodatkowy obiekt
             const routesArray = Array.isArray(data) ? data : (data.content || data.data || data.routes);
 
                         if (routesArray && Array.isArray(routesArray)) {
@@ -196,8 +179,6 @@ export default function PassengerSearch() {
                 
                 const mappedDepartures = routesArray.map((d: any) => ({
                     id: String(d.tripId || d.id), 
-                    
-                    // POPRAWKA: Przeliczanie czasu z backendu na polską strefę czasową
                     departureTime: formatTime(d.departureTime),
                     arrivalTime: formatTime(d.arrivalTime),
                     
@@ -231,9 +212,6 @@ export default function PassengerSearch() {
                     reduced: passengerCounts.reduced
                 }
             };
-
-            // Jeśli użytkownik zaznaczył darmowy przejazd, dopisujemy to do payloadu.
-            // Upewnij się, że na backendzie dodasz obsługę tego pola w /calculate-price
             if (voucherApplied) {
                 payload.voucher_id = "FREE_RIDE_1000"; 
             }
@@ -248,7 +226,7 @@ export default function PassengerSearch() {
                 setCalculatedPrice(data.total_price);
             } else {
                 console.error("Błąd kalkulacji ceny");
-                setCalculatedPrice(departure.price); // Fallback do podstawowej ceny z wyszukiwania
+                setCalculatedPrice(departure.price); 
             }
         } catch (err) {
             console.error("Błąd sieci przy kalkulacji:", err);
@@ -284,7 +262,7 @@ export default function PassengerSearch() {
 
             if (res.ok) {
                 setReservationModalVisible(false);
-                setUseFreeRide(false); // Reset vouchera po udanej rezerwacji
+                setUseFreeRide(false);
                 Alert.alert("Sukces", "Bilet został pomyślnie zarezerwowany!");
             } else {
                 Alert.alert("Błąd", "Nie udało się zarezerwować biletu.");
@@ -351,10 +329,10 @@ export default function PassengerSearch() {
                         {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => <DepartureCard key={dep.id} departure={dep}
                             onBook={() => {
                                 setSelectedDep(dep);
-                                setUseFreeRide(false); // Resetujemy zaznaczenie vouchera
-                                setCalculatedPrice(dep.price); // Pokazujemy na ułamek sekundy cenę bazową
+                                setUseFreeRide(false);
+                                setCalculatedPrice(dep.price);
                                 setReservationModalVisible(true);
-                                fetchExactPrice(dep, false); // Przeliczamy dokładnie przez endpoint
+                                fetchExactPrice(dep, false);
                             }}
                         />
                     )}
@@ -477,7 +455,6 @@ export default function PassengerSearch() {
 
                             <TouchableOpacity 
                                 style={[styles.primaryBtn, { marginTop: 30 }]} 
-                                // Pamiętaj o dodaniu useFreeRide do finalnego zapytania rezerwacji!
                                 onPress={() => handleBookTicket(useFreeRide)} 
                                 disabled={isBooking || isCalculating}
                             >

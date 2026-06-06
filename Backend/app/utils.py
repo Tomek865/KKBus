@@ -3,9 +3,6 @@ from flask import request, jsonify, current_app
 import jwt
 
 def token_required(f):
-    """
-    Dekorator dla ogólnych użytkowników (Klientów i Pracowników).
-    """
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
@@ -34,9 +31,6 @@ def token_required(f):
     return decorated
 
 def admin_required(f):
-    """
-    Dekorator wymagający uprawnień właściciela lub sekretariatu.
-    """
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
@@ -67,9 +61,6 @@ def admin_required(f):
     return decorated
 
 def driver_required(f):
-    """
-    Dekorator wymagający uprawnień kierowcy.
-    """
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None

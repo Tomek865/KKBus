@@ -27,7 +27,7 @@ export default function DriverSegmentReport() {
 
             if (response.ok) {
                 Alert.alert("Sukces", "Raport odcinka zapisany poprawnie.");
-                setBoarded(0); 
+                setBoarded(0);
                 setAlighted(0);
             } else {
                 throw new Error();
@@ -44,7 +44,6 @@ export default function DriverSegmentReport() {
             <View style={styles.card}>
                 <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 25, color: '#111827', textAlign: 'center' }}>Raport Odcinkowy</Text>
 
-                {/* Sekcja wsiadających */}
                 <View style={{ marginBottom: 30, alignItems: 'center' }}>
                     <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#4b5563', marginBottom: 15 }}>LICZBA WSIADAJĄCYCH (BEZ BILETU)</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -58,7 +57,6 @@ export default function DriverSegmentReport() {
                     </View>
                 </View>
 
-                {/* Sekcja wysiadających */}
                 <View style={{ marginBottom: 40, alignItems: 'center' }}>
                     <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#4b5563', marginBottom: 15 }}>LICZBA WYSIADAJĄCYCH</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>

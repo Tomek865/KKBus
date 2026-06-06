@@ -18,13 +18,13 @@ export default function DriverEndShift() {
                 body: JSON.stringify({
                     volume: volume ? parseFloat(volume) : 0,
                     cost: cost ? parseFloat(cost) : 0,
-                    vehicle_id: 1 // W przyszłości można pobrać dynamicznie ze stanu aplikacji
+                    vehicle_id: 1
                 })
             });
 
             if (response.ok) {
                 Alert.alert("Sukces", "Zmiana zakończona. System wyliczył cenę za litr i zapisał dane z tankowania.");
-                setVolume(''); 
+                setVolume('');
                 setCost('');
             } else {
                 throw new Error();
@@ -47,27 +47,27 @@ export default function DriverEndShift() {
                     </View>
 
                     <View style={[styles.inputWrapper, focusedField === 'volume' && styles.inputWrapperActive, { backgroundColor: '#f9fafb' }]}>
-                        <TextInput 
-                            style={styles.textInput} 
-                            value={volume} 
-                            onChangeText={setVolume} 
-                            keyboardType="decimal-pad" 
-                            onFocus={() => setFocusedField('volume')} 
-                            onBlur={() => setFocusedField(null)} 
-                            placeholder="Zatankowane litry (np. 50.5)" 
+                        <TextInput
+                            style={styles.textInput}
+                            value={volume}
+                            onChangeText={setVolume}
+                            keyboardType="decimal-pad"
+                            onFocus={() => setFocusedField('volume')}
+                            onBlur={() => setFocusedField(null)}
+                            placeholder="Zatankowane litry (np. 50.5)"
                         />
                         <Text style={{ fontWeight: 'bold', color: '#9ca3af' }}>LITRY</Text>
                     </View>
 
                     <View style={[styles.inputWrapper, focusedField === 'cost' && styles.inputWrapperActive, { backgroundColor: '#f9fafb' }]}>
-                        <TextInput 
-                            style={styles.textInput} 
-                            value={cost} 
-                            onChangeText={setCost} 
-                            keyboardType="decimal-pad" 
-                            onFocus={() => setFocusedField('cost')} 
-                            onBlur={() => setFocusedField(null)} 
-                            placeholder="Całkowity koszt (np. 320.50)" 
+                        <TextInput
+                            style={styles.textInput}
+                            value={cost}
+                            onChangeText={setCost}
+                            keyboardType="decimal-pad"
+                            onFocus={() => setFocusedField('cost')}
+                            onBlur={() => setFocusedField(null)}
+                            placeholder="Całkowity koszt (np. 320.50)"
                         />
                         <Text style={{ fontWeight: 'bold', color: '#9ca3af' }}>PLN</Text>
                     </View>

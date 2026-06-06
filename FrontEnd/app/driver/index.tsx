@@ -177,7 +177,7 @@ export default function DriverDashboard() {
         }
     };
 
-       const validateTicket = async (resNumber: string) => {
+    const validateTicket = async (resNumber: string) => {
         if (!selectedTripId) {
             Alert.alert("Błąd", "Nie wybrano aktywnego kursu. Wybierz trasę przed skanowaniem.");
             setIsScannerOpen(false);
@@ -195,16 +195,13 @@ export default function DriverDashboard() {
                     trip_id: selectedTripId
                 })
             });
-            
+
             const resData = await response.json();
 
             if (response.ok) {
-                // Wyświetla komunikat o sukcesie (z klucza message)
                 Alert.alert("Sukces", resData.message || "Bilet zweryfikowany pomyślnie.");
-                // Odświeża listę pasażerów po udanym skanowaniu
                 fetchData(selectedTripId);
             } else {
-                // Wyświetla precyzyjny błąd z backendu (np. zły kurs, już zeskanowany)
                 Alert.alert("Błąd", resData.error || "Nieprawidłowy bilet.");
             }
         } catch (e) {
@@ -243,7 +240,6 @@ export default function DriverDashboard() {
 
             {selectedTripId ? (
                 <View>
-                    {/* Cyfrowa Wizytówka Przydziału Pojazdu */}
                     {selectedTripInfo && (
                         <View style={[styles.card, { backgroundColor: '#1f2937', marginBottom: 20 }]}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -273,7 +269,6 @@ export default function DriverDashboard() {
                         <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 10, fontSize: 18 }}>SKANUJ BILET (QR)</Text>
                     </TouchableOpacity>
 
-                    {/* Oś Czasu (Timeline) Postępu Trasy */}
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Postęp na trasie</Text>
                         {stops.map((stop, index) => {
@@ -311,7 +306,6 @@ export default function DriverDashboard() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Inteligentny Panel Odprawy z Alfabetyczną Listą */}
                     <View style={styles.card}>
                         <View style={styles.boardingHeader}>
                             <Text style={styles.sectionTitle}>Lista Pasażerów (A-Z)</Text>
@@ -333,8 +327,8 @@ export default function DriverDashboard() {
                                     {p.status === 'boarded' ? (
                                         <Ionicons name="checkmark-circle" size={32} color="#10b981" />
                                     ) : (
-                                        <TouchableOpacity 
-                                            style={{ backgroundColor: '#111827', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 8 }} 
+                                        <TouchableOpacity
+                                            style={{ backgroundColor: '#111827', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 8 }}
                                             onPress={() => validateTicket(p.reservationNumber)}
                                         >
                                             <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>ODPRAW</Text>

@@ -29,21 +29,15 @@ def get_stations():
 
 @client_reservation_bp.route("/routes/search", methods=["POST", "OPTIONS"])
 def search_routes():
-    """
-    Wyszukuje dostępne kursy na dany dzień.
-    Przyjmuje JSON-a z parametrami trasy i ilością biletów.
-    """
     if request.method == "OPTIONS":
         return jsonify({}), 200
 
     data = request.get_json()
 
-    # Odbieramy dane ze skondensowanego JSON-a
     from_station = data.get("from_station")
     to_station = data.get("to_station")
     date = data.get("date")
 
-    # Bezpieczne pobranie biletów (domyślnie 1 dorosły, jeśli brakuje pola)
     tickets = data.get("tickets", {})
     adult_count = tickets.get("adult", 1)
     student_count = tickets.get("student", 0)
@@ -60,7 +54,6 @@ def search_routes():
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Zaktualizowane zapytanie SQL - dodano liczenie zajętych miejsc (occupied_seats)
         query = """
             SELECT 
                 tr.trip_id, 
@@ -96,44 +89,34 @@ def search_routes():
 
         results = []
         for dep in departures:
-            # 1. Liczymy dostępne miejsca (pojemność minus zajęte)
             available_seats = dep["seating_capacity"] - dep["occupied_seats"]
 
-            # 2. Liczymy odległość w przystankach (do ceny)
             stops_count = dep["to_order"] - dep["from_order"]
             base_price = 15.00 + (stops_count * 5.00)
 
-            # 3. WYLICZANIE ŁĄCZNEJ CENY ZE ZNIŻKAMI
             total_price = (
                 (adult_count * base_price)
                 + (student_count * (base_price * 0.49))
                 + (reduced_count * (base_price * 0.63))
             )
 
-            # 4. Wyliczanie dynamicznego czasu podróży
             raw_dep = dep["raw_departure"]
             raw_arr = dep["raw_arrival"]
             max_order = dep["max_order"]
             from_order = dep["from_order"]
             to_order = dep["to_order"]
 
-            # Liczba "odcinków" między stacjami to liczba stacji minus 1
             total_segments = max_order - 1 if max_order > 1 else 1
 
-            # Całkowity czas przejazdu całej trasy
             total_route_duration = raw_arr - raw_dep
 
-            # Czas na przejechanie jednego odcinka (między dwiema stacjami)
             time_per_segment = total_route_duration / total_segments
 
-            # Obliczamy rzeczywistą godzinę odjazdu i przyjazdu dla wyszukiwanego połączenia
             actual_departure = raw_dep + (time_per_segment * (from_order - 1))
             actual_arrival = raw_dep + (time_per_segment * (to_order - 1))
 
-            # Różnica w czasie dla szukanej podróży (pomiędzy from_station a to_station)
             trip_duration = actual_arrival - actual_departure
 
-            # Wyciągamy całkowite minuty do sformatowania stringa
             duration_minutes = int(trip_duration.total_seconds() // 60)
             hours = duration_minutes // 60
             minutes = duration_minutes % 60
@@ -187,7 +170,6 @@ def create_reservation(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # SPRAWDZANIE MIEJSC (Twój oryginalny kod)
         query_capacity = """
             SELECT v.seating_capacity, 
                    COALESCE((SELECT SUM(seat_count) FROM Reservation WHERE trip_id = %s AND status != 'Cancelled'), 0) AS occupied_seats
@@ -208,7 +190,6 @@ def create_reservation(current_user_id):
                 {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
-        # WYLICZANIE CENY Z UWZGLĘDNIENIEM ZNIŻEK (dokładnie to samo co w kalkulatorze)
         query_stops = """
             SELECT 
                 (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
@@ -227,10 +208,8 @@ def create_reservation(current_user_id):
             + (reduced_count * (base_price * 0.63))
         )
 
-        # TWORZENIE REZERWACJI
         reservation_number = f"RES-{current_user_id}-{int(time.time())}"
 
-        # Dodane: zapisujemy total_price
         query_insert = """
             INSERT INTO Reservation (client_id, trip_id, reservation_number, status, seat_count, total_price)
             VALUES (%s, %s, %s, 'Pending Payment', %s, %s) RETURNING reservation_id;
@@ -270,15 +249,10 @@ def create_reservation(current_user_id):
 @client_reservation_bp.route("/journey-details/<string:res_number>", methods=["GET"])
 @token_required
 def get_journey_details(current_client_id, res_number):
-    """
-    Zwraca szczegóły podróży dla konkretnej rezerwacji.
-    Wykorzystywane m.in. do śledzenia trasy i biletów przez klienta.
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 1. Pobranie danych o rezerwacji, kursie i przypisanym pojeździe
         query_info = """
             SELECT 
                 r.reservation_number,
@@ -302,7 +276,6 @@ def get_journey_details(current_client_id, res_number):
         trip_id = journey_info["trip_id"]
         dep_time = journey_info["departure_time"]
 
-        # 2. Pobranie wszystkich przystanków przypisanych do tego kursu
         query_stations = """
             SELECT 
                 s.name,
@@ -317,12 +290,10 @@ def get_journey_details(current_client_id, res_number):
         stations = cur.fetchall()
         cur.close()
 
-        # 3. Budowanie routeDetails (symulacja czasu dla pośrednich przystanków)
         route_details = []
         now = datetime.now()
 
         for index, st in enumerate(stations):
-            # Dodajemy np. 25 minut dla każdego kolejnego przystanku
             station_time = dep_time + timedelta(minutes=25 * index)
 
             route_details.append(
@@ -330,20 +301,17 @@ def get_journey_details(current_client_id, res_number):
                     "station": st["name"],
                     "time": station_time.strftime("%H:%M"),
                     "isPassed": now
-                    > station_time,  # True jeśli obecny czas minął już czas przystanku
+                    > station_time,
                 }
             )
 
-        # 4. Formowanie JSON-a dokładnie pod wymagania Reacta
         response_data = {
             "busDetails": {
                 "operator": "KKBus Express",
                 "vehicleName": f"{journey_info['brand']} {journey_info['model']} / {journey_info['registration_number']}",
-                # Zestaw ikon: wifi, klima, prąd, eko
                 "amenities": ["wifi", "snow", "flash", "leaf"],
             },
             "ticketInfo": {
-                # "To Be Determined" (możesz tu podpiąć system miejsc)
                 "seat": "TBD",
                 "class": "Standard",
                 "seatCount": journey_info["seat_count"],
@@ -365,9 +333,6 @@ def get_journey_details(current_client_id, res_number):
 @client_reservation_bp.route("/calculate-price", methods=["POST", "OPTIONS"])
 @token_required
 def calculate_price(current_user_id):
-    if request.method == "OPTIONS":
-        return jsonify({}), 200
-
     data = request.get_json()
     trip_id = data.get("trip_id")
     from_station = data.get("from_station")
@@ -386,7 +351,6 @@ def calculate_price(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 0. SPRAWDZENIE PUNKTÓW LOJALNOŚCIOWYCH KLIENTA
         cur.execute(
             "SELECT loyalty_points FROM Client WHERE client_id = %s", (current_user_id,)
         )
@@ -397,7 +361,6 @@ def calculate_price(current_user_id):
             else 0
         )
 
-        # 1. Pobieramy kolejność przystanków
         query_stops = """
             SELECT 
                 (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
@@ -410,22 +373,19 @@ def calculate_price(current_user_id):
         if not stops or not stops["from_order"] or not stops["to_order"]:
             return jsonify({"error": "Invalid stations for this trip"}), 400
 
-        # 2. Wyliczanie ceny BAZOWEJ
         stops_count = stops["to_order"] - stops["from_order"]
         base_price = 15.00 + (stops_count * 5.00)
 
-        # 3. Naliczanie STANDARDOWYCH zniżek (Studencka / Ulgowa)
         total_price = 0.00
         total_price += adult_count * base_price
         total_price += student_count * (base_price * 0.49)
         total_price += reduced_count * (base_price * 0.63)
 
-        # 4. ZŁOTA ZNIŻKA LOJALNOŚCIOWA (60% taniej na cały koszyk)
         is_gold_eligible = loyalty_points >= 2000
         if is_gold_eligible:
             total_price = (
                 total_price * 0.40
-            )  # Klient płaci tylko 40% ostatecznej kwoty!
+            ) 
 
         cur.close()
 
@@ -450,14 +410,11 @@ def calculate_price(current_user_id):
 @client_reservation_bp.route("/checkout", methods=["POST"])
 @token_required
 def process_checkout(current_user_id):
-    # Odbieramy całego JSON-a
     data = request.get_json()
 
-    # 1. BEZPIECZNE ROZPAKOWANIE SKONDENSOWANEGO OBIEKTU
     trip_data = data.get("trip", {})
     tickets_data = data.get("tickets", {})
 
-    # 2. WYCIĄGANIE KONKRETNYCH WARTOŚCI
     trip_id = trip_data.get("id")
     from_station = trip_data.get("from")
     to_station = trip_data.get("to")
@@ -468,18 +425,15 @@ def process_checkout(current_user_id):
 
     seat_count = adult_count + student_count + reduced_count
 
-    # 3. WALIDACJA
     if not trip_id or seat_count <= 0 or not from_station or not to_station:
         return jsonify(
             {"error": "Missing trip ID, station data or ticket count is 0"}
         ), 400
 
-    # 4. DALSZA LOGIKA BAZY DANYCH
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # --- A. SPRAWDZANIE DOSTĘPNOŚCI MIEJSC ---
         query_capacity = """
             SELECT v.seating_capacity, 
                    COALESCE((SELECT SUM(seat_count) FROM Reservation WHERE trip_id = %s AND status != 'Cancelled'), 0) AS occupied_seats
@@ -500,7 +454,6 @@ def process_checkout(current_user_id):
                 {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
-        # --- B. BEZPIECZNE WYLICZANIE CENY ---
         query_stops = """
             SELECT 
                 (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
@@ -513,11 +466,9 @@ def process_checkout(current_user_id):
         if not stops or not stops["from_order"] or not stops["to_order"]:
             return jsonify({"error": "Invalid stations for this trip"}), 400
 
-        # Odległość w przystankach i cena bazowa
         stops_count = stops["to_order"] - stops["from_order"]
         base_price = 15.00 + (stops_count * 5.00)
 
-        # Cena uwzględniająca zniżki
         total_price = (
             (adult_count * base_price)
             + (student_count * (base_price * 0.49))
@@ -562,7 +513,6 @@ def process_checkout(current_user_id):
 
         total_price = round(total_price, 2)
 
-        # --- C. TWORZENIE REZERWACJI W BAZIE ---
         reservation_number = f"RES-{current_user_id}-{int(time.time())}"
 
         query_insert = """
@@ -575,7 +525,6 @@ def process_checkout(current_user_id):
         )
         new_id = cur.fetchone()["reservation_id"]
 
-        # --- D. TWORZENIE JEDNEGO GRUPOWEGO BILETU ---
         summary_parts = []
         if adult_count > 0:
             summary_parts.append(f"{adult_count}x Normalny")
@@ -598,8 +547,6 @@ def process_checkout(current_user_id):
 
         new_ticket_id = cur.fetchone()["ticket_id"]
 
-        # --- E. NALICZANIE PUNKTÓW LOJALNOŚCIOWYCH ---
-        # 40 punktów za każde miejsce w koszyku
         earned_points = seat_count * 40
 
         query_update_points = """
@@ -609,11 +556,9 @@ def process_checkout(current_user_id):
         """
         cur.execute(query_update_points, (earned_points, current_user_id))
 
-        # Potwierdzenie zapisu do bazy CAŁEJ TRANSAKCJI
         conn.commit()
         cur.close()
 
-        # Zwracamy frontendowi odpowiedź z sukcesem + informację o punktach
         return jsonify(
             {
                 "message": "Reservation created successfully.",
@@ -631,7 +576,7 @@ def process_checkout(current_user_id):
     except Exception as e:
         print(f"DB Error w /checkout: {e}")
         if conn:
-            conn.rollback()  # Cofamy zmiany w razie błędu
+            conn.rollback()
         return jsonify({"error": "Error occurred during checkout"}), 500
     finally:
         if conn:
@@ -641,15 +586,10 @@ def process_checkout(current_user_id):
 @client_reservation_bp.route("/tickets/<int:ticket_id>/cancel", methods=["PATCH"])
 @token_required
 def cancel_ticket(current_user_id, ticket_id):
-    """
-    Anuluje bilet grupowy i całą powiązaną z nim rezerwację,
-    co automatycznie zwalnia wszystkie miejsca w autobusie.
-    """
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 1. WERYFIKACJA: Sprawdzamy bilet i powiązaną rezerwację
         query_check = """
             SELECT t.ticket_id, t.status, r.reservation_id 
             FROM Ticket t
@@ -665,12 +605,10 @@ def cancel_ticket(current_user_id, ticket_id):
         if data["status"] == "Cancelled":
             return jsonify({"error": "Ten bilet został już anulowany."}), 400
 
-        # 2. ANULOWANIE BILETU GRUPOWEGO
         cur.execute(
             "UPDATE Ticket SET status = 'Cancelled' WHERE ticket_id = %s", (ticket_id,)
         )
 
-        # 3. ANULOWANIE GŁÓWNEJ REZERWACJI (To zwalnia miejsca!)
         cur.execute(
             "UPDATE Reservation SET status = 'Cancelled' WHERE reservation_id = %s",
             (data["reservation_id"],),

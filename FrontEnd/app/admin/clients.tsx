@@ -8,8 +8,6 @@ export default function AdminClients() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
-
-    // Formularz nowego użytkownika
     const [newUser, setNewUser] = useState({
         name: '',
         email: '',
@@ -42,7 +40,6 @@ export default function AdminClients() {
         }
 
         try {
-            // fetch - Dodawanie użytkownika z tokenem (POST)
             const response = await authFetch('/api/admin/management/users', {
                 method: 'POST',
                 body: JSON.stringify(newUser)

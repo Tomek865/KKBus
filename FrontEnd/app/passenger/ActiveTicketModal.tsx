@@ -22,14 +22,12 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
             
             const fetchJourneyDetails = async () => {
                 try {
-                    // Zmiana na ticket.ticketNumber zgodnie z nowym interfejsem w tickets.tsx
                     const res = await authFetch(`/api/client/reservations/journey-details/${ticket.ticketNumber}`);
                  
                     if (res.ok) {
                         const data = await res.json();
                         console.log("Journey details data:", data);
                         
-                        // Bezpieczne mapowanie danych na podstawie zagnieżdżonego obiektu JSON
                         if (data.busDetails) {
                              setBusDetails({
                                 busNumber: data.busDetails.vehicleName || "Brak danych",
@@ -119,7 +117,6 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                         <View style={styles.infoGrid}>
                             <View style={styles.infoBox}>
                                 <Text style={styles.infoLabel}>SEATS</Text>
-                                {/* Posiada bezpieczny fallback do ticket.seats w nowym formacie */}
                                 <Text style={styles.infoValue}>
                                     {ticketInfo ? ticketInfo.seatCount : ticket.seats}
                                 </Text>

@@ -18,11 +18,8 @@ def validate_ticket(current_user_id, res_number):
 
     conn = get_db_connection()
     try:
-        # ZWYKŁY KURSOR
         cur = conn.cursor()
 
-        # --- 1. WERYFIKACJA BILETU (SELECT) ---
-        # POPRAWKA: Używamy tr.employee_id zamiast tr.driver_id
         query_check = """
             SELECT 
                 r.reservation_id,
@@ -36,25 +33,20 @@ def validate_ticket(current_user_id, res_number):
         """
         cur.execute(query_check, (res_number,))
 
-        # Zwraca standardową krotkę (tuple), np. (5, 'Pending Payment', 12, 3, '2026-05-26 15:00')
         ticket_info = cur.fetchone()
         print(ticket_info)
 
-        # A. Czy bilet w ogóle istnieje?
         if not ticket_info:
             return jsonify({"error": "Nie znaleziono takiego biletu w systemie."}), 404
 
-        # B. Czy bilet nie został anulowany? (Sprawdzamy indeks 1)
         if ticket_info[1] == "Cancelled":
             return jsonify(
                 {"error": "Błąd! Ten bilet został anulowany i jest nieważny."}
             ), 400
 
-        # C. Czy bilet nie został już wcześniej zeskanowany?
         if ticket_info[1] == "Boarded":
             return jsonify({"error": "Uwaga! Ten bilet został już zeskanowany."}), 409
 
-        # D. Czy bilet należy do poprawnego kursu? (Sprawdzamy indeks 2 i 4)
         if ticket_info[2] != int(active_trip_id):
             return jsonify(
                 {
@@ -63,14 +55,12 @@ def validate_ticket(current_user_id, res_number):
                 }
             ), 403
 
-        # E. Czy ten kurs na pewno obsługuje TEN kierowca? (Sprawdzamy indeks 3 - to nasze employee_id)
         if ticket_info[3] != current_user_id:
             return jsonify(
                 {"error": "Brak uprawnień. Ten kurs obsługuje inny kierowca."}
             ), 403
 
-        # --- 2. AKCEPTACJA BILETU (UPDATE) ---
-        reservation_id = ticket_info[0]  # Pobieramy ID z indeksu 0
+        reservation_id = ticket_info[0]
 
         cur.execute(
             "UPDATE Reservation SET status = 'Boarded' WHERE reservation_id = %s",
@@ -82,7 +72,6 @@ def validate_ticket(current_user_id, res_number):
             (reservation_id,),
         )
 
-        # Zatwierdzenie zmian
         conn.commit()
         cur.close()
 
