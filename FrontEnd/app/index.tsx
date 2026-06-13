@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
-    SafeAreaView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform
+    SafeAreaView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+    Modal
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { IP_adress } from '../utils';
 import * as SecureStore from 'expo-secure-store';
+import { ScrollView } from 'react-native-gesture-handler';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
+    const [infoModalVisible, setInfoModalVisible] = useState(false);
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -141,9 +144,53 @@ export default function LoginScreen() {
                             <Text style={styles.registerLink}>Załóż konto klienta</Text>
                         </TouchableOpacity>
                     </View>
+                   <View style={styles.guestContainer}>
+                        <TouchableOpacity onPress={() => router.replace('/passenger')}>
+                            <Text style={styles.guestLink}>Kontynuuj bez logowania</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setInfoModalVisible(true)} style={{ marginTop: 15 }}>
+                            <Text style={{ color: '#e60000', fontSize: 14, fontWeight: '600' }}>O firmie i kontakt</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
                 <Text style={styles.footer}>KKbus v1.0</Text>
             </KeyboardAvoidingView>
+                        {/* MODAL: O FIRMIE (DLA NIEZALOGOWANYCH) */}
+            <Modal visible={infoModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setInfoModalVisible(false)}>
+                <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>O nas i Kontakt</Text>
+                        <TouchableOpacity onPress={() => setInfoModalVisible(false)}>
+                            <Ionicons name="close" size={28} color="#111" />
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView contentContainerStyle={{ padding: 20 }}>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Firma transportowa KKBus sp z.o.o</Text>
+                        
+                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>O nas</Text>
+                        <Text style={{ color: '#4b5563', marginBottom: 20, lineHeight: 22 }}>
+                            Firma zajmuje się transportem osób między Krakowem a Katowicami. Oferujemy bezpieczne przewozy z użyciem nowoczesnej floty pojazdów, a nasi niezalogowani klienci mogą zawsze liczyć na pełen dostęp do informacji o trasach i cenniku.
+                        </Text>
+
+                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>Dane kontaktowe</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+                            <Ionicons name="location" size={20} color="#e60000" style={{ marginRight: 10 }} />
+                            <Text style={{ fontSize: 15, color: '#4b5563' }}>ul. Jana Pawła II 37, 31-864 Kraków</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+                            <Ionicons name="call" size={20} color="#e60000" style={{ marginRight: 10 }} />
+                            <View>
+                                <Text style={{ fontSize: 15, color: '#4b5563' }}>(070) 012-34-56</Text>
+                                <Text style={{ fontSize: 15, color: '#4b5563', marginTop: 4 }}>(070) 011-22-33</Text>
+                            </View>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="mail" size={20} color="#e60000" style={{ marginRight: 10 }} />
+                            <Text style={{ fontSize: 15, color: '#4b5563' }}>sekretariat@kkbus.pl</Text>
+                        </View>
+                    </ScrollView>
+                </SafeAreaView>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -169,5 +216,7 @@ const styles = StyleSheet.create({
     registerText: { color: '#6b7280', fontSize: 14 },
     registerLink: { color: '#e60000', fontSize: 14, fontWeight: 'bold' },
 
-    footer: { position: 'absolute', bottom: 30, color: '#ccc', fontSize: 11, fontWeight: 'bold' }
+    footer: { position: 'absolute', bottom: 30, color: '#ccc', fontSize: 11, fontWeight: 'bold' },
+    guestContainer: { marginTop: 25, alignItems: 'center', paddingTop: 15, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+    guestLink: { color: '#6b7280', fontSize: 14, fontWeight: '600' },
 });

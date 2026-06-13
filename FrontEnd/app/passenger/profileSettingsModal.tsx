@@ -230,17 +230,30 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
             case 'help':
                 return (
                     <View style={{ paddingVertical: 10 }}>
-                        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Contact Support</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Firma transportowa KKBus sp z.o.o</Text>
+                        
+                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>O nas</Text>
                         <Text style={{ color: '#4b5563', marginBottom: 20, lineHeight: 22 }}>
-                            If you encounter any issues with your reservation or the app, please dont hesitate to reach out.
+                            Firma zajmuje się transportem osób między Krakowem a Katowicami. Posiadamy nowoczesną flotę busów i autokarów. Zapewniamy komfortowe i bezpieczne przejazdy na naszych trasach.
                         </Text>
+
+                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>Dane kontaktowe</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+                            <Ionicons name="location" size={20} color="#e60000" style={{ marginRight: 10 }} />
+                            <Text style={{ fontSize: 15, color: '#4b5563' }}>ul. Jana Pawła II 37, 31-864 Kraków</Text>
+                        </View>
+                        
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
                             <Ionicons name="call" size={20} color="#e60000" style={{ marginRight: 10 }} />
-                            <Text style={{ fontSize: 16 }}>+48 123 456 789</Text>
+                            <View>
+                                <Text style={{ fontSize: 15, color: '#4b5563' }}>(070) 012-34-56</Text>
+                                <Text style={{ fontSize: 15, color: '#4b5563', marginTop: 4 }}>(070) 011-22-33</Text>
+                            </View>
                         </View>
+
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Ionicons name="mail" size={20} color="#e60000" style={{ marginRight: 10 }} />
-                            <Text style={{ fontSize: 16 }}>support@kkbus.pl</Text>
+                            <Text style={{ fontSize: 15, color: '#4b5563' }}>sekretariat@kkbus.pl</Text>
                         </View>
                     </View>
                 );

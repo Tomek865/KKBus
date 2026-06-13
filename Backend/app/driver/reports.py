@@ -60,30 +60,31 @@ def complete_shift(current_user_id):
 
     volume = float(data.get("volume", 0))
     cost = float(data.get("cost", 0))
-
-    vehicle_id = (
-        data.get("vehicleId") or data.get("vehicle_id") or data.get("id_pojazdu")
-    )
+    kilometers = float(data.get("driven_kilometers", 0))
+    vehicle_id = data.get("vehicleId") or data.get("vehicle_id") or data.get("id_pojazdu")
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
-
+        
+        msg = "Zmiana zakończona sukcesem."
         if volume > 0 and cost > 0 and vehicle_id:
             cena_za_litr = cost / volume
+            
+            # Obliczenia zużycia paliwa na 100km (Pkt 2.3)
+            if kilometers > 0:
+                avg_consumption = (volume / kilometers) * 100
+                msg = f"Zapisano tankowanie. Średnie spalanie pojazdu wyniosło: {round(avg_consumption, 1)} l/100km."
+
             query = """
-                INSERT INTO Refueling (vehicle_id, employee_id, liters_volume, price_per_liter, total_cost)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO Refueling (vehicle_id, employee_id, liters_volume, price_per_liter, total_cost, driven_kilometers)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """
-            cur.execute(
-                query, (vehicle_id, current_user_id, volume, cena_za_litr, cost)
-            )
+            cur.execute(query, (vehicle_id, current_user_id, volume, cena_za_litr, cost, kilometers))
             conn.commit()
 
         cur.close()
-        return jsonify(
-            {"message": "Zmiana zakończona sukcesem. Dane z tankowania zapisane."}
-        ), 200
+        return jsonify({"message": msg}), 200
     except Exception as e:
         print(f"Błąd DB: {e}")
         return jsonify({"error": "Wystąpił błąd podczas kończenia zmiany."}), 500

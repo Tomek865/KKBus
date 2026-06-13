@@ -6,6 +6,7 @@ import { router, useFocusEffect } from 'expo-router';
 import ProfileSettingsModal from './profileSettingsModal';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { authFetch } from '../../utils';
+import GuestLoginModal from './GuestLoginModal';
 
 interface LoyaltyData { 
     points: number; 
@@ -88,6 +89,7 @@ export default function PassengerProfile() {
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [settingsModalVisible, setSettingsModalVisible] = useState(false);
     const [activeSection, setActiveSection] = useState<any>(null);
+    const [isGuest, setIsGuest] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -95,6 +97,22 @@ export default function PassengerProfile() {
                 setIsLoadingLoyalty(true);
                 setIsLoadingProfile(true);
                 try {
+                    let token = null;
+                    if (Platform.OS === 'web') {
+                        token = localStorage.getItem('userToken');
+                    } else {
+                        token = await SecureStore.getItemAsync('userToken');
+                    }
+
+                    if (!token) {
+                        setIsGuest(true);
+                        setIsLoadingLoyalty(false);
+                        setIsLoadingProfile(false);
+                        return; // Przerywamy dalsze pobieranie
+                    }
+                    
+                    setIsGuest(false);
+
                     const resLoyalty = await authFetch('/api/client/profile/user/loyalty');
                     if (resLoyalty.ok) {
                         const dataLoyalty = await resLoyalty.json();
@@ -160,7 +178,13 @@ export default function PassengerProfile() {
     };
 
     const openSettings = (section: any) => { setActiveSection(section); setSettingsModalVisible(true); };
-
+    if (isGuest) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <GuestLoginModal visible={true} onClose={() => { setIsGuest(false); router.navigate('/passenger'); }} />
+            </SafeAreaView>
+        );
+    }
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>

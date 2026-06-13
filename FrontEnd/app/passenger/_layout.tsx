@@ -31,17 +31,23 @@ export default function PassengerLayout() {
                 }}
             />
             <Tabs.Screen
-    name="profileSettingsModal"
-    options={{
-        href: null,
-    }}
+            name="profileSettingsModal"
+            options={{
+                href: null,
+            }}
             />
             <Tabs.Screen
-    name="ActiveTicketModal"
-    options={{
-        href: null,
-    }}
-/>
+                name="ActiveTicketModal"
+                options={{
+                    href: null,
+            }}
+            />
+            <Tabs.Screen
+                name="GuestLoginModal"
+                options={{
+                    href: null,
+                }}
+            />
         </Tabs>
     );
 }

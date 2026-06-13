@@ -1,12 +1,14 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Animated, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
 import ActiveTicketModal from './ActiveTicketModal'; 
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authFetch } from '../../utils';
+import * as SecureStore from 'expo-secure-store';
+import GuestLoginModal from './GuestLoginModal';
 
 export interface TicketData {
     id: string;             
@@ -17,6 +19,7 @@ export interface TicketData {
     seats: string | number; 
     status: string;
     isPast: boolean;
+    rawDepTime?: string;
 }
 const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket: TicketData, onViewDetails: (t: TicketData) => void, onArchiveSuccess: (id: string) => void }) => {
     const opacityAnim = useRef(new Animated.Value(1)).current;
@@ -28,6 +31,16 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
     };
 
     const handleArchiveTicket = () => {
+        if (ticket.rawDepTime) {
+            const depDate = new Date(ticket.rawDepTime);
+            const now = new Date();
+            const diffHours = (depDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+            
+            if (diffHours < 24) {
+                showNotification("Niedozwolona operacja", "Zgodnie z regulaminem, bilet można anulować najpóźniej 24 godziny przed wyjazdem.");
+                return;
+            }
+        }
         const executeCancellation = async () => {
             try {
                 const res = await authFetch(`/api/client/reservations/tickets/${ticket.id}/cancel`, {
@@ -158,12 +171,28 @@ export default function PassengerTickets() {
     const [isLoading, setIsLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
+    const [isGuest, setIsGuest] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
             const fetchTickets = async () => {
                 setIsLoading(true);
                 try {
+                    let token = null;
+                    if (Platform.OS === 'web') {
+                        token = localStorage.getItem('userToken');
+                    } else {
+                        token = await SecureStore.getItemAsync('userToken');
+                    }
+
+                    if (!token) {
+                        setIsGuest(true);
+                        setIsLoading(false);
+                        return; // Przerywamy dalsze pobieranie
+                    }
+                    
+                    setIsGuest(false);
+
                     const res = await authFetch('/api/client/profile/tickets');
                     if (!res.ok) {
                         console.error("Błąd pobierania biletów, status HTTP:", res.status);
@@ -198,6 +227,7 @@ export default function PassengerTickets() {
                             id: String(t.ticketId || Math.random()), 
                             ticketNumber: String(t.reservationNumber || 'Brak'),
                             depTime: timeOnly,
+                            rawDepTime: validDateString,
                             depStation: depStation, 
                             arrStation: arrStation,
                             seats: t.ticketsSummary || 1, 
@@ -231,7 +261,13 @@ export default function PassengerTickets() {
     };
     const activeTickets = tickets.filter(t => !t.isPast);
     const pastTickets = tickets.filter(t => t.isPast);
-
+    if (isGuest) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <GuestLoginModal visible={true} onClose={() => { setIsGuest(false); router.navigate('/passenger'); }} />
+            </SafeAreaView>
+        );
+    }
     return (
         <SafeAreaView style={styles.safeArea}>
             {isLoading ? (

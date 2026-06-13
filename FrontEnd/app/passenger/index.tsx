@@ -5,6 +5,9 @@ import { SearchInput } from '../../components/passenger/SearchInput';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authFetch } from '../../utils';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import GuestLoginModal from './GuestLoginModal';
 
 const formatTime = (timeString?: string, searchedDate?: string) => {
     if (!timeString) return 'Brak danych';
@@ -38,9 +41,9 @@ export interface Departure {
     price: number | null;
 }
 
-const generateNext14Days = () => {
+const generateNext7Days = () => {
     const dates = [];
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 7; i++) {
         const d = new Date(); d.setDate(d.getDate() + i); dates.push(d);
     }
     return dates;
@@ -92,7 +95,7 @@ export default function PassengerSearch() {
     const [stations, setStations] = useState<string[]>([]);
     const [fromStation, setFromStation] = useState('Kraków');
     const [toStation, setToStation] = useState('Katowice');
-    const [availableDates] = useState(generateNext14Days());
+    const [availableDates] = useState(generateNext7Days());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [passengerCounts, setPassengerCounts] = useState({ adult: 1, student: 0, reduced: 0 });
     const [departures, setDepartures] = useState<Departure[]>([]);
@@ -110,6 +113,7 @@ export default function PassengerSearch() {
     const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [useFreeRide, setUseFreeRide] = useState(false);
+    const [guestModalVisible, setGuestModalVisible] = useState(false);
        useEffect(() => {
         const fetchStationsFromDB = async () => {
             try {
@@ -326,8 +330,25 @@ export default function PassengerSearch() {
                             <Text style={styles.resultsTitle}>Available Departures</Text>
                             <View style={styles.optionsBadge}><Text style={styles.optionsText}>{departures.length} options</Text></View>
                         </View>
-                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => <DepartureCard key={dep.id} departure={dep}
-                            onBook={() => {
+                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => 
+                        <DepartureCard 
+                            key={dep.id} 
+                            departure={dep}
+                            onBook={async () => {
+                                let token = null;
+                                try {
+                                    if (Platform.OS === 'web') {
+                                        token = localStorage.getItem('userToken');
+                                    } else {
+                                        token = await SecureStore.getItemAsync('userToken');
+                                    }
+                                } catch (error) {
+                                    console.error("Błąd podczas odczytu tokena", error);
+                                }
+                                if (!token) {
+                                    setGuestModalVisible(true);
+                                    return;
+                                }
                                 setSelectedDep(dep);
                                 setUseFreeRide(false);
                                 setCalculatedPrice(dep.price);
@@ -464,6 +485,10 @@ export default function PassengerSearch() {
                     )}
                 </SafeAreaView>
             </Modal>
+            <GuestLoginModal 
+                visible={guestModalVisible} 
+                onClose={() => setGuestModalVisible(false)} 
+            />
         </SafeAreaView>
     );
 }

@@ -16,7 +16,8 @@ CREATE TABLE Client (
     unfulfilled_reservations_count INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     gold_tier_count INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    blocked_until TIMESTAMP
 );
 
 CREATE TABLE Employee (
@@ -78,7 +79,8 @@ CREATE TABLE Refueling (
     refueling_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     liters_volume FLOAT NOT NULL,
     price_per_liter FLOAT NOT NULL,
-    total_cost FLOAT NOT NULL
+    total_cost FLOAT NOT NULL,
+    driven_kilometers FLOAT DEFAULT 0.0
 );
 
 CREATE TABLE Trip (
@@ -136,4 +138,13 @@ CREATE TABLE Client_Reward (
     reward_id INTEGER NOT NULL REFERENCES Reward(reward_id) ON DELETE CASCADE,
     exchange_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (client_id, reward_id, exchange_date)
+);
+
+CREATE TABLE Driver_Availability (
+    availability_id SERIAL PRIMARY KEY,
+    employee_id INTEGER NOT NULL REFERENCES Employee(employee_id) ON DELETE CASCADE,
+    available_date DATE NOT NULL,
+    is_available BOOLEAN DEFAULT TRUE,
+    notes VARCHAR(255),
+    UNIQUE(employee_id, available_date)
 );

@@ -5,6 +5,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as SecureStore from 'expo-secure-store';
 import { driverStyles as styles } from '../src/styles/driverStyles';
 import { authFetch } from '../../utils';
+import * as Print from 'expo-print';
+import { shareAsync } from 'expo-sharing';
 
 export default function DriverDashboard() {
     const [stops, setStops] = useState<any[]>([]);
@@ -224,6 +226,63 @@ export default function DriverDashboard() {
 
     const displayedPassengers = activeTab === 'all' ? passengers : passengers.filter(p => p.status === 'pending');
 
+        const printPassengers = async () => {
+        if (!selectedTripInfo) {
+            Alert.alert("Błąd", "Wybierz trasę, aby wydrukować listę.");
+            return;
+        }
+
+        const html = `
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    h1 { color: #e60000; margin-bottom: 5px; }
+                    h3 { color: #555; margin-top: 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                    th { background-color: #f3f4f6; color: #111; }
+                    .status-boarded { color: #10b981; font-weight: bold; }
+                    .status-pending { color: #eab308; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <h1>Lista Pasażerów KKBus</h1>
+                <h3>Trasa: ${selectedTripInfo.routeName || 'Brak'}</h3>
+                <p><strong>Pojazd:</strong> ${selectedTripInfo.busBrand} ${selectedTripInfo.busModel} (${selectedTripInfo.registrationNumber})</p>
+                <p><strong>Odjazd:</strong> ${selectedTripInfo.departureTime}</p>
+                <table>
+                    <tr>
+                        <th>Pasażer</th>
+                        <th>Numer rezerwacji</th>
+                        <th>Telefon</th>
+                        <th>Bilety</th>
+                        <th>Status</th>
+                    </tr>
+                    ${passengers.map(p => `
+                        <tr>
+                            <td>${p.name}</td>
+                            <td>${p.reservationNumber}</td>
+                            <td>${p.phone || '-'}</td>
+                            <td>${p.seatCount}</td>
+                            <td class="${p.status === 'boarded' ? 'status-boarded' : 'status-pending'}">
+                                ${p.status === 'boarded' ? 'Odprawiony' : 'Oczekujący'}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </table>
+            </body>
+            </html>
+        `;
+
+        try {
+            const { uri } = await Print.printToFileAsync({ html });
+            await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+        } catch (error) {
+            Alert.alert("Błąd", "Nie udało się wygenerować dokumentu.");
+        }
+    };
+
     return (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
             <View style={styles.dashboardHeader}>
@@ -309,9 +368,14 @@ export default function DriverDashboard() {
                     <View style={styles.card}>
                         <View style={styles.boardingHeader}>
                             <Text style={styles.sectionTitle}>Lista Pasażerów (A-Z)</Text>
-                            <View style={styles.tabs}>
-                                <TouchableOpacity onPress={() => setActiveTab('all')}><Text style={[styles.tab, activeTab === 'all' && styles.tabActive]}>Wszyscy</Text></TouchableOpacity>
-                                <TouchableOpacity onPress={() => setActiveTab('pending')}><Text style={[styles.tab, activeTab === 'pending' && styles.tabActive]}>Oczekujący</Text></TouchableOpacity>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.tabs}>
+                                    <TouchableOpacity onPress={() => setActiveTab('all')}><Text style={[styles.tab, activeTab === 'all' && styles.tabActive]}>Wszyscy</Text></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => setActiveTab('pending')}><Text style={[styles.tab, activeTab === 'pending' && styles.tabActive]}>Oczekujący</Text></TouchableOpacity>
+                                </View>
+                                <TouchableOpacity onPress={printPassengers} style={{ marginLeft: 15, padding: 8, backgroundColor: '#f3f4f6', borderRadius: 8 }}>
+                                    <Ionicons name="print-outline" size={24} color="#111827" />
+                                </TouchableOpacity>
                             </View>
                         </View>
                         <View style={styles.passengerList}>

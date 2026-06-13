@@ -30,7 +30,11 @@ def get_stations():
 @client_reservation_bp.route("/routes/search", methods=["POST", "OPTIONS"])
 def search_routes():
     if request.method == "OPTIONS":
-        return jsonify({}), 200
+        res = jsonify({})
+        res.headers.add("Access-Control-Allow-Origin", "*")
+        res.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        res.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        return res, 200
 
     data = request.get_json()
 
@@ -69,13 +73,10 @@ def search_routes():
             FROM Trip tr
             JOIN Route r ON tr.route_id = r.route_id
             JOIN Vehicle v ON tr.vehicle_id = v.vehicle_id
-            
             JOIN Route_Station rs_from ON r.route_id = rs_from.route_id
             JOIN Station s_from ON rs_from.station_id = s_from.station_id
-            
             JOIN Route_Station rs_to ON r.route_id = rs_to.route_id
             JOIN Station s_to ON rs_to.station_id = s_to.station_id
-            
             WHERE DATE(tr.departure_time) = %s 
               AND tr.status = 'Planned'
               AND s_from.name = %s 
@@ -85,14 +86,22 @@ def search_routes():
         """
         cur.execute(query, (date, from_station, to_station))
         departures = cur.fetchall()
-        cur.close()
 
         results = []
         for dep in departures:
-            available_seats = dep["seating_capacity"] - dep["occupied_seats"]
+            # --- POPRAWIONA LOGIKA CENY Z BAZY ---
+            cur.execute("""
+                SELECT fs.standard_price 
+                FROM Fare_Segment fs
+                JOIN Trip tr ON fs.route_id = tr.route_id
+                JOIN Station s1 ON fs.start_station_id = s1.station_id
+                JOIN Station s2 ON fs.end_station_id = s2.station_id
+                WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
+            """, (dep["trip_id"], from_station, to_station))
+            price_row = cur.fetchone()
+            base_price = float(price_row["standard_price"]) if price_row else 12.00
 
-            stops_count = dep["to_order"] - dep["from_order"]
-            base_price = 15.00 + (stops_count * 5.00)
+            available_seats = dep["seating_capacity"] - dep["occupied_seats"]
 
             total_price = (
                 (adult_count * base_price)
@@ -107,14 +116,11 @@ def search_routes():
             to_order = dep["to_order"]
 
             total_segments = max_order - 1 if max_order > 1 else 1
-
             total_route_duration = raw_arr - raw_dep
-
             time_per_segment = total_route_duration / total_segments
 
             actual_departure = raw_dep + (time_per_segment * (from_order - 1))
             actual_arrival = raw_dep + (time_per_segment * (to_order - 1))
-
             trip_duration = actual_arrival - actual_departure
 
             duration_minutes = int(trip_duration.total_seconds() // 60)
@@ -135,6 +141,8 @@ def search_routes():
                     "status": dep["status"],
                 }
             )
+            
+        cur.close()
         return jsonify(results), 200
 
     except Exception as e:
@@ -158,7 +166,6 @@ def create_reservation(current_user_id):
     adult_count = tickets.get("adult", 0)
     student_count = tickets.get("student", 0)
     reduced_count = tickets.get("reduced", 0)
-
     seat_count = adult_count + student_count + reduced_count
 
     if not trip_id or seat_count <= 0 or not from_station or not to_station:
@@ -190,17 +197,18 @@ def create_reservation(current_user_id):
                 {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
-        query_stops = """
-            SELECT 
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS to_order
-            FROM Trip tr WHERE trip_id = %s;
+        # --- POPRAWIONA LOGIKA CENY Z BAZY ---
+        query_price = """
+            SELECT fs.standard_price 
+            FROM Fare_Segment fs
+            JOIN Trip tr ON fs.route_id = tr.route_id
+            JOIN Station s1 ON fs.start_station_id = s1.station_id
+            JOIN Station s2 ON fs.end_station_id = s2.station_id
+            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
         """
-        cur.execute(query_stops, (from_station, to_station, trip_id))
-        stops = cur.fetchone()
-
-        stops_count = stops["to_order"] - stops["from_order"]
-        base_price = 15.00 + (stops_count * 5.00)
+        cur.execute(query_price, (trip_id, from_station, to_station))
+        price_row = cur.fetchone()
+        base_price = float(price_row["standard_price"]) if price_row else 12.00
 
         total_price = (
             (adult_count * base_price)
@@ -300,8 +308,7 @@ def get_journey_details(current_client_id, res_number):
                 {
                     "station": st["name"],
                     "time": station_time.strftime("%H:%M"),
-                    "isPassed": now
-                    > station_time,
+                    "isPassed": now > station_time,
                 }
             )
 
@@ -330,7 +337,16 @@ def get_journey_details(current_client_id, res_number):
             conn.close()
 
 
-@client_reservation_bp.route("/calculate-price", methods=["POST", "OPTIONS"])
+# --- ROZDZIELENIE METOD OPTIONS I POST (Rozwiązuje problem 401 Unauthorized) ---
+@client_reservation_bp.route("/calculate-price", methods=["OPTIONS"])
+def calculate_price_options():
+    res = jsonify({})
+    res.headers.add("Access-Control-Allow-Origin", "*")
+    res.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    res.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+    return res, 200
+
+@client_reservation_bp.route("/calculate-price", methods=["POST"])
 @token_required
 def calculate_price(current_user_id):
     data = request.get_json()
@@ -361,20 +377,22 @@ def calculate_price(current_user_id):
             else 0
         )
 
-        query_stops = """
-            SELECT 
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS to_order
-            FROM Trip tr WHERE trip_id = %s;
+        # --- POPRAWIONA LOGIKA CENY Z BAZY ---
+        query_price = """
+            SELECT fs.standard_price 
+            FROM Fare_Segment fs
+            JOIN Trip tr ON fs.route_id = tr.route_id
+            JOIN Station s1 ON fs.start_station_id = s1.station_id
+            JOIN Station s2 ON fs.end_station_id = s2.station_id
+            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
         """
-        cur.execute(query_stops, (from_station, to_station, trip_id))
-        stops = cur.fetchone()
-
-        if not stops or not stops["from_order"] or not stops["to_order"]:
+        cur.execute(query_price, (trip_id, from_station, to_station))
+        price_row = cur.fetchone()
+        
+        if not price_row:
             return jsonify({"error": "Invalid stations for this trip"}), 400
-
-        stops_count = stops["to_order"] - stops["from_order"]
-        base_price = 15.00 + (stops_count * 5.00)
+            
+        base_price = float(price_row["standard_price"])
 
         total_price = 0.00
         total_price += adult_count * base_price
@@ -383,9 +401,7 @@ def calculate_price(current_user_id):
 
         is_gold_eligible = loyalty_points >= 2000
         if is_gold_eligible:
-            total_price = (
-                total_price * 0.40
-            ) 
+            total_price = total_price * 0.40 
 
         cur.close()
 
@@ -434,6 +450,47 @@ def process_checkout(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
+        # --- SPRAWDZANIE BLOKADY I DANYCH KLIENTA ---
+        cur.execute(
+            "SELECT loyalty_points, email, blocked_until FROM Client WHERE client_id = %s", (current_user_id,)
+        )
+        client_data = cur.fetchone()
+        
+        if client_data and client_data.get("blocked_until") and client_data["blocked_until"] > datetime.now():
+            return jsonify({"error": f"Konto jest zablokowane do {client_data['blocked_until'].strftime('%Y-%m-%d %H:%M')}"}), 403
+
+        client_email = client_data["email"] if client_data else "nieznany@mail.com"
+        loyalty_points = client_data["loyalty_points"] if client_data and client_data["loyalty_points"] else 0
+
+        # --- WALIDACJE CZASOWE ZGODNE ZE SPECYFIKACJĄ (Pkt 2.2) ---
+        cur.execute("SELECT departure_time, route_id FROM Trip WHERE trip_id = %s", (trip_id,))
+        trip_info = cur.fetchone()
+
+        if not trip_info:
+            return jsonify({"error": "Trip not found"}), 404
+            
+        target_time = trip_info["departure_time"]
+        now = datetime.now()
+        
+        # 1. Rezerwacja max 7 dni w przód
+        if target_time > now + timedelta(days=7):
+            return jsonify({"error": "Możesz rezerwować miejsca maksymalnie na tydzień w przód."}), 400
+
+        # 2. Rezerwacja max 2 godziny przed PIERWSZYM kursem tego samego dnia
+        query_first_trip = """
+            SELECT MIN(departure_time) as first_departure 
+            FROM Trip 
+            WHERE route_id = %s AND DATE(departure_time) = DATE(%s)
+        """
+        cur.execute(query_first_trip, (trip_info["route_id"], target_time))
+        first_trip_res = cur.fetchone()
+        
+        if first_trip_res and first_trip_res['first_departure']:
+            first_trip_time = first_trip_res['first_departure']
+            if target_time.date() == now.date() and now > (first_trip_time - timedelta(hours=2)):
+                return jsonify({"error": "Rezerwacja możliwa najpóźniej 2h przed pierwszym kursem w wybranym dniu."}), 403
+
+        # --- WALIDACJA MIEJSC ---
         query_capacity = """
             SELECT v.seating_capacity, 
                    COALESCE((SELECT SUM(seat_count) FROM Reservation WHERE trip_id = %s AND status != 'Cancelled'), 0) AS occupied_seats
@@ -444,9 +501,6 @@ def process_checkout(current_user_id):
         cur.execute(query_capacity, (trip_id, trip_id))
         bus_info = cur.fetchone()
 
-        if not bus_info:
-            return jsonify({"error": "Trip not found"}), 404
-
         available_seats = bus_info["seating_capacity"] - bus_info["occupied_seats"]
 
         if seat_count > available_seats:
@@ -454,20 +508,22 @@ def process_checkout(current_user_id):
                 {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
-        query_stops = """
-            SELECT 
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS to_order
-            FROM Trip tr WHERE trip_id = %s;
+        # --- POPRAWIONA LOGIKA CENY Z BAZY ---
+        query_price = """
+            SELECT fs.standard_price 
+            FROM Fare_Segment fs
+            JOIN Trip tr ON fs.route_id = tr.route_id
+            JOIN Station s1 ON fs.start_station_id = s1.station_id
+            JOIN Station s2 ON fs.end_station_id = s2.station_id
+            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
         """
-        cur.execute(query_stops, (from_station, to_station, trip_id))
-        stops = cur.fetchone()
-
-        if not stops or not stops["from_order"] or not stops["to_order"]:
+        cur.execute(query_price, (trip_id, from_station, to_station))
+        price_row = cur.fetchone()
+        
+        if not price_row:
             return jsonify({"error": "Invalid stations for this trip"}), 400
-
-        stops_count = stops["to_order"] - stops["from_order"]
-        base_price = 15.00 + (stops_count * 5.00)
+            
+        base_price = float(price_row["standard_price"])
 
         total_price = (
             (adult_count * base_price)
@@ -476,25 +532,11 @@ def process_checkout(current_user_id):
         )
 
         # --- ZŁOTA ZNIŻKA I AKTUALIZACJA PUNKTÓW ---
-        cur.execute(
-            "SELECT loyalty_points FROM Client WHERE client_id = %s", (current_user_id,)
-        )
-        client_data = cur.fetchone()
-        loyalty_points = (
-            client_data["loyalty_points"]
-            if client_data and client_data["loyalty_points"]
-            else 0
-        )
-
         is_gold_eligible = loyalty_points >= 2000
-        earned_points = seat_count * 40  # Punkty z nowej podróży
+        earned_points = seat_count * 40
 
         if is_gold_eligible:
-            # Nakładamy zniżkę 60%
             total_price = total_price * 0.40
-
-            # Odbieramy 2000 punktów za użycie zniżki, dodajemy punkty za obecną trasę
-            # i podbijamy statystykę gold_tier_count o 1
             query_update_points = """
                 UPDATE Client 
                 SET loyalty_points = loyalty_points - 2000 + %s,
@@ -503,7 +545,6 @@ def process_checkout(current_user_id):
             """
             cur.execute(query_update_points, (earned_points, current_user_id))
         else:
-            # Standardowe dodanie punktów bez zniżki (tak jak miałeś wcześniej)
             query_update_points = """
                 UPDATE Client 
                 SET loyalty_points = loyalty_points + %s 
@@ -512,9 +553,9 @@ def process_checkout(current_user_id):
             cur.execute(query_update_points, (earned_points, current_user_id))
 
         total_price = round(total_price, 2)
-
         reservation_number = f"RES-{current_user_id}-{int(time.time())}"
 
+        # --- ZAPIS REZERWACJI ---
         query_insert = """
             INSERT INTO Reservation (client_id, trip_id, reservation_number, status, seat_count, total_price)
             VALUES (%s, %s, %s, 'Pending Payment', %s, %s) RETURNING reservation_id;
@@ -547,17 +588,12 @@ def process_checkout(current_user_id):
 
         new_ticket_id = cur.fetchone()["ticket_id"]
 
-        earned_points = seat_count * 40
-
-        query_update_points = """
-            UPDATE Client 
-            SET loyalty_points = COALESCE(loyalty_points, 0) + %s 
-            WHERE client_id = %s;
-        """
-        cur.execute(query_update_points, (earned_points, current_user_id))
-
         conn.commit()
-        cur.close()
+        
+        # --- MOCK EMAIL ---
+        print(f"\n[MOCK EMAIL] DO: {client_email}")
+        print(f"Temat: Potwierdzenie rezerwacji {reservation_number}")
+        print(f"Treść: Zarezerwowano miejsca na trasie {from_station} -> {to_station}. Numer biletu: {reservation_number}.\n")
 
         return jsonify(
             {
@@ -568,7 +604,7 @@ def process_checkout(current_user_id):
                 "ticket_summary": ticket_summary,
                 "total_price": total_price,
                 "received_seats": seat_count,
-                "earned_points": earned_points,  # <--- NOWE
+                "earned_points": earned_points,
                 "route": f"{from_station} -> {to_station}",
             }
         ), 201
@@ -580,6 +616,7 @@ def process_checkout(current_user_id):
         return jsonify({"error": "Error occurred during checkout"}), 500
     finally:
         if conn:
+            cur.close()
             conn.close()
 
 
@@ -591,9 +628,11 @@ def cancel_ticket(current_user_id, ticket_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
         query_check = """
-            SELECT t.ticket_id, t.status, r.reservation_id 
+            SELECT t.ticket_id, t.status, r.reservation_id, r.reservation_number, c.email, tr.departure_time
             FROM Ticket t
             JOIN Reservation r ON t.reservation_id = r.reservation_id
+            JOIN Trip tr ON r.trip_id = tr.trip_id
+            JOIN Client c ON r.client_id = c.client_id
             WHERE t.ticket_id = %s AND r.client_id = %s;
         """
         cur.execute(query_check, (ticket_id, current_user_id))
@@ -601,21 +640,22 @@ def cancel_ticket(current_user_id, ticket_id):
 
         if not data:
             return jsonify({"error": "Bilet nie istnieje lub brak uprawnień."}), 404
-
         if data["status"] == "Cancelled":
             return jsonify({"error": "Ten bilet został już anulowany."}), 400
 
-        cur.execute(
-            "UPDATE Ticket SET status = 'Cancelled' WHERE ticket_id = %s", (ticket_id,)
-        )
+        # --- WALIDACJA CZASOWA: ANULOWANIE MAX 24H PRZED WYJAZDEM ---
+        if data["departure_time"] - datetime.now() < timedelta(hours=24):
+            return jsonify({"error": "Bilet można anulować najpóźniej 24 godziny przed wyjazdem."}), 403
 
-        cur.execute(
-            "UPDATE Reservation SET status = 'Cancelled' WHERE reservation_id = %s",
-            (data["reservation_id"],),
-        )
+        cur.execute("UPDATE Ticket SET status = 'Cancelled' WHERE ticket_id = %s", (ticket_id,))
+        cur.execute("UPDATE Reservation SET status = 'Cancelled' WHERE reservation_id = %s", (data["reservation_id"],))
 
         conn.commit()
-        cur.close()
+        
+        # --- MOCK EMAIL ---
+        print(f"\n[MOCK EMAIL] DO: {data['email']}")
+        print(f"Temat: Anulowanie rezerwacji {data['reservation_number']}")
+        print(f"Treść: Twoja rezerwacja została pomyślnie anulowana.\n")
 
         return jsonify(
             {
@@ -632,4 +672,5 @@ def cancel_ticket(current_user_id, ticket_id):
         return jsonify({"error": "Błąd serwera podczas anulowania biletu."}), 500
     finally:
         if conn:
+            cur.close()
             conn.close()

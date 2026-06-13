@@ -8,7 +8,8 @@ export default function DriverEndShift() {
     const [volume, setVolume] = useState('');
     const [cost, setCost] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [focusedField, setFocusedField] = useState<'volume' | 'cost' | null>(null);
+    const [focusedField, setFocusedField] = useState<'volume' | 'cost' | 'kilometers' | null>(null);
+    const [kilometers, setKilometers] = useState('');
 
     const handleComplete = async () => {
         setIsSubmitting(true);
@@ -18,14 +19,18 @@ export default function DriverEndShift() {
                 body: JSON.stringify({
                     volume: volume ? parseFloat(volume) : 0,
                     cost: cost ? parseFloat(cost) : 0,
-                    vehicle_id: 1
+                    driven_kilometers: kilometers ? parseFloat(kilometers) : 0,
+                    vehicle_id: 1 // TODO: Zaciągane dynamicznie z local storage w przyszłości
                 })
             });
 
+            const resData = await response.json();
+
             if (response.ok) {
-                Alert.alert("Sukces", "Zmiana zakończona. System wyliczył cenę za litr i zapisał dane z tankowania.");
+                Alert.alert("Sukces", resData.message || "Zmiana zakończona.");
                 setVolume('');
                 setCost('');
+                setKilometers('');
             } else {
                 throw new Error();
             }
@@ -70,6 +75,19 @@ export default function DriverEndShift() {
                             placeholder="Całkowity koszt (np. 320.50)"
                         />
                         <Text style={{ fontWeight: 'bold', color: '#9ca3af' }}>PLN</Text>
+                    </View>
+
+                    <View style={[styles.inputWrapper, focusedField === 'kilometers' && styles.inputWrapperActive, { backgroundColor: '#f9fafb' }]}>
+                        <TextInput
+                            style={styles.textInput}
+                            value={kilometers}
+                            onChangeText={setKilometers}
+                            keyboardType="decimal-pad"
+                            onFocus={() => setFocusedField('kilometers')}
+                            onBlur={() => setFocusedField(null)}
+                            placeholder="Przejechane km (np. 450.5)"
+                        />
+                        <Text style={{ fontWeight: 'bold', color: '#9ca3af' }}>KM</Text>
                     </View>
 
                     <TouchableOpacity style={styles.submitBtn} onPress={handleComplete}>
