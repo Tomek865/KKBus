@@ -51,16 +51,23 @@ def deactivate_user(current_admin_id, user_id):
 
 @admin_management_bp.route("/reservations", methods=["OPTIONS"])
 def admin_purchase_ticket_options():
-    return '', 200, {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Methods": "POST, OPTIONS"
-    }
+    return (
+        "",
+        200,
+        {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+        },
+    )
 
 
-@admin_management_bp.route("/reservations", methods=["POST"])
+@admin_management_bp.route("/reservations", methods=["POST", "OPTIONS"])
 @admin_required
 def admin_purchase_ticket(current_admin_id):
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     data = request.get_json()
     if not data:
         return jsonify({"error": "Brak danych w zapytaniu."}), 400
@@ -79,7 +86,6 @@ def admin_purchase_ticket(current_admin_id):
 
     seat_count = adult_count + student_count + child_count
 
-    # Walidacja wejścia
     if (
         not target_client_id
         or not trip_id
@@ -97,7 +103,6 @@ def admin_purchase_ticket(current_admin_id):
     try:
         cur = conn.cursor()
 
-        # --- A. SPRAWDZENIE CZY KLIENT ISTNIEJE ---
         cur.execute(
             "SELECT loyalty_points FROM Client WHERE client_id = %s AND is_active = TRUE",
             (target_client_id,),
@@ -131,8 +136,9 @@ def admin_purchase_ticket(current_admin_id):
 
         query_stops = """
             SELECT 
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS to_order
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s LIMIT 1) AS from_order,
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s LIMIT 1) AS to_order,
+                tr.route_id
             FROM Trip tr WHERE trip_id = %s;
         """
         cur.execute(query_stops, (from_station, to_station, trip_id))
@@ -141,7 +147,11 @@ def admin_purchase_ticket(current_admin_id):
         if not stops or stops[0] is None or stops[1] is None:
             return jsonify({"error": "Nieprawidłowe stacje dla tego kursu."}), 400
 
-        stops_count = stops[1] - stops[0]
+        from_order = stops[0]
+        to_order = stops[1]
+        route_id = stops[2]
+
+        stops_count = to_order - from_order
         base_price = 15.00 + (stops_count * 5.00)
 
         total_price = (
@@ -150,7 +160,20 @@ def admin_purchase_ticket(current_admin_id):
             + (child_count * 0.00)
         )
 
-        earned_points = seat_count * 40
+        query_distance = """
+            SELECT COALESCE(SUM(distance_from_prev), 0)
+            FROM Route_Station
+            WHERE route_id = %s 
+              AND order_on_route > %s 
+              AND order_on_route <= %s;
+        """
+        cur.execute(query_distance, (route_id, from_order, to_order))
+        dist_res = cur.fetchone()
+
+        total_km = dist_res[0] if dist_res else 0
+
+        points_per_seat = int(total_km) if total_km > 0 else 20
+        earned_points = points_per_seat * seat_count
 
         query_update_points = """
             UPDATE Client 
@@ -217,67 +240,78 @@ def admin_purchase_ticket(current_admin_id):
         if conn:
             conn.close()
 
-@admin_management_bp.route('/users', methods=['OPTIONS'])
+
+@admin_management_bp.route("/users", methods=["OPTIONS"])
 def create_user_options():
-    return '', 200, {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Methods": "POST, OPTIONS"
-    }
+    return (
+        "",
+        200,
+        {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+        },
+    )
+
 
 @admin_management_bp.route("/users", methods=["POST"])
 @admin_required
 def create_user(current_admin_id):
     data = request.get_json()
-    name = data.get('name')
-    email = data.get('email')
-    role = data.get('role')
-    is_active = data.get('isActive', True)
-    
+    name = data.get("name")
+    email = data.get("email")
+    role = data.get("role")
+    is_active = data.get("isActive", True)
+
     if not name or not email:
         return jsonify({"message": "Imię, nazwisko i email są wymagane"}), 400
 
-    name_parts = name.split(' ', 1)
+    name_parts = name.split(" ", 1)
     first_name = name_parts[0]
     last_name = name_parts[1] if len(name_parts) > 1 else ""
-    
-    # Używamy bezpiecznego algorytmu pbkdf2, żeby ominąć błąd na Macu
+
     default_password = generate_password_hash("haslo123", method="pbkdf2:sha256")
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
-        
-        if role == 'Client':
+
+        if role == "Client":
             query = """
                 INSERT INTO Client (first_name, last_name, email, password, is_active)
                 VALUES (%s, %s, %s, %s, %s) RETURNING client_id;
             """
-            cur.execute(query, (first_name, last_name, email, default_password, is_active))
+            cur.execute(
+                query, (first_name, last_name, email, default_password, is_active)
+            )
             new_id = f"C_{cur.fetchone()[0]}"
         else:
             query = """
                 INSERT INTO Employee (first_name, last_name, email, password, role, is_active)
                 VALUES (%s, %s, %s, %s, %s, %s) RETURNING employee_id;
             """
-            cur.execute(query, (first_name, last_name, email, default_password, role, is_active))
+            cur.execute(
+                query, (first_name, last_name, email, default_password, role, is_active)
+            )
             new_id = f"E_{cur.fetchone()[0]}"
 
         conn.commit()
         cur.close()
 
-        return jsonify({
-            "id": new_id,
-            "name": name,
-            "email": email,
-            "role": role,
-            "isActive": is_active,
-            "trips": 0
-        }), 201
+        return jsonify(
+            {
+                "id": new_id,
+                "name": name,
+                "email": email,
+                "role": role,
+                "isActive": is_active,
+                "trips": 0,
+            }
+        ), 201
 
     except Exception as e:
         print(f"DB Error: {e}")
         return jsonify({"message": "Email już istnieje lub wystąpił błąd serwera"}), 500
     finally:
-        if conn: 
+        if conn:
             conn.close()

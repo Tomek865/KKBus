@@ -404,38 +404,52 @@ def create_station(current_admin_id):
             conn.close()
 
 
-@admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["POST"])
+@admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["POST", "OPTIONS"])
 @owner_required
 def assign_stations_to_route(current_admin_id, route_id):
-    data = request.get_json()
-    station_ids = data.get("stations")
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
 
-    if not station_ids or not isinstance(station_ids, list):
+    data = request.get_json()
+    stations_data = data.get("stations")
+
+    if not stations_data or not isinstance(stations_data, list):
         return jsonify(
-            {"error": "No stations provided. Expected an array of IDs."}
+            {"error": "No stations provided. Expected an array of station objects."}
         ), 400
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
 
+        # 1. Czyścimy starą sekwencję przystanków dla tej trasy
         cur.execute("DELETE FROM Route_Station WHERE route_id = %s", (route_id,))
 
+        # 2. Zaktualizowane zapytanie z nową kolumną distance_from_prev
         query = """
-            INSERT INTO Route_Station (route_id, station_id, order_on_route)
-            VALUES (%s, %s, %s);
+            INSERT INTO Route_Station (route_id, station_id, order_on_route, distance_from_prev)
+            VALUES (%s, %s, %s, %s);
         """
 
-        for index, station_id in enumerate(station_ids):
+        for index, station in enumerate(stations_data):
+            # Zabezpieczenie na wypadek, gdyby frontend przez przypadek wysłał starą tablicę samych ID (np. [1, 2, 3])
+            if isinstance(station, dict):
+                station_id = int(station.get("station_id"))
+                distance = float(station.get("distance_from_prev", 0.0))
+            else:
+                station_id = int(station)
+                distance = 0.0
+                
             order = index + 1
-            cur.execute(query, (route_id, int(station_id), order))
+            
+            cur.execute(query, (route_id, station_id, order, distance))
 
         conn.commit()
         cur.close()
 
         return jsonify(
             {
-                "message": f"Successfully assigned {len(station_ids)} stations to route {route_id} in order."
+                "message": f"Successfully assigned {len(stations_data)} stations to route {route_id} with distances."
             }
         ), 200
 
@@ -451,19 +465,24 @@ def assign_stations_to_route(current_admin_id, route_id):
             conn.close()
 
 
-@admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["GET"])
+@admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["GET", "OPTIONS"])
 @admin_required
 def get_route_stations(current_admin_id, route_id):
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
+        # Pobieramy przystanki oraz ich nową kolumnę distance_from_prev
         query = """
             SELECT 
                 s.station_id AS id,
                 s.name,
                 s.exact_address,
-                rs.order_on_route
+                rs.order_on_route,
+                rs.distance_from_prev
             FROM Route_Station rs
             JOIN Station s ON rs.station_id = s.station_id
             WHERE rs.route_id = %s
@@ -479,6 +498,7 @@ def get_route_stations(current_admin_id, route_id):
                 "name": s["name"],
                 "exactAddress": s["exact_address"],
                 "orderOnRoute": s["order_on_route"],
+                "distance_from_prev": float(s["distance_from_prev"]) if s["distance_from_prev"] is not None else 0.0
             }
             for s in stations
         ]

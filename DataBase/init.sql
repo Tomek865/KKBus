@@ -60,6 +60,7 @@ CREATE TABLE Route_Station (
     route_id INTEGER NOT NULL REFERENCES Route(route_id) ON DELETE CASCADE,
     station_id INTEGER NOT NULL REFERENCES Station(station_id) ON DELETE CASCADE,
     order_on_route INTEGER NOT NULL,
+    distance_from_prev FLOAT DEFAULT 0.0,
     PRIMARY KEY (route_id, station_id)
 );
 

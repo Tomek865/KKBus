@@ -474,6 +474,7 @@ def process_checkout(current_user_id):
             return jsonify({"error": "Trip not found"}), 404
             
         target_time = trip_info["departure_time"]
+        route_id = trip_info["route_id"]
         now = datetime.now()
         
         if target_time > now + timedelta(days=7):
@@ -484,7 +485,7 @@ def process_checkout(current_user_id):
             FROM Trip 
             WHERE route_id = %s AND DATE(departure_time) = DATE(%s)
         """
-        cur.execute(query_first_trip, (trip_info["route_id"], target_time))
+        cur.execute(query_first_trip, (route_id, target_time))
         first_trip_res = cur.fetchone()
         
         if first_trip_res and first_trip_res['first_departure']:
@@ -565,7 +566,33 @@ def process_checkout(current_user_id):
             elif applied_reward_id == 4:
                 ticket_summary += " [+ Darmowy Bagaż]"
 
-        earned_points = seat_count * 40
+
+        query_orders = """
+            SELECT 
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = %s AND s.name = %s LIMIT 1) AS from_order,
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = %s AND s.name = %s LIMIT 1) AS to_order;
+        """
+        cur.execute(query_orders, (route_id, from_station, route_id, to_station))
+        orders = cur.fetchone()
+
+        total_km = 0
+        if orders and orders["from_order"] is not None and orders["to_order"] is not None:
+            query_distance = """
+                SELECT COALESCE(SUM(distance_from_prev), 0) AS total_km
+                FROM Route_Station
+                WHERE route_id = %s 
+                  AND order_on_route > %s 
+                  AND order_on_route <= %s;
+            """
+            cur.execute(query_distance, (route_id, orders["from_order"], orders["to_order"]))
+            dist_res = cur.fetchone()
+            if dist_res:
+                total_km = dist_res["total_km"]
+
+        points_per_seat = int(total_km) if total_km > 0 else 20
+        earned_points = points_per_seat * seat_count
+
+
         query_update_points = """
             UPDATE Client 
             SET loyalty_points = COALESCE(loyalty_points, 0) + %s 
@@ -574,6 +601,7 @@ def process_checkout(current_user_id):
         cur.execute(query_update_points, (earned_points, current_user_id))
 
         total_price = round(total_price, 2)
+        import time
         reservation_number = f"RES-{current_user_id}-{int(time.time())}"
 
         query_insert = """
@@ -599,10 +627,6 @@ def process_checkout(current_user_id):
 
         conn.commit()
         
-        print(f"\n[MOCK EMAIL] DO: {client_email}")
-        print(f"Temat: Potwierdzenie rezerwacji {reservation_number}")
-        print(f"Treść: Zarezerwowano miejsca na trasie {from_station} -> {to_station}. Numer biletu: {reservation_number}.\n")
-
         return jsonify(
             {
                 "message": "Reservation created successfully.",
@@ -626,6 +650,7 @@ def process_checkout(current_user_id):
         if conn:
             cur.close()
             conn.close()
+
 
 @client_reservation_bp.route("/tickets/<int:ticket_id>/cancel", methods=["PATCH"])
 @token_required
