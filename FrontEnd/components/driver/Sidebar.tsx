@@ -41,7 +41,7 @@ export const Sidebar = () => {
                 <NavItem icon="document-text" label="REPORT" path="/driver/report" />
                 <NavItem icon="water" label="SHIFT" path="/driver/shift" />
                 <NavItem icon="bus-outline" label="FLEET" path="/driver/fleet" />
-                <NavItem icon="calendar-outline" label="SCHEDULE" path="/driver/schedule" />
+                <NavItem icon="calendar-outline" label="SCHEDULE" path="/driver/availability" />
                 {isMobile && <NavItem icon="log-out-outline" label="EXIT" path="/" />}
             </View>
 

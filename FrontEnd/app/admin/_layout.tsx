@@ -72,7 +72,9 @@ export default function AdminLayout() {
                         <Text style={styles.sectionTitle}>OPERATIONS</Text>
                         <MenuItem icon="grid-outline" label="Dashboard Overview" path="/admin" pathname={pathname} />
                         <MenuItem icon="calendar-outline" label="Schedule & Fleet" path="/admin/schedule" pathname={pathname} />
-                          <MenuItem icon="ticket-outline" label="Manual Booking" path="/admin/booking" pathname={pathname} />
+                        {/* DODANY KOD: Przycisk do zakładki Shifts */}
+                        <MenuItem icon="time-outline" label="Schedules & Shifts" path="/admin/shifts" pathname={pathname} />
+                        <MenuItem icon="ticket-outline" label="Manual Booking" path="/admin/booking" pathname={pathname} />
                     </View>
 
                     <View style={styles.menuSection}>

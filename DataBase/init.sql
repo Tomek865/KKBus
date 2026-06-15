@@ -148,3 +148,22 @@ CREATE TABLE Driver_Availability (
     notes VARCHAR(255),
     UNIQUE(employee_id, available_date)
 );
+
+-- TABELA 1: Dyspozycyjność zgłaszana z wyprzedzeniem przez pracowników
+CREATE TABLE IF NOT EXISTS Employee_Availability (
+    availability_id SERIAL PRIMARY KEY,
+    employee_id INT REFERENCES Employee(employee_id) ON DELETE CASCADE,
+    available_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL
+);
+
+-- TABELA 2: Grafik czasu pracy (zmiany) narzucane przez przełożonych
+CREATE TABLE IF NOT EXISTS Work_Shift (
+    shift_id SERIAL PRIMARY KEY,
+    employee_id INT REFERENCES Employee(employee_id) ON DELETE CASCADE,
+    assigned_by INT REFERENCES Employee(employee_id) ON DELETE SET NULL,
+    shift_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL
+);
