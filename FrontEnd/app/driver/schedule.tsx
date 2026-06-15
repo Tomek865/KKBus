@@ -43,14 +43,13 @@ export default function DriverSchedule() {
             
             const baseDays = generateNext7Days();
             
-            // Łączymy wygenerowane 7 dni z danymi zapisanymi już w bazie
             const merged = baseDays.map(baseDay => {
-                const found = Array.isArray(existingData) ? existingData.find((d: any) => d.date === baseDay.formatted) : null;
+                const found = Array.isArray(existingData) ? existingData.find((d: any) => d.date === baseDay.formatted) : undefined;
                 return {
                     date: baseDay.formatted,
                     display: baseDay.display,
-                    isAvailable: found !== null ? found.is_available : true, // Domyślnie true, jeśli nie zgłoszono
-                    notes: found !== null ? (found.notes || '') : ''
+                    isAvailable: found?.is_available ?? true,
+                    notes: found?.notes || ''
                 };
             });
             
