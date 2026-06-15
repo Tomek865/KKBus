@@ -399,10 +399,6 @@ def calculate_price(current_user_id):
         total_price += student_count * (base_price * 0.49)
         total_price += reduced_count * (base_price * 0.63)
 
-        is_gold_eligible = loyalty_points >= 2000
-        if is_gold_eligible:
-            total_price = total_price * 0.40 
-
         cur.close()
 
         return jsonify(
@@ -411,7 +407,6 @@ def calculate_price(current_user_id):
                 "total_price": round(total_price, 2),
                 "total_seats": total_seats,
                 "current_points": loyalty_points,
-                "is_gold_eligible": is_gold_eligible,
             }
         ), 200
 
@@ -532,25 +527,14 @@ def process_checkout(current_user_id):
         )
 
         # --- ZŁOTA ZNIŻKA I AKTUALIZACJA PUNKTÓW ---
-        is_gold_eligible = loyalty_points >= 2000
         earned_points = seat_count * 40
 
-        if is_gold_eligible:
-            total_price = total_price * 0.40
-            query_update_points = """
-                UPDATE Client 
-                SET loyalty_points = loyalty_points - 2000 + %s,
-                    gold_tier_count = gold_tier_count + 1
-                WHERE client_id = %s;
-            """
-            cur.execute(query_update_points, (earned_points, current_user_id))
-        else:
-            query_update_points = """
-                UPDATE Client 
-                SET loyalty_points = loyalty_points + %s 
-                WHERE client_id = %s;
-            """
-            cur.execute(query_update_points, (earned_points, current_user_id))
+        query_update_points = """
+            UPDATE Client 
+            SET loyalty_points = loyalty_points + %s 
+            WHERE client_id = %s;
+        """
+        cur.execute(query_update_points, (earned_points, current_user_id))
 
         total_price = round(total_price, 2)
         reservation_number = f"RES-{current_user_id}-{int(time.time())}"

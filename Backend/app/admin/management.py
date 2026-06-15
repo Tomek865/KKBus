@@ -150,25 +150,14 @@ def admin_purchase_ticket(current_admin_id):
         )
 
         # --- D. LOGIKA ZŁOTEJ ZNIŻKI ---
-        is_gold_eligible = loyalty_points >= 2000
         earned_points = seat_count * 40
 
-        if is_gold_eligible:
-            total_price = total_price * 0.40
-            query_update_points = """
-                UPDATE Client 
-                SET loyalty_points = loyalty_points - 2000 + %s,
-                    gold_tier_count = gold_tier_count + 1
-                WHERE client_id = %s;
-            """
-            cur.execute(query_update_points, (earned_points, target_client_id))
-        else:
-            query_update_points = """
-                UPDATE Client 
-                SET loyalty_points = loyalty_points + %s 
-                WHERE client_id = %s;
-            """
-            cur.execute(query_update_points, (earned_points, target_client_id))
+        query_update_points = """
+            UPDATE Client 
+            SET loyalty_points = loyalty_points + %s 
+            WHERE client_id = %s;
+        """
+        cur.execute(query_update_points, (earned_points, target_client_id))
 
         total_price = round(total_price, 2)
 

@@ -14,7 +14,7 @@ def get_loyalty(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(
-            "SELECT loyalty_points, gold_tier_count FROM Client WHERE client_id = %s",
+            "SELECT loyalty_points FROM Client WHERE client_id = %s",
             (current_user_id,),
         )
         loyalty_data = cur.fetchone()
@@ -23,7 +23,7 @@ def get_loyalty(current_user_id):
         if not loyalty_data:
             return jsonify({"error": "User not found"}), 404
 
-        return jsonify({"points": loyalty_data["loyalty_points"], "goldTier": loyalty_data["gold_tier_count"]}), 200
+        return jsonify({"points": loyalty_data["loyalty_points"]}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:

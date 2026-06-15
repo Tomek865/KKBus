@@ -13,7 +13,6 @@ interface LoyaltyData {
     currentTier: string; 
     nextTier: string; 
     nextTierPoints: number; 
-    goldTier: number;
 }
 interface UserData { first_name: string; last_name: string; email: string; initials: string }
 
