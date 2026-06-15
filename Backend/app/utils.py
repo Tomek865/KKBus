@@ -42,6 +42,9 @@ def token_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if request.method == "OPTIONS":
+            return jsonify({}), 200
+
         token = None
         if "Authorization" in request.headers:
             auth_header = request.headers["Authorization"]
@@ -78,6 +81,9 @@ def admin_required(f):
 def owner_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if request.method == "OPTIONS":
+            return jsonify({}), 200
+
         token = None
         if "Authorization" in request.headers:
             auth_header = request.headers["Authorization"]
@@ -114,6 +120,9 @@ def owner_required(f):
 def driver_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if request.method == "OPTIONS":
+            return jsonify({}), 200
+
         token = None
         if "Authorization" in request.headers:
             auth_header = request.headers["Authorization"]
