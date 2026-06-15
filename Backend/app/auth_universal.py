@@ -110,7 +110,7 @@ def register():
         return jsonify({"error": "Invalid role for public registration"}), 403
 
     try:
-        birth_date = datetime.strptime(birth_date_str, "%d-%m-%Y").date()
+        birth_date = datetime.datetime.strptime(birth_date_str, "%Y-%m-%d").date()
     except ValueError:
         return jsonify({"error": "Invalid date format. Expected DD-MM-YYYY"}), 400
 
@@ -118,7 +118,7 @@ def register():
     first_name = name_parts[0]
     last_name = name_parts[1] if len(name_parts) > 1 else ""
 
-    hashed_password = generate_password_hash(password)
+    hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
     conn = get_db_connection()
     try:
