@@ -51,7 +51,7 @@ INSERT INTO Vehicle (vin, registration_number, brand, model, status, parking_loc
 -- Uwaga: Hasło dla wszystkich to: haslo123 (wygenerowane dla pbkdf2:sha256)
 -- Właściciel
 INSERT INTO Employee (first_name, last_name, email, password, role, is_active) VALUES 
-('Jan', 'Kowalski', 'jan.kowalski@kkbus.pl', 'pbkdf2:sha256:600000$ZROY7nHNsJgGdO1c$9b3c1f3f7394900e250321bbe6952b2593d9f9325981b73ccb89caf86a8ef654', 'Admin', TRUE);
+('Jan', 'Kowalski', 'jan.kowalski@kkbus.pl', 'pbkdf2:sha256:600000$ZROY7nHNsJgGdO1c$9b3c1f3f7394900e250321bbe6952b2593d9f9325981b73ccb89caf86a8ef654', 'Owner', TRUE);
 
 
 -- Sekretariat
