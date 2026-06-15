@@ -8,6 +8,7 @@ export default function AdminBooking() {
     const [clients, setClients] = useState<any[]>([]);
     const [trips, setTrips] = useState<any[]>([]);
     const [stations, setStations] = useState<any[]>([]);
+    const [routeStops, setRouteStops] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,6 +53,30 @@ export default function AdminBooking() {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        const fetchRouteStops = async () => {
+            if (!selectedTrip) {
+                setRouteStops([]);
+                return;
+            }
+
+            const trip = trips.find(t => t.id.toString() === selectedTrip);
+            if (trip && trip.route_id) {
+                try {
+                    const response = await authFetch(`/api/admin/fleet/routes/${trip.route_id}/stations`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setRouteStops(data);
+                    }
+                } catch (error) {
+                    console.error("Błąd pobierania stacji dla trasy:", error);
+                }
+            }
+        };
+
+        fetchRouteStops();
+    }, [selectedTrip, trips]);
+
     const updateTicket = (type: 'adult' | 'student' | 'child', delta: number) => {
         setTickets(prev => ({
             ...prev,
@@ -74,22 +99,25 @@ export default function AdminBooking() {
 
         setIsSubmitting(true);
         try {
-            // Note: We will create this endpoint in the backend in the next step
             const response = await authFetch('/api/admin/management/reservations', {
                 method: 'POST',
                 body: JSON.stringify({
                     client_id: parseInt(selectedClient.replace('C_', '')),
-                    trip_id: parseInt(selectedTrip),
-                    from_station: fromStation.trim(),
-                    to_station: toStation.trim(),
+                    trip: {
+                        id: parseInt(selectedTrip),
+                        from: fromStation.trim(),
+                        to: toStation.trim()
+                    },
                     tickets
                 })
             });
+            console.log("Booking response:", response);
 
             const data = await response.json();
 
             if (response.ok) {
                 showAlert("Success", "The ticket has been successfully booked for the client.");
+                // Resetowanie formularza
                 setSelectedClient('');
                 setSelectedTrip('');
                 setFromStation('');
@@ -169,8 +197,9 @@ export default function AdminBooking() {
                             onChange={(e) => setFromStation(e.target.value)}
                         >
                             <option value="">-- Select station --</option>
-                            {stations.map(s => (
-                                <option key={s.id} value={s.name}>{s.name}</option>
+                            {/* ZMIANA: mapujemy po routeStops zamiast stations */}
+                            {routeStops.map(s => (
+                                <option key={s.id} value={s.name}>{s.orderOnRoute}. {s.name}</option>
                             ))}
                         </select>
                     </View>
@@ -182,8 +211,9 @@ export default function AdminBooking() {
                             onChange={(e) => setToStation(e.target.value)}
                         >
                             <option value="">-- Select station --</option>
-                            {stations.map(s => (
-                                <option key={s.id} value={s.name}>{s.name}</option>
+                            {/* ZMIANA: mapujemy po routeStops zamiast stations */}
+                            {routeStops.map(s => (
+                                <option key={s.id} value={s.name}>{s.orderOnRoute}. {s.name}</option>
                             ))}
                         </select>
                     </View>
