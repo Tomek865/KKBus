@@ -130,7 +130,7 @@ CREATE TABLE Reward (
     reward_id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     required_points INTEGER NOT NULL,
-    description VARCHAR(255),
+    description VARCHAR(255)
 );
 
 CREATE TABLE Client_Reward (

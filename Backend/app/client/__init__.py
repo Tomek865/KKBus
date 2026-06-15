@@ -2,7 +2,6 @@ from flask import Blueprint
 from .reservation import client_reservation_bp
 from .auth import client_auth_bp
 from .profile import client_profil_bp
-from .loyalty import 
 
 client_bp = Blueprint("client", __name__, url_prefix="/api/client")
 

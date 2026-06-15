@@ -27,7 +27,6 @@ def login():
             (email,),
         )
         client = cur.fetchone()
-
         if client and check_password_hash(client["password"], password_provided):
             token = jwt.encode(
                 {
@@ -110,7 +109,6 @@ def register():
     if role.lower() != "client":
         return jsonify({"error": "Invalid role for public registration"}), 403
 
-
     try:
         birth_date = datetime.strptime(birth_date_str, "%d-%m-%Y").date()
     except ValueError:
@@ -138,7 +136,10 @@ def register():
             INSERT INTO Client (first_name, last_name, email, password, phone_number, birth_date, is_active)
             VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING client_id;
         """
-        cur.execute(query, (first_name, last_name, email, phone_number, birth_date, hashed_password))
+        cur.execute(
+            query,
+            (first_name, last_name, email, hashed_password, phone_number, birth_date),
+        )
 
         conn.commit()
         cur.close()
