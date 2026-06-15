@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from db import get_db_connection
 from app.utils import admin_required
 from werkzeug.security import generate_password_hash
+import time
 
 admin_management_bp = Blueprint('admin_management', __name__)
 
@@ -50,7 +51,7 @@ def admin_purchase_ticket(current_admin_id):
     if not data:
         return jsonify({"error": "Brak danych w zapytaniu."}), 400
 
-    # 1. ROZPAKOWANIE DANYCH (Admin dodatkowo podaje target_client_id)
+    # 1. ROZPAKOWANIE DANYCH
     target_client_id = data.get("client_id")
     trip_data = data.get("trip", {})
     tickets_data = data.get("tickets", {})
@@ -59,11 +60,12 @@ def admin_purchase_ticket(current_admin_id):
     from_station = trip_data.get("from")
     to_station = trip_data.get("to")
 
+    # ZMIANA: Zmiana z 'reduced' na 'child'
     adult_count = tickets_data.get("adult", 0)
     student_count = tickets_data.get("student", 0)
-    reduced_count = tickets_data.get("reduced", 0)
+    child_count = tickets_data.get("child", 0)
 
-    seat_count = adult_count + student_count + reduced_count
+    seat_count = adult_count + student_count + child_count
 
     # Walidacja wejścia
     if not target_client_id or not trip_id or seat_count <= 0 or not from_station or not to_station:
@@ -71,10 +73,9 @@ def admin_purchase_ticket(current_admin_id):
 
     conn = get_db_connection()
     try:
-        # Używamy zwykłego kursora (zgodnie z Twoją preferencją z testów)
         cur = conn.cursor()
 
-        # --- A. SPRAWDZENIE CZY KLIENT ISTNIEJE I POBRANIE JEGO PUNKTÓW ---
+        # --- A. SPRAWDZENIE CZY KLIENT ISTNIEJE ---
         cur.execute("SELECT loyalty_points FROM Client WHERE client_id = %s AND is_active = TRUE", (target_client_id,))
         client_data = cur.fetchone()
         if not client_data:
@@ -116,19 +117,19 @@ def admin_purchase_ticket(current_admin_id):
         stops_count = stops[1] - stops[0]
         base_price = 15.00 + (stops_count * 5.00)
 
-        # Wyliczanie bazowej sumy ze zniżkami ustawowymi
+        # ZMIANA: Wyliczanie bazowej sumy z nowymi zniżkami (Student -30%, Dziecko -100%)
         total_price = (
             (adult_count * base_price)
-            + (student_count * (base_price * 0.49))
-            + (reduced_count * (base_price * 0.63))
+            + (student_count * (base_price * 0.70))
+            + (child_count * 0.00)
         )
 
-        # --- D. LOGIKA ZŁOTEJ ZNIŻKI (Program lojalnościowy klienta) ---
+        # --- D. LOGIKA ZŁOTEJ ZNIŻKI ---
         is_gold_eligible = loyalty_points >= 2000
         earned_points = seat_count * 40
 
         if is_gold_eligible:
-            total_price = total_price * 0.40  # 60% zniżki
+            total_price = total_price * 0.40
             query_update_points = """
                 UPDATE Client 
                 SET loyalty_points = loyalty_points - 2000 + %s,
@@ -147,10 +148,8 @@ def admin_purchase_ticket(current_admin_id):
         total_price = round(total_price, 2)
 
         # --- E. TWORZENIE REZERWACJI ---
-        # Numer referencyjny generujemy z ID klienta, dla którego kupujemy bilet
         reservation_number = f"RES-{target_client_id}-{int(time.time())}"
 
-        # Status ustawiamy od razu jako 'Confirmed', a płatność jako 'Paid' (bo admin fizycznie sprzedaje bilet na miejscu)
         query_insert_res = """
             INSERT INTO Reservation (client_id, trip_id, reservation_number, status, payment_status, seat_count, total_price)
             VALUES (%s, %s, %s, 'Confirmed', 'Paid', %s, %s) RETURNING reservation_id;
@@ -162,13 +161,14 @@ def admin_purchase_ticket(current_admin_id):
         new_reservation_id = cur.fetchone()[0]
 
         # --- F. TWORZENIE BILETU GRUPOWEGO ---
+        # ZMIANA: Etykiety biletów
         summary_parts = []
         if adult_count > 0: summary_parts.append(f"{adult_count}x Normalny")
-        if student_count > 0: summary_parts.append(f"{student_count}x Student")
-        if reduced_count > 0: summary_parts.append(f"{reduced_count}x Ulgowy")
+        if student_count > 0: summary_parts.append(f"{student_count}x Uczeń/Student")
+        if child_count > 0: summary_parts.append(f"{child_count}x Dziecko")
         ticket_summary = ", ".join(summary_parts)
         
-        default_segment_id = 1  # Wersja uproszczona, analogicznie do checkoutu
+        default_segment_id = 1 
 
         query_insert_ticket = """
             INSERT INTO Ticket (reservation_id, segment_id, final_price, ticket_summary, status)
@@ -186,13 +186,9 @@ def admin_purchase_ticket(current_admin_id):
 
         return jsonify({
             "message": "Bilet został pomyślnie zakupiony przez administratora.",
-            "client_id": target_client_id,
             "reservation_id": new_reservation_id,
-            "ticket_id": new_ticket_id,
             "reservation_number": reservation_number,
-            "ticket_summary": ticket_summary,
-            "total_price": total_price,
-            "gold_discount_applied": is_gold_eligible
+            "total_price": total_price
         }), 201
 
     except Exception as e:
@@ -203,58 +199,3 @@ def admin_purchase_ticket(current_admin_id):
     finally:
         if conn:
             conn.close()
-
-@admin_management_bp.route('/users', methods=['POST'])
-@admin_required
-def create_user(current_admin_id):
-    data = request.get_json()
-    name = data.get('name')
-    email = data.get('email')
-    role = data.get('role')
-    is_active = data.get('isActive', True)
-    
-    if not name or not email:
-        return jsonify({"message": "Name and email are required"}), 400
-
-    name_parts = name.split(' ', 1)
-    first_name = name_parts[0]
-    last_name = name_parts[1] if len(name_parts) > 1 else ""
-    
-    default_password = generate_password_hash("haslo123")
-
-    conn = get_db_connection()
-    try:
-        cur = conn.cursor()
-        
-        if role == 'Client':
-            query = """
-                INSERT INTO Client (first_name, last_name, email, password, is_active)
-                VALUES (%s, %s, %s, %s, %s) RETURNING client_id;
-            """
-            cur.execute(query, (first_name, last_name, email, default_password, is_active))
-            new_id = f"C_{cur.fetchone()[0]}"
-        else:
-            query = """
-                INSERT INTO Employee (first_name, last_name, email, password, role, is_active)
-                VALUES (%s, %s, %s, %s, %s, %s) RETURNING employee_id;
-            """
-            cur.execute(query, (first_name, last_name, email, default_password, role, is_active))
-            new_id = f"E_{cur.fetchone()[0]}"
-
-        conn.commit()
-        cur.close()
-
-        return jsonify({
-            "id": new_id,
-            "name": name,
-            "email": email,
-            "role": role,
-            "isActive": is_active,
-            "trips": 0
-        }), 201
-
-    except Exception as e:
-        print(f"DB Error: {e}")
-        return jsonify({"message": "Email already exists or server error"}), 500
-    finally:
-        if conn: conn.close()
