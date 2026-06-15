@@ -3,6 +3,7 @@ from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from app.utils import admin_required
 from app.utils import owner_required
+from datetime import datetime, timedelta
 
 admin_fleet_bp = Blueprint("admin_fleet", __name__)
 
@@ -13,7 +14,6 @@ def get_fleet_assignments(current_admin_id):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-
         query = """
             SELECT 
                 tr.trip_id AS id, 
@@ -21,13 +21,14 @@ def get_fleet_assignments(current_admin_id):
                 v.registration_number AS "busId", 
                 rt.name AS route, 
                 tr.status, 
-                e.first_name || ' ' || LEFT(e.last_name, 1) || '.' AS driver,
+                COALESCE(e.first_name || ' ' || LEFT(e.last_name, 1) || '.', 'Brak przypisania') AS driver,
+                tr.employee_id AS driver_id,
                 tr.departure_time AS "departureTime",
                 tr.arrival_time AS "arrivalTime"
             FROM Trip tr
             JOIN Vehicle v ON tr.vehicle_id = v.vehicle_id
             JOIN Route rt ON tr.route_id = rt.route_id
-            JOIN Employee e ON tr.employee_id = e.employee_id
+            LEFT JOIN Employee e ON tr.employee_id = e.employee_id
             ORDER BY tr.departure_time DESC;
         """
         cur.execute(query)
@@ -75,84 +76,61 @@ def cancel_fleet_assignment(current_admin_id, assignment_id):
 @admin_fleet_bp.route("/", methods=["POST"])
 @admin_required
 def create_trip(current_admin_id):
-    from datetime import datetime, timedelta
-
     data = request.get_json()
-
-    print(data)
-
     vehicle_id = data.get("busId")
     route_id = data.get("route")
-    employee_id = data.get("driver")
+    employee_id = data.get("driver")  
     status = data.get("status", "Planned")
 
-    if not vehicle_id or not route_id or not employee_id:
-        return jsonify({"message": "All fields are required"}), 400
-
+    if not vehicle_id or not route_id:
+        return jsonify({"message": "Vehicle and Route fields are required"}), 400
     dep_time_str = data.get("departureTime")
     if dep_time_str:
-        departure_time = datetime.fromisoformat(dep_time_str.replace("Z", "+00:00"))
-
-        departure_time = departure_time.replace(tzinfo=None)
+        departure_time = datetime.fromisoformat(dep_time_str.replace("Z", "+00:00")).replace(tzinfo=None)
     else:
         departure_time = datetime.now() + timedelta(days=1)
 
     arr_time_str = data.get("arrivalTime")
     if arr_time_str:
-        arrival_time = datetime.fromisoformat(arr_time_str.replace("Z", "+00:00"))
-
-        arrival_time = arrival_time.replace(tzinfo=None)
+        arrival_time = datetime.fromisoformat(arr_time_str.replace("Z", "+00:00")).replace(tzinfo=None)
     else:
         arrival_time = departure_time + timedelta(hours=4)
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
+        if employee_id:
+            conflict_query = """
+                SELECT trip_id FROM Trip 
+                WHERE employee_id = %s AND status != 'Cancelled'
+                AND (
+                    (departure_time < %s AND arrival_time > %s)
+                ) LIMIT 1;
+            """
+            cur.execute(conflict_query, (employee_id, arrival_time, departure_time))
+            if cur.fetchone():
+                employee_id = None
+                status = "Unassigned"
 
         query = """
             INSERT INTO Trip (vehicle_id, route_id, employee_id, departure_time, arrival_time, status)
             VALUES (%s, %s, %s, %s, %s, %s) RETURNING trip_id;
         """
-        cur.execute(
-            query,
-            (vehicle_id, route_id, employee_id, departure_time, arrival_time, status),
-        )
+        cur.execute(query, (vehicle_id, route_id, employee_id, departure_time, arrival_time, status))
         new_id = cur.fetchone()[0]
-
-        cur.execute(
-            "SELECT registration_number FROM Vehicle WHERE vehicle_id = %s",
-            (vehicle_id,),
-        )
-        bus_reg = cur.fetchone()[0]
-
-        cur.execute("SELECT name FROM Route WHERE route_id = %s", (route_id,))
-        route_name = cur.fetchone()[0]
-
-        cur.execute(
-            "SELECT first_name FROM Employee WHERE employee_id = %s", (employee_id,)
-        )
-        driver_name = cur.fetchone()[0]
-
+        
         conn.commit()
         cur.close()
 
-        return jsonify(
-            {
-                "id": new_id,
-                "busId": bus_reg,
-                "route": route_name,
-                "driver": driver_name,
-                "status": status,
-            }
-        ), 201
+        return jsonify({"id": new_id, "status": status}), 201
 
     except Exception as e:
-        print(f"DB Error: {e}")
+        if conn:
+            conn.rollback()
         return jsonify({"message": "Error creating trip"}), 500
     finally:
         if conn:
             conn.close()
-
 
 @admin_fleet_bp.route("/buses", methods=["GET"])
 @admin_required
@@ -508,6 +486,94 @@ def get_route_stations(current_admin_id, route_id):
     except Exception as e:
         print(f"DB Error: {e}")
         return jsonify({"error": "Server error occurred"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@admin_fleet_bp.route("/drivers/available", methods=["GET"])
+@admin_required
+def get_available_drivers(current_admin_id):
+    dep_time_str = request.args.get("departureTime")
+    arr_time_str = request.args.get("arrivalTime")
+
+    if not dep_time_str or not arr_time_str:
+        return jsonify({"error": "Missing time parameters"}), 400
+
+    try:
+        dep_time = datetime.fromisoformat(dep_time_str.replace("Z", "+00:00")).replace(tzinfo=None)
+        arr_time = datetime.fromisoformat(arr_time_str.replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+         return jsonify({"error": "Invalid time format"}), 400
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        # Znajdź kierowców, którzy NIE mają kursów nakładających się na podany czas
+        query = """
+            SELECT employee_id AS id, first_name || ' ' || last_name AS name, email
+            FROM Employee 
+            WHERE role = 'Driver' AND is_active = TRUE
+            AND employee_id NOT IN (
+                SELECT employee_id FROM Trip
+                WHERE status != 'Cancelled' AND employee_id IS NOT NULL
+                AND (departure_time < %s AND arrival_time > %s)
+            )
+            ORDER BY last_name ASC;
+        """
+        cur.execute(query, (arr_time, dep_time))
+        drivers = cur.fetchall()
+        cur.close()
+        return jsonify(drivers), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@admin_fleet_bp.route("/<int:trip_id>/driver", methods=["PATCH"])
+@admin_required
+def change_trip_driver(current_admin_id, trip_id):
+    data = request.get_json()
+    new_driver_id = data.get("driverId")
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT departure_time, arrival_time FROM Trip WHERE trip_id = %s AND status != 'Cancelled'", (trip_id,))
+        trip = cur.fetchone()
+
+        if not trip:
+            return jsonify({"error": "Kurs nie istnieje lub został anulowany"}), 404
+
+        # Zabezpieczenie: Zmiana do 7 dni przed kursem
+        if trip['departure_time'] - timedelta(days=7) < datetime.now():
+            return jsonify({"error": "Zmiana kierowcy jest możliwa najpóźniej na 7 dni przed odjazdem."}), 400
+
+        # Sprawdzenie dostępności nowego kierowcy, jeśli go przypisujemy
+        if new_driver_id:
+            conflict_query = """
+                SELECT trip_id FROM Trip 
+                WHERE employee_id = %s AND status != 'Cancelled' AND trip_id != %s
+                AND (departure_time < %s AND arrival_time > %s) LIMIT 1;
+            """
+            cur.execute(conflict_query, (new_driver_id, trip_id, trip['arrival_time'], trip['departure_time']))
+            if cur.fetchone():
+                return jsonify({"error": "Wybrany kierowca ma już przypisany inny kurs w tym czasie."}), 409
+        
+        new_status = "Planned" if new_driver_id else "Unassigned"
+        
+        cur.execute(
+            "UPDATE Trip SET employee_id = %s, status = %s WHERE trip_id = %s", 
+            (new_driver_id, new_status, trip_id)
+        )
+        conn.commit()
+        cur.close()
+
+        return jsonify({"message": "Pomyślnie zaktualizowano kierowcę", "status": new_status}), 200
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"error": str(e)}), 500
     finally:
         if conn:
             conn.close()
