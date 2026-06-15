@@ -57,7 +57,7 @@ def get_financial_reports(current_admin_id):
             conn.close()
 
 
-@admin_reports_bp.route("route-revenue", methods=["GET"])
+@admin_reports_bp.route("/route-revenue", methods=["GET"])
 @admin_required
 def get_revenue_by_route(current_user_id):
     """

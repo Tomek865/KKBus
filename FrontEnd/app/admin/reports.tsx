@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 import { authFetch } from '../../utils';
+import * as Print from 'expo-print';
+import { shareAsync } from 'expo-sharing';
 
 export default function AdminReports() {
     const [reportData, setReportData] = useState<any>(null);
@@ -10,7 +12,7 @@ export default function AdminReports() {
     const [tripRevenues, setTripRevenues] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-       useEffect(() => {
+    useEffect(() => {
         const fetchReports = async () => {
             setLoading(true);
             try {
@@ -29,7 +31,6 @@ export default function AdminReports() {
                 if (routeRevenueRes.ok) {
                     const routeRevenueData = await routeRevenueRes.json();
                     setTripRevenues(prev => [...prev, ...routeRevenueData]);
-                    console.log("Fetched route revenue data:", routeRevenueData);
                 }
 
                 if (statsRes.ok) {
@@ -46,15 +47,87 @@ export default function AdminReports() {
         fetchReports();
     }, []);
 
+    const printFinancialReport = async () => {
+        const html = `
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 30px; color: #111; }
+                    h1 { color: #e60000; margin-bottom: 5px; }
+                    h3 { color: #555; margin-top: 0; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+                    .summary-box { display: flex; justify-content: space-between; background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+                    .stat { text-align: center; }
+                    .stat h4 { margin: 0; color: #6b7280; font-size: 14px; }
+                    .stat p { margin: 5px 0 0; font-size: 24px; font-weight: bold; }
+                    .profit { color: ${reportData?.netProfit < 0 ? '#ef4444' : '#10b981'}; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                    th { background-color: #f3f4f6; color: #111; }
+                    .text-right { text-align: right; }
+                </style>
+            </head>
+            <body>
+                <h1>Raport Finansowy KKBus</h1>
+                <h3>Podsumowanie Operacyjne (MTD)</h3>
+                
+                <div class="summary-box">
+                    <div class="stat">
+                        <h4>Przychód Brutto</h4>
+                        <p>${reportData?.grossRevenue || '0'} PLN</p>
+                    </div>
+                    <div class="stat">
+                        <h4>Koszty Operacyjne</h4>
+                        <p style="color: #ef4444;">- ${reportData?.operatingCosts || '0'} PLN</p>
+                    </div>
+                    <div class="stat">
+                        <h4>Zysk Netto</h4>
+                        <p class="profit">${reportData?.netProfit || '0'} PLN</p>
+                    </div>
+                </div>
+
+                <h3>Przychody według tras</h3>
+                <table>
+                    <tr>
+                        <th>Trasa</th>
+                        <th class="text-right">Przychód</th>
+                    </tr>
+                    ${tripRevenues.map(trip => `
+                        <tr>
+                            <td>${trip.routeName}</td>
+                            <td class="text-right"><strong>${trip.totalRevenue} PLN</strong></td>
+                        </tr>
+                    `).join('')}
+                </table>
+                <p style="text-align: right; margin-top: 50px; font-size: 12px; color: #888;">Wygenerowano automatycznie z systemu KKBus</p>
+            </body>
+            </html>
+        `;
+
+        try {
+            const { uri } = await Print.printToFileAsync({ html });
+            if (Platform.OS === 'web') {
+                window.open(uri, '_blank');
+            } else {
+                await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+            }
+        } catch (error) {
+            Alert.alert("Błąd", "Nie udało się wygenerować raportu.");
+        }
+    };
+
     if (loading) return <ActivityIndicator size="large" color={COLORS.red} style={{ marginTop: 50 }} />;
 
     return (
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-            <View style={styles.pageHeader}>
+            <View style={[styles.pageHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                 <View>
                     <Text style={styles.title}>Financial & Operational Reports</Text>
                     <Text style={styles.subtitle}>MONTH-TO-DATE PERFORMANCE</Text>
                 </View>
+                <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#111827' }]} onPress={printFinancialReport}>
+                    <Ionicons name="print-outline" size={18} color="#fff" />
+                    <Text style={styles.primaryBtnText}>Print PDF</Text>
+                </TouchableOpacity>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>

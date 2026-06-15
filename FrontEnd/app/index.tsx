@@ -67,7 +67,7 @@ export default function LoginScreen() {
                     }
                 }
 
-                if (role === 'admin') {
+                if (role === 'admin' || role === 'owner') {
                     router.replace('/admin');
                 } else if (role === 'driver') {
                     router.replace('/driver');
