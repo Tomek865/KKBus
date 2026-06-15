@@ -89,7 +89,6 @@ def search_routes():
 
         results = []
         for dep in departures:
-            # --- POPRAWIONA LOGIKA CENY Z BAZY ---
             cur.execute("""
                 SELECT fs.standard_price 
                 FROM Fare_Segment fs
@@ -197,7 +196,6 @@ def create_reservation(current_user_id):
                 {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
-        # --- POPRAWIONA LOGIKA CENY Z BAZY ---
         query_price = """
             SELECT fs.standard_price 
             FROM Fare_Segment fs
@@ -337,7 +335,6 @@ def get_journey_details(current_client_id, res_number):
             conn.close()
 
 
-# --- ROZDZIELENIE METOD OPTIONS I POST (Rozwiązuje problem 401 Unauthorized) ---
 @client_reservation_bp.route("/calculate-price", methods=["OPTIONS"])
 def calculate_price_options():
     res = jsonify({})
@@ -346,14 +343,20 @@ def calculate_price_options():
     res.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
     return res, 200
 
-@client_reservation_bp.route("/calculate-price", methods=["POST"])
+
+@client_reservation_bp.route("/calculate-price", methods=["POST", "OPTIONS"])
 @token_required
 def calculate_price(current_user_id):
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     data = request.get_json()
     trip_id = data.get("trip_id")
     from_station = data.get("from_station")
     to_station = data.get("to_station")
     tickets = data.get("tickets", {})
+    
+    applied_reward_id = data.get("applied_reward_id") 
 
     adult_count = tickets.get("adult", 0)
     student_count = tickets.get("student", 0)
@@ -367,48 +370,49 @@ def calculate_price(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        cur.execute(
-            "SELECT loyalty_points FROM Client WHERE client_id = %s", (current_user_id,)
-        )
-        client_data = cur.fetchone()
-        loyalty_points = (
-            client_data["loyalty_points"]
-            if client_data and client_data["loyalty_points"]
-            else 0
-        )
-
-        # --- POPRAWIONA LOGIKA CENY Z BAZY ---
-        query_price = """
-            SELECT fs.standard_price 
-            FROM Fare_Segment fs
-            JOIN Trip tr ON fs.route_id = tr.route_id
-            JOIN Station s1 ON fs.start_station_id = s1.station_id
-            JOIN Station s2 ON fs.end_station_id = s2.station_id
-            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
+        query_stops = """
+            SELECT 
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS to_order
+            FROM Trip tr WHERE trip_id = %s;
         """
-        cur.execute(query_price, (trip_id, from_station, to_station))
-        price_row = cur.fetchone()
-        
-        if not price_row:
-            return jsonify({"error": "Invalid stations for this trip"}), 400
-            
-        base_price = float(price_row["standard_price"])
+        cur.execute(query_stops, (from_station, to_station, trip_id))
+        stops = cur.fetchone()
 
-        total_price = 0.00
-        total_price += adult_count * base_price
-        total_price += student_count * (base_price * 0.49)
-        total_price += reduced_count * (base_price * 0.63)
+        if not stops or not stops["from_order"] or not stops["to_order"]:
+            return jsonify({"error": "Invalid stations for this trip"}), 400
+
+        stops_count = stops["to_order"] - stops["from_order"]
+        base_price = 15.00 + (stops_count * 5.00)
+
+        total_price = (
+            (adult_count * base_price) +
+            (student_count * (base_price * 0.49)) +
+            (reduced_count * (base_price * 0.63))
+        )
+
+        if applied_reward_id:
+            cur.execute(
+                "SELECT 1 FROM Client_Reward WHERE client_id = %s AND reward_id = %s LIMIT 1", 
+                (current_user_id, applied_reward_id)
+            )
+            has_reward = cur.fetchone()
+            
+            if not has_reward:
+                return jsonify({"error": "Nie posiadasz tej nagrody na swoim koncie!"}), 403
+
+            if applied_reward_id == 1:
+                total_price = max(0, total_price - base_price)
+            elif applied_reward_id == 2:
+                total_price = max(0, total_price - (base_price * 0.50))
 
         cur.close()
 
-        return jsonify(
-            {
-                "base_price_per_ticket": round(base_price, 2),
-                "total_price": round(total_price, 2),
-                "total_seats": total_seats,
-                "current_points": loyalty_points,
-            }
-        ), 200
+        return jsonify({
+            "base_price_per_ticket": round(base_price, 2),
+            "total_price": round(total_price, 2),
+            "total_seats": total_seats
+        }), 200
 
     except Exception as e:
         print(f"DB Error: {e}")
@@ -418,9 +422,12 @@ def calculate_price(current_user_id):
             conn.close()
 
 
-@client_reservation_bp.route("/checkout", methods=["POST"])
+@client_reservation_bp.route("/checkout", methods=["POST", "OPTIONS"])
 @token_required
 def process_checkout(current_user_id):
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     data = request.get_json()
 
     trip_data = data.get("trip", {})
@@ -429,6 +436,8 @@ def process_checkout(current_user_id):
     trip_id = trip_data.get("id")
     from_station = trip_data.get("from")
     to_station = trip_data.get("to")
+
+    applied_reward_id = data.get("applied_reward_id") 
 
     adult_count = tickets_data.get("adult", 0)
     student_count = tickets_data.get("student", 0)
@@ -445,7 +454,6 @@ def process_checkout(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # --- SPRAWDZANIE BLOKADY I DANYCH KLIENTA ---
         cur.execute(
             "SELECT loyalty_points, email, blocked_until FROM Client WHERE client_id = %s", (current_user_id,)
         )
@@ -455,9 +463,7 @@ def process_checkout(current_user_id):
             return jsonify({"error": f"Konto jest zablokowane do {client_data['blocked_until'].strftime('%Y-%m-%d %H:%M')}"}), 403
 
         client_email = client_data["email"] if client_data else "nieznany@mail.com"
-        loyalty_points = client_data["loyalty_points"] if client_data and client_data["loyalty_points"] else 0
 
-        # --- WALIDACJE CZASOWE ZGODNE ZE SPECYFIKACJĄ (Pkt 2.2) ---
         cur.execute("SELECT departure_time, route_id FROM Trip WHERE trip_id = %s", (trip_id,))
         trip_info = cur.fetchone()
 
@@ -467,11 +473,9 @@ def process_checkout(current_user_id):
         target_time = trip_info["departure_time"]
         now = datetime.now()
         
-        # 1. Rezerwacja max 7 dni w przód
         if target_time > now + timedelta(days=7):
             return jsonify({"error": "Możesz rezerwować miejsca maksymalnie na tydzień w przód."}), 400
 
-        # 2. Rezerwacja max 2 godziny przed PIERWSZYM kursem tego samego dnia
         query_first_trip = """
             SELECT MIN(departure_time) as first_departure 
             FROM Trip 
@@ -485,7 +489,6 @@ def process_checkout(current_user_id):
             if target_time.date() == now.date() and now > (first_trip_time - timedelta(hours=2)):
                 return jsonify({"error": "Rezerwacja możliwa najpóźniej 2h przed pierwszym kursem w wybranym dniu."}), 403
 
-        # --- WALIDACJA MIEJSC ---
         query_capacity = """
             SELECT v.seating_capacity, 
                    COALESCE((SELECT SUM(seat_count) FROM Reservation WHERE trip_id = %s AND status != 'Cancelled'), 0) AS occupied_seats
@@ -503,7 +506,6 @@ def process_checkout(current_user_id):
                 {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
-        # --- POPRAWIONA LOGIKA CENY Z BAZY ---
         query_price = """
             SELECT fs.standard_price 
             FROM Fare_Segment fs
@@ -526,12 +528,44 @@ def process_checkout(current_user_id):
             + (reduced_count * (base_price * 0.63))
         )
 
-        # --- ZŁOTA ZNIŻKA I AKTUALIZACJA PUNKTÓW ---
-        earned_points = seat_count * 40
+        summary_parts = []
+        if adult_count > 0:
+            summary_parts.append(f"{adult_count}x Normalny")
+        if student_count > 0:
+            summary_parts.append(f"{student_count}x Student")
+        if reduced_count > 0:
+            summary_parts.append(f"{reduced_count}x Ulgowy")
 
+        ticket_summary = ", ".join(summary_parts)
+
+        if applied_reward_id:
+            query_consume_reward = """
+                DELETE FROM Client_Reward 
+                WHERE client_id = %s AND reward_id = %s AND exchange_date = (
+                    SELECT MIN(exchange_date) FROM Client_Reward WHERE client_id = %s AND reward_id = %s
+                ) RETURNING reward_id;
+            """
+            cur.execute(query_consume_reward, (current_user_id, applied_reward_id, current_user_id, applied_reward_id))
+            consumed = cur.fetchone()
+
+            if not consumed:
+                return jsonify({"error": "Nie posiadasz tego kuponu lub został już wykorzystany!"}), 403
+
+            if applied_reward_id == 1:
+                total_price = max(0, total_price - base_price)
+                ticket_summary += " [+ Darmowy Przejazd]"
+            elif applied_reward_id == 2:
+                total_price = max(0, total_price - (base_price * 0.50))
+                ticket_summary += " [+ Zniżka 50%]"
+            elif applied_reward_id == 3:
+                ticket_summary += " [+ Miejsce VIP]"
+            elif applied_reward_id == 4:
+                ticket_summary += " [+ Darmowy Bagaż]"
+
+        earned_points = seat_count * 40
         query_update_points = """
             UPDATE Client 
-            SET loyalty_points = loyalty_points + %s 
+            SET loyalty_points = COALESCE(loyalty_points, 0) + %s 
             WHERE client_id = %s;
         """
         cur.execute(query_update_points, (earned_points, current_user_id))
@@ -539,7 +573,6 @@ def process_checkout(current_user_id):
         total_price = round(total_price, 2)
         reservation_number = f"RES-{current_user_id}-{int(time.time())}"
 
-        # --- ZAPIS REZERWACJI ---
         query_insert = """
             INSERT INTO Reservation (client_id, trip_id, reservation_number, status, seat_count, total_price)
             VALUES (%s, %s, %s, 'Pending Payment', %s, %s) RETURNING reservation_id;
@@ -550,17 +583,7 @@ def process_checkout(current_user_id):
         )
         new_id = cur.fetchone()["reservation_id"]
 
-        summary_parts = []
-        if adult_count > 0:
-            summary_parts.append(f"{adult_count}x Normalny")
-        if student_count > 0:
-            summary_parts.append(f"{student_count}x Student")
-        if reduced_count > 0:
-            summary_parts.append(f"{reduced_count}x Ulgowy")
-
-        ticket_summary = ", ".join(summary_parts)
         default_segment_id = 1
-
         query_insert_ticket = """
             INSERT INTO Ticket (reservation_id, segment_id, final_price, ticket_summary, status)
             VALUES (%s, %s, %s, %s, 'Active') RETURNING ticket_id;
@@ -569,12 +592,10 @@ def process_checkout(current_user_id):
             query_insert_ticket,
             (new_id, default_segment_id, total_price, ticket_summary),
         )
-
         new_ticket_id = cur.fetchone()["ticket_id"]
 
         conn.commit()
         
-        # --- MOCK EMAIL ---
         print(f"\n[MOCK EMAIL] DO: {client_email}")
         print(f"Temat: Potwierdzenie rezerwacji {reservation_number}")
         print(f"Treść: Zarezerwowano miejsca na trasie {from_station} -> {to_station}. Numer biletu: {reservation_number}.\n")
@@ -603,7 +624,6 @@ def process_checkout(current_user_id):
             cur.close()
             conn.close()
 
-
 @client_reservation_bp.route("/tickets/<int:ticket_id>/cancel", methods=["PATCH"])
 @token_required
 def cancel_ticket(current_user_id, ticket_id):
@@ -627,7 +647,6 @@ def cancel_ticket(current_user_id, ticket_id):
         if data["status"] == "Cancelled":
             return jsonify({"error": "Ten bilet został już anulowany."}), 400
 
-        # --- WALIDACJA CZASOWA: ANULOWANIE MAX 24H PRZED WYJAZDEM ---
         if data["departure_time"] - datetime.now() < timedelta(hours=24):
             return jsonify({"error": "Bilet można anulować najpóźniej 24 godziny przed wyjazdem."}), 403
 
@@ -636,7 +655,6 @@ def cancel_ticket(current_user_id, ticket_id):
 
         conn.commit()
         
-        # --- MOCK EMAIL ---
         print(f"\n[MOCK EMAIL] DO: {data['email']}")
         print(f"Temat: Anulowanie rezerwacji {data['reservation_number']}")
         print(f"Treść: Twoja rezerwacja została pomyślnie anulowana.\n")

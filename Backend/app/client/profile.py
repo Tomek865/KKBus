@@ -31,6 +31,48 @@ def get_loyalty(current_user_id):
             conn.close()
 
 
+@client_profil_bp.route("/user/my-rewards", methods=["GET", "OPTIONS"])
+@token_required
+def get_my_rewards(current_user_id):
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        query = """
+            SELECT 
+                cr.reward_id, 
+                r.name, 
+                r.description, 
+                COUNT(*) as quantity
+            FROM Client_Reward cr
+            JOIN Reward r ON cr.reward_id = r.reward_id
+            WHERE cr.client_id = %s
+            GROUP BY cr.reward_id, r.name, r.description
+            ORDER BY cr.reward_id ASC;
+        """
+        cur.execute(query, (current_user_id,))
+        my_rewards = cur.fetchall()
+        cur.close()
+        
+        formatted_rewards = []
+        for reward in my_rewards:
+            reward_dict = dict(reward)
+            reward_dict['icon'] = get_reward_icon(reward['name'])
+            formatted_rewards.append(reward_dict)
+
+        return jsonify(formatted_rewards), 200
+
+    except Exception as e:
+        print(f"DB Error w GET /user/my-rewards: {e}")
+        return jsonify({"error": "Failed to fetch user rewards"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
 @client_profil_bp.route("/loyalty/rewards", methods=["GET", "OPTIONS"])
 def get_all_rewards():
     if request.method == "OPTIONS":
