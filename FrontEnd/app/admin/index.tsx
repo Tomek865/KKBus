@@ -30,7 +30,6 @@ export default function AdminDashboard() {
     const [stations, setStations] = useState<any[]>([]);
 
     const [topUsers, setTopUsers] = useState<any[]>([]);
-    const [rewards, setRewards] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -60,8 +59,18 @@ export default function AdminDashboard() {
                 setBuses(Array.isArray(busesData) ? busesData : []);
                 setRoutes(Array.isArray(routesData) ? routesData : []);
                 setStations(Array.isArray(stationsData) ? stationsData : []);
-                setTopUsers(Array.isArray(topUsersData) ? topUsersData : []);
 
+                if (Array.isArray(topUsersData)) {
+                    const passengers = topUsersData.filter(u => u.role === 'Passenger' || u.role === 'Client');
+                    const sorted = passengers.sort((a, b) => {
+                        const ptsA = a.loyalty_points || a.loyaltyPoints || a.points || 0;
+                        const ptsB = b.loyalty_points || b.loyaltyPoints || b.points || 0;
+                        return ptsB - ptsA;
+                    });
+                    setTopUsers(sorted.slice(0, 5));
+                } else {
+                    setTopUsers([]);
+                }
             } catch (e) {
                 console.error("Krytyczny błąd pobierania danych na dashboard:", e);
             } finally {
@@ -142,6 +151,7 @@ export default function AdminDashboard() {
 
                         {topUsers.map((user, index) => {
                             const rankStr = String(index + 1);
+                            const userPts = user.loyalty_points || user.loyaltyPoints || user.points || 0;
                             return (
                                 <View key={user.id} style={[localStyles.listItemRow, { paddingVertical: 10 }]}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -150,25 +160,11 @@ export default function AdminDashboard() {
                                         </View>
                                         <Text style={{ fontWeight: '600', fontSize: 13 }}>{user.name}</Text>
                                     </View>
-                                    <Text style={{ fontWeight: 'bold', color: COLORS.green, fontSize: 13 }}>{user.points || user.loyaltyPoints} pkt</Text>
+                                    <Text style={{ fontWeight: 'bold', color: COLORS.green, fontSize: 13 }}>{userPts} pkt</Text>
                                 </View>
                             )
                         })}
                         {topUsers.length === 0 && <Text style={localStyles.emptyText}>Brak danych z rankingu.</Text>}
-
-                        <Text style={[localStyles.sectionTitle, { marginTop: 25, marginBottom: 12 }]}>Panel Nagród Klubowych</Text>
-                        {rewards.map((reward) => (
-                            <View key={reward.id} style={{ backgroundColor: '#f9fafb', borderWidth: 1, borderColor: COLORS.grayBorder, borderRadius: 10, padding: 10, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <View style={{ flex: 1, marginRight: 5 }}>
-                                    <Text style={{ fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{reward.name}</Text>
-                                    <Text style={{ fontSize: 10, color: COLORS.grayText }}>Dostępne: {reward.stock || 'n/a'} szt.</Text>
-                                </View>
-                                <View style={{ backgroundColor: COLORS.blueLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: COLORS.blue }}>{reward.cost || reward.pointsCost} pkt</Text>
-                                </View>
-                            </View>
-                        ))}
-                        {rewards.length === 0 && <Text style={localStyles.emptyText}>Brak aktywnych nagród.</Text>}
                     </View>
                 </View>
 
