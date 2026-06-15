@@ -8,10 +8,10 @@ const formatTime = (dateString?: string) => {
     if (!dateString) return '--:--';
     try {
         const d = new Date(dateString);
-        
+
         const hours = String(d.getUTCHours()).padStart(2, '0');
         const minutes = String(d.getUTCMinutes()).padStart(2, '0');
-        
+
         return `${hours}:${minutes}`;
     } catch (e) {
         return '--:--';
@@ -25,7 +25,7 @@ const formatDate = (dateString?: string) => {
         const day = String(d.getUTCDate()).padStart(2, '0');
         const month = String(d.getUTCMonth() + 1).padStart(2, '0');
         const year = String(d.getUTCFullYear()).slice(-2);
-        
+
         return `${day}.${month}.${year}`;
     } catch {
         return '';
@@ -49,14 +49,14 @@ export default function AdminSchedule() {
 
     const [openDropdown, setOpenDropdown] = useState<'bus' | 'route' | 'driver' | 'editRoute' | null>(null);
 
-    const [newEntry, setNewEntry] = useState({ 
-        busId: '', 
-        route: '', 
-        driver: '', 
-        date: '', 
-        departureTime: '', 
-        arrivalTime: '', 
-        status: 'Planned' 
+    const [newEntry, setNewEntry] = useState({
+        busId: '',
+        route: '',
+        driver: '',
+        date: '',
+        departureTime: '',
+        arrivalTime: '',
+        status: 'Planned'
     });
 
     const [isRepeating, setIsRepeating] = useState(false);
@@ -75,7 +75,7 @@ export default function AdminSchedule() {
         { label: 'Sob', value: 6 },
         { label: 'Ndz', value: 0 },
     ];
-    
+
     const [newRoute, setNewRoute] = useState({ name: '' });
     const [newStation, setNewStation] = useState({ name: '', exactAddress: '' });
 
@@ -154,7 +154,10 @@ export default function AdminSchedule() {
             try {
                 const res = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`);
                 const data = await res.json();
-                setRouteStops(Array.isArray(data) ? data.map(st => ({ station_id: st.id?.toString() || st.station_id?.toString() || '' })) : []);
+                setRouteStops(Array.isArray(data) ? data.map(st => ({
+                    station_id: st.id?.toString() || st.station_id?.toString() || '',
+                    distance_from_prev: st.distance_from_prev?.toString() || '0'
+                })) : []);
             } catch (e) {
                 setRouteStops([]);
             }
@@ -162,31 +165,36 @@ export default function AdminSchedule() {
         fetchSegmentStops();
     }, [selectedRouteId]);
 
+
     const handleAddStopToRouteSequence = () => {
         setRouteStops(prev => [
             ...prev,
-            { station_id: '' }
+            { station_id: '', distance_from_prev: '' }
         ]);
     };
+
 
     const handleSaveRouteStopsSequence = async () => {
         if (!selectedRouteId) return;
 
-        const stationIdsOnly = routeStops
-            .map(stop => parseInt(stop.station_id))
-            .filter(id => !isNaN(id));
+        const payload = routeStops
+            .filter(stop => parseInt(stop.station_id))
+            .map((stop, index) => ({
+                station_id: parseInt(stop.station_id),
+                distance_from_prev: index === 0 ? 0 : (parseFloat(stop.distance_from_prev) || 0)
+            }));
 
         try {
             const response = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`, {
                 method: 'POST',
-                body: JSON.stringify({ stations: stationIdsOnly }) 
+                body: JSON.stringify({ stations: payload })
             });
 
             if (response.ok) {
                 setRouteStopsModalVisible(false);
                 setSelectedRouteId('');
                 setRouteStops([]);
-                showScheduleAlert("Sukces", "Sekwencja stacji trasy została zaktualizowana.");
+                showScheduleAlert("Sukces", "Sekwencja stacji i odległości zostały zaktualizowane.");
             } else {
                 showScheduleAlert("Błąd", "Nie udało się zapisać punktów trasy.");
             }
@@ -194,6 +202,7 @@ export default function AdminSchedule() {
             showScheduleAlert("Błąd", "Problem z połączeniem.");
         }
     };
+
 
     const generateScheduleDates = () => {
         const dates: string[] = [];
@@ -215,7 +224,7 @@ export default function AdminSchedule() {
                 currentDate.setDate(currentDate.getDate() + 1);
             } else {
                 dates.push(dateString);
-                
+
                 if (repeatConfig.frequency === 'daily') {
                     currentDate.setDate(currentDate.getDate() + 1);
                 } else if (repeatConfig.frequency === 'weekly') {
@@ -239,8 +248,8 @@ export default function AdminSchedule() {
             return;
         }
 
-        const datesToSchedule = isRepeating 
-            ? generateScheduleDates() 
+        const datesToSchedule = isRepeating
+            ? generateScheduleDates()
             : [newEntry.date];
 
         if (datesToSchedule.length === 0) {
@@ -275,13 +284,13 @@ export default function AdminSchedule() {
             const allOk = responses.every(r => r.ok);
 
             if (allOk) {
-                fetchInitialData(); 
-                
+                fetchInitialData();
+
                 setScheduleModalVisible(false);
                 setNewEntry({ busId: '', route: '', driver: '', date: '', departureTime: '', arrivalTime: '', status: 'Planned' });
                 setIsRepeating(false);
                 setRepeatConfig({ endDate: '', frequency: 'daily', customDays: [] });
-                
+
                 showScheduleAlert("Sukces", `Zaplanowano ${datesToSchedule.length} kursów.`);
             } else {
                 showScheduleAlert("Ostrzeżenie", "Niektóre kursy mogły nie zostać zapisane.");
@@ -493,7 +502,7 @@ export default function AdminSchedule() {
                         <View key={bus.id} style={[styles.tableRow, isCancelled && { opacity: 0.4 }]}>
                             <Text style={[styles.cell, { flex: 1, fontWeight: 'bold' }]}>{bus.busId}</Text>
                             <Text style={[styles.cell, { flex: 1.5 }]}>{bus.route}</Text>
-                            
+
                             <View style={{ flex: 1.5 }}>
                                 <Text style={[styles.cell, { fontWeight: 'bold' }]}>
                                     {formatTime(bus.departureTime)} - {formatTime(bus.arrivalTime)}
@@ -509,7 +518,7 @@ export default function AdminSchedule() {
                                 </View>
                             </View>
                             <Text style={[styles.cell, { flex: 1, textAlign: 'center' }]}>{bus.driver}</Text>
-                            
+
                             <View style={{ width: 40, alignItems: 'flex-end' }}>
                                 {!isCancelled && (
                                     <TouchableOpacity onPress={() => handleDeleteRoute(bus.id)} style={{ padding: 5 }}>
@@ -586,35 +595,35 @@ export default function AdminSchedule() {
 
                         <View style={{ marginTop: 15 }}>
                             <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
-                            <input 
-                                type="date" 
+                            <input
+                                type="date"
                                 style={{ ...(styles.nativeDateInput as any), marginBottom: 12 }}
-                                value={newEntry.date} 
-                                onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })} 
+                                value={newEntry.date}
+                                onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
                             />
-                            
+
                             <View style={{ flexDirection: 'row', gap: 12 }}>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.inputLabel}>DEPARTURE TIME</Text>
-                                    <input 
-                                        type="time" 
+                                    <input
+                                        type="time"
                                         style={styles.nativeDateInput as any}
-                                        value={newEntry.departureTime} 
-                                        onChange={(e) => setNewEntry({ ...newEntry, departureTime: e.target.value })} 
+                                        value={newEntry.departureTime}
+                                        onChange={(e) => setNewEntry({ ...newEntry, departureTime: e.target.value })}
                                     />
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.inputLabel}>ARRIVAL TIME</Text>
-                                    <input 
-                                        type="time" 
+                                    <input
+                                        type="time"
                                         style={styles.nativeDateInput as any}
-                                        value={newEntry.arrivalTime} 
-                                        onChange={(e) => setNewEntry({ ...newEntry, arrivalTime: e.target.value })} 
+                                        value={newEntry.arrivalTime}
+                                        onChange={(e) => setNewEntry({ ...newEntry, arrivalTime: e.target.value })}
                                     />
                                 </View>
                             </View>
                         </View>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 }}
                             onPress={() => setIsRepeating(!isRepeating)}
                         >
@@ -624,21 +633,21 @@ export default function AdminSchedule() {
 
                         {isRepeating && (
                             <View style={{ backgroundColor: '#f9fafb', padding: 15, borderRadius: 12, marginTop: 10, borderWidth: 1, borderColor: COLORS.grayBorder }}>
-                                
+
                                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15 }}>
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.inputLabel}>END DATE</Text>
-                                        <input 
-                                            type="date" 
+                                        <input
+                                            type="date"
                                             style={styles.nativeDateInput as any}
-                                            value={repeatConfig.endDate} 
+                                            value={repeatConfig.endDate}
                                             min={newEntry.date}
-                                            onChange={(e) => setRepeatConfig({ ...repeatConfig, endDate: e.target.value })} 
+                                            onChange={(e) => setRepeatConfig({ ...repeatConfig, endDate: e.target.value })}
                                         />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.inputLabel}>FREQUENCY</Text>
-                                        <select 
+                                        <select
                                             style={styles.nativeDateInput as any}
                                             value={repeatConfig.frequency}
                                             onChange={(e) => setRepeatConfig({ ...repeatConfig, frequency: e.target.value as any })}
@@ -658,7 +667,7 @@ export default function AdminSchedule() {
                                             {DAYS_OF_WEEK.map(day => {
                                                 const isSelected = repeatConfig.customDays.includes(day.value);
                                                 return (
-                                                    <TouchableOpacity 
+                                                    <TouchableOpacity
                                                         key={day.value}
                                                         style={{
                                                             paddingVertical: 8,
@@ -668,16 +677,16 @@ export default function AdminSchedule() {
                                                         }}
                                                         onPress={() => {
                                                             setRepeatConfig(prev => {
-                                                                const newDays = isSelected 
+                                                                const newDays = isSelected
                                                                     ? prev.customDays.filter(d => d !== day.value)
                                                                     : [...prev.customDays, day.value];
                                                                 return { ...prev, customDays: newDays };
                                                             });
                                                         }}
                                                     >
-                                                        <Text style={{ 
-                                                            color: isSelected ? COLORS.white : '#4b5563', 
-                                                            fontWeight: 'bold', fontSize: 12 
+                                                        <Text style={{
+                                                            color: isSelected ? COLORS.white : '#4b5563',
+                                                            fontWeight: 'bold', fontSize: 12
                                                         }}>
                                                             {day.label}
                                                         </Text>
@@ -691,10 +700,10 @@ export default function AdminSchedule() {
                         )}
 
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 25 }}>
-                            <TouchableOpacity onPress={() => { 
-                                setScheduleModalVisible(false); 
-                                setOpenDropdown(null); 
-                                setIsRepeating(false); 
+                            <TouchableOpacity onPress={() => {
+                                setScheduleModalVisible(false);
+                                setOpenDropdown(null);
+                                setIsRepeating(false);
                             }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
                             <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAddEntry}><Text style={styles.primaryBtnText}>Save</Text></TouchableOpacity>
                         </View>
@@ -812,14 +821,14 @@ export default function AdminSchedule() {
                                 <Text style={[styles.inputLabel, { marginBottom: 10 }]}>STATIONS TIMELINE ORDER</Text>
                                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
                                     {routeStops.map((stop, index) => (
-                                        <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                                        <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                                             <View style={styles.indexBadge}>
                                                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>{index + 1}</Text>
                                             </View>
 
-                                            <View style={{ flex: 1, zIndex: 100 - index, position: 'relative' }}>
+                                            <View style={{ flex: 2, zIndex: 100 - index, position: 'relative' }}>
                                                 <select
-                                                    style={styles.nativeSelectElement}
+                                                    style={styles.nativeSelectElement as any}
                                                     value={stop.station_id || ''}
                                                     onChange={(e) => {
                                                         const val = e.target.value;
@@ -833,12 +842,32 @@ export default function AdminSchedule() {
                                                 </select>
                                             </View>
 
-                                            <TouchableOpacity onPress={() => setRouteStops(prev => prev.filter((_, i) => i !== index))}>
-                                                <Ionicons name="trash-outline" size={18} color={COLORS.red} />
+                                            <View style={{ width: 80 }}>
+                                                <TextInput
+                                                    style={{
+                                                        backgroundColor: index === 0 ? '#f3f4f6' : '#fff',
+                                                        borderWidth: 1,
+                                                        borderColor: '#e5e7eb',
+                                                        borderRadius: 8,
+                                                        padding: 8,
+                                                        textAlign: 'center',
+                                                        color: index === 0 ? '#9ca3af' : '#111'
+                                                    }}
+                                                    editable={index !== 0}
+                                                    keyboardType="numeric"
+                                                    placeholder="+ km"
+                                                    value={index === 0 ? '0 km' : stop.distance_from_prev}
+                                                    onChangeText={(val) => {
+                                                        setRouteStops(prev => prev.map((s, i) => i === index ? { ...s, distance_from_prev: val } : s));
+                                                    }}
+                                                />
+                                            </View>
+
+                                            <TouchableOpacity onPress={() => setRouteStops(prev => prev.filter((_, i) => i !== index))} style={{ padding: 5 }}>
+                                                <Ionicons name="trash-outline" size={20} color={COLORS.red} />
                                             </TouchableOpacity>
                                         </View>
                                     ))}
-
                                     <TouchableOpacity style={styles.plusButtonRow} onPress={handleAddStopToRouteSequence}>
                                         <Ionicons name="add-circle" size={26} color="#059669" />
                                         <Text style={{ color: '#059669', fontWeight: 'bold', fontSize: 14 }}>Add Stop Location</Text>

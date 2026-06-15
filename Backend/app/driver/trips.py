@@ -206,7 +206,6 @@ def handle_schedule(current_driver_id):
         if request.method == "POST":
             data = request.get_json()
             
-            # Oczekujemy listy, ale zabezpieczamy się, gdyby przyszedł stary format (pojedynczy słownik)
             if isinstance(data, dict):
                 data = [data]
 
