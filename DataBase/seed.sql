@@ -88,3 +88,10 @@ INSERT INTO Ticket (reservation_id, segment_id, final_price, discount_type) VALU
 -- Testowe tankowanie dla autokaru (Kierowca: Tomasz Rajdowiec)
 INSERT INTO Refueling (vehicle_id, employee_id, refueling_date, liters_volume, price_per_liter, total_cost) VALUES 
 (5, 4, CURRENT_TIMESTAMP, 120.0, 6.50, 780.00);
+
+
+INSERT INTO Reward (name, description, required_points) VALUES 
+('Free Ticket', 'Exchange points for a free ride on any route.', 1000),
+('50% Discount', 'Get a 50% discount on your next single ticket.', 500),
+('VIP Seat', 'Guarantee of the best seat and extra legroom.', 300),
+('Free Luggage', 'Take an extra suitcase at no additional cost.', 200);

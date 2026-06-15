@@ -8,23 +8,42 @@ import { authFetch } from '../../utils';
 import GuestLoginModal from './GuestLoginModal';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 
-// Definicja nagród dostępnych w sklepie (przetłumaczona na angielski)
-const REWARDS = [
-    { id: 'FREE_RIDE_1000', title: 'Free Ticket', description: 'Exchange points for a free ride on any route.', cost: 1000, icon: 'ticket' },
-    { id: 'DISCOUNT_50', title: '50% Discount', description: 'Get a 50% discount on your next single ticket.', cost: 500, icon: 'pricetag' },
-    { id: 'VIP_SEAT', title: 'VIP Seat', description: 'Guarantee of the best seat and extra legroom.', cost: 300, icon: 'star' },
-    { id: 'FREE_LUGGAGE', title: 'Free Luggage', description: 'Take an extra suitcase at no additional cost.', cost: 200, icon: 'briefcase' },
-];
+interface Reward {
+    reward_id: number;
+    name: string;
+    required_points: number;
+    description?: string;
+    icon?: string;
+}
+
+const getRewardIcon = (name: string): string => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('ticket') || lowerName.includes('ride')) return 'ticket';
+    if (lowerName.includes('discount') || lowerName.includes('zniżka')) return 'pricetag';
+    if (lowerName.includes('seat') || lowerName.includes('miejsce')) return 'star';
+    if (lowerName.includes('luggage') || lowerName.includes('bagaż')) return 'briefcase';
+    return 'gift';
+};
+
+const getRewardDescription = (name: string): string => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('ticket')) return 'Exchange points for a free ride on any route.';
+    if (lowerName.includes('discount')) return 'Get a 50% discount on your next single ticket.';
+    if (lowerName.includes('seat')) return 'Guarantee of the best seat and extra legroom.';
+    if (lowerName.includes('luggage')) return 'Take an extra suitcase at no additional cost.';
+    return 'Special loyalty reward for our frequent travelers.';
+};
 
 export default function LoyaltyStore() {
     const [points, setPoints] = useState<number>(0);
+    const [rewards, setRewards] = useState<Reward[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
+    const [isPurchasing, setIsPurchasing] = useState<number | null>(null);
     const [isGuest, setIsGuest] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
-            const fetchPoints = async () => {
+            const fetchStoreData = async () => {
                 setIsLoading(true);
                 try {
                     let token = null;
@@ -47,18 +66,24 @@ export default function LoyaltyStore() {
                         const data = await resLoyalty.json();
                         setPoints(data.points !== undefined ? data.points : 0);
                     }
+
+                    const resRewards = await authFetch('/api/client/profile/loyalty/rewards');
+                    if (resRewards.ok) {
+                        const rewardsData = await resRewards.json();
+                        setRewards(rewardsData);
+                    }
                 } catch (err) {
-                    console.error("Error fetching store points:", err);
+                    console.error("Error fetching store data:", err);
                 } finally {
                     setIsLoading(false);
                 }
             };
 
-            fetchPoints();
+            fetchStoreData();
         }, [])
     );
 
-    const handlePurchase = (rewardId: string, cost: number, title: string) => {
+    const handlePurchase = (rewardId: number, cost: number, title: string) => {
         if (points < cost) {
             const message = "You do not have enough points to redeem this reward.";
             Platform.OS === 'web' ? window.alert(message) : Alert.alert("Not enough points", message);
@@ -68,7 +93,7 @@ export default function LoyaltyStore() {
         const executePurchase = async () => {
             setIsPurchasing(rewardId);
             try {
-                const res = await authFetch('/api/client/loyalty/purchase', {
+                const res = await authFetch('/api/client/profile/loyalty/purchase', {
                     method: 'POST',
                     body: JSON.stringify({ reward_id: rewardId, cost: cost })
                 });
@@ -115,7 +140,6 @@ export default function LoyaltyStore() {
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
-                {/* Nagłówek i Stan Konta */}
                 <View style={localStyles.headerSection}>
                     <Text style={styles.headerTitle}>Rewards Store</Text>
                     <View style={localStyles.balanceCard}>
@@ -131,37 +155,45 @@ export default function LoyaltyStore() {
 
                 <Text style={styles.sectionTitle}>Available Rewards</Text>
 
-                {/* Lista Nagród */}
                 <View style={localStyles.rewardsContainer}>
-                    {REWARDS.map((reward) => (
-                        <View key={reward.id} style={localStyles.rewardCard}>
-                            <View style={localStyles.rewardIconContainer}>
-                                <Ionicons name={reward.icon as any} size={28} color="#e60000" />
-                            </View>
-                            <View style={localStyles.rewardInfo}>
-                                <Text style={localStyles.rewardTitle}>{reward.title}</Text>
-                                <Text style={localStyles.rewardDesc}>{reward.description}</Text>
-                                <View style={localStyles.costContainer}>
-                                    <Ionicons name="star" size={14} color="#facc15" />
-                                    <Text style={localStyles.costText}>{reward.cost} pts</Text>
+                    {isLoading && rewards.length === 0 ? (
+                        <ActivityIndicator color="#e60000" size="large" style={{ marginTop: 20 }} />
+                    ) : (
+                        rewards.map((reward) => {
+                            const iconName = getRewardIcon(reward.name);
+                            const description = getRewardDescription(reward.name);
+
+                            return (
+                                <View key={reward.reward_id} style={localStyles.rewardCard}>
+                                    <View style={localStyles.rewardIconContainer}>
+                                        <Ionicons name={iconName as any} size={28} color="#e60000" />
+                                    </View>
+                                    <View style={localStyles.rewardInfo}>
+                                        <Text style={localStyles.rewardTitle}>{reward.name}</Text>
+                                        <Text style={localStyles.rewardDesc}>{description}</Text>
+                                        <View style={localStyles.costContainer}>
+                                            <Ionicons name="star" size={14} color="#facc15" />
+                                            <Text style={localStyles.costText}>{reward.required_points} pts</Text>
+                                        </View>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={[
+                                            localStyles.buyButton,
+                                            points < reward.required_points && localStyles.buyButtonDisabled
+                                        ]}
+                                        onPress={() => handlePurchase(reward.reward_id, reward.required_points, reward.name)}
+                                        disabled={points < reward.required_points || isPurchasing === reward.reward_id}
+                                    >
+                                        {isPurchasing === reward.reward_id ? (
+                                            <ActivityIndicator color="#fff" size="small" />
+                                        ) : (
+                                            <Text style={localStyles.buyButtonText}>Redeem</Text>
+                                        )}
+                                    </TouchableOpacity>
                                 </View>
-                            </View>
-                            <TouchableOpacity
-                                style={[
-                                    localStyles.buyButton,
-                                    points < reward.cost && localStyles.buyButtonDisabled
-                                ]}
-                                onPress={() => handlePurchase(reward.id, reward.cost, reward.title)}
-                                disabled={points < reward.cost || isPurchasing === reward.id}
-                            >
-                                {isPurchasing === reward.id ? (
-                                    <ActivityIndicator color="#fff" size="small" />
-                                ) : (
-                                    <Text style={localStyles.buyButtonText}>Redeem</Text>
-                                )}
-                            </TouchableOpacity>
-                        </View>
-                    ))}
+                            );
+                        })
+                    )}
                 </View>
 
             </ScrollView>
@@ -170,107 +202,20 @@ export default function LoyaltyStore() {
 }
 
 const localStyles = StyleSheet.create({
-    headerSection: {
-        marginBottom: 20,
-    },
-    balanceCard: {
-        backgroundColor: '#111827',
-        borderRadius: 20,
-        padding: 24,
-        alignItems: 'center',
-        marginTop: 15,
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    balanceIcon: {
-        position: 'absolute',
-        right: -10,
-        top: -10,
-        opacity: 0.2,
-        transform: [{ scale: 2.5 }]
-    },
-    balanceLabel: {
-        color: '#9ca3af',
-        fontSize: 12,
-        fontWeight: 'bold',
-        letterSpacing: 1,
-        marginBottom: 8,
-    },
-    balanceAmount: {
-        color: '#fff',
-        fontSize: 36,
-        fontWeight: '900',
-    },
-    rewardsContainer: {
-        gap: 15,
-        paddingBottom: 30,
-    },
-    rewardCard: {
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3,
-    },
-    rewardIconContainer: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: '#fee2e2',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    rewardInfo: {
-        flex: 1,
-    },
-    rewardTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#111',
-        marginBottom: 4,
-    },
-    rewardDesc: {
-        fontSize: 12,
-        color: '#6b7280',
-        lineHeight: 16,
-        marginBottom: 8,
-    },
-    costContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fef3c7',
-        alignSelf: 'flex-start',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    costText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#b45309',
-        marginLeft: 4,
-    },
-    buyButton: {
-        backgroundColor: '#e60000',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
-        marginLeft: 10,
-        minWidth: 80,
-        alignItems: 'center',
-    },
-    buyButtonDisabled: {
-        backgroundColor: '#e5e7eb',
-    },
-    buyButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 14,
-    }
+    headerSection: { marginBottom: 20 },
+    balanceCard: { backgroundColor: '#111827', borderRadius: 20, padding: 24, alignItems: 'center', marginTop: 15, position: 'relative', overflow: 'hidden' },
+    balanceIcon: { position: 'absolute', right: -10, top: -10, opacity: 0.2, transform: [{ scale: 2.5 }] },
+    balanceLabel: { color: '#9ca3af', fontSize: 12, fontWeight: 'bold', letterSpacing: 1, marginBottom: 8 },
+    balanceAmount: { color: '#fff', fontSize: 36, fontWeight: '900' },
+    rewardsContainer: { gap: 15, paddingBottom: 30 },
+    rewardCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+    rewardIconContainer: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#fee2e2', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    rewardInfo: { flex: 1 },
+    rewardTitle: { fontSize: 16, fontWeight: 'bold', color: '#111', marginBottom: 4 },
+    rewardDesc: { fontSize: 12, color: '#6b7280', lineHeight: 16, marginBottom: 8 },
+    costContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fef3c7', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+    costText: { fontSize: 12, fontWeight: 'bold', color: '#b45309', marginLeft: 4 },
+    buyButton: { backgroundColor: '#e60000', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, marginLeft: 10, minWidth: 80, alignItems: 'center' },
+    buyButtonDisabled: { backgroundColor: '#e5e7eb' },
+    buyButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 14 }
 });
