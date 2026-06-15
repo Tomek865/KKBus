@@ -11,10 +11,10 @@ import GuestLoginModal from './GuestLoginModal';
 
 const formatTime = (timeString?: string, searchedDate?: string) => {
     if (!timeString) return 'Brak danych';
-    
+
     try {
         let isoString = timeString;
-        
+
         if (!timeString.includes('T')) {
             const cleanTime = timeString.length === 5 ? `${timeString}:00` : timeString;
             const baseDate = searchedDate || new Date().toISOString().split('T')[0];
@@ -22,22 +22,23 @@ const formatTime = (timeString?: string, searchedDate?: string) => {
         }
 
         const d = new Date(isoString);
-        
-        if (isNaN(d.getTime())) return timeString.substring(0, 5); 
-        
+
+        if (isNaN(d.getTime())) return timeString.substring(0, 5);
+
         return d.toISOString().split('T')[1].substring(0, 5);
     } catch {
         return timeString.substring(0, 5);
     }
 };
+
 export interface Departure {
-    id: string; 
-    departureTime: string; 
-    arrivalTime: string; 
+    id: string;
+    departureTime: string;
+    arrivalTime: string;
     departureStation: string;
-    arrivalStation: string; 
-    duration: string; 
-    seatsLeft: number | string; 
+    arrivalStation: string;
+    duration: string;
+    seatsLeft: number | string;
     price: number | null;
 }
 
@@ -51,7 +52,7 @@ const generateNext7Days = () => {
 
 const DepartureCard = ({ departure, onBook }: { departure: Departure, onBook: () => void }) => {
     const isLowSeats = typeof departure.seatsLeft === 'number' && departure.seatsLeft <= 5;
-    
+
     return (
         <TouchableOpacity style={styles.departureCard} onPress={onBook}>
             <View style={styles.routeContainer}>
@@ -101,35 +102,34 @@ export default function PassengerSearch() {
     const [departures, setDepartures] = useState<Departure[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
-    
+
     const [modalVisible, setModalVisible] = useState(false);
     const [selectingField, setSelectingField] = useState<'from' | 'to' | null>(null);
     const [passengerModalVisible, setPassengerModalVisible] = useState(false);
     const [dateModalVisible, setDateModalVisible] = useState(false);
     const [reservationModalVisible, setReservationModalVisible] = useState(false);
-    
+
     const [selectedDep, setSelectedDep] = useState<Departure | null>(null);
     const [isBooking, setIsBooking] = useState(false);
     const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
-    const [useFreeRide, setUseFreeRide] = useState(false);
     const [guestModalVisible, setGuestModalVisible] = useState(false);
-       useEffect(() => {
+
+    // --- NOWE STANY DO NAGRÓD (KUPONÓW) ---
+    const [myRewards, setMyRewards] = useState<any[]>([]);
+    const [isLoadingRewards, setIsLoadingRewards] = useState(false);
+    const [selectedRewardId, setSelectedRewardId] = useState<number | null>(null);
+
+    useEffect(() => {
         const fetchStationsFromDB = async () => {
             try {
                 const res = await authFetch('/api/client/reservations/stations');
-                if (!res.ok) {
-                    console.error("Błąd pobierania stacji, status HTTP:", res.status);
-                    return;
-                }
+                if (!res.ok) return;
                 const data = await res.json();
-                console.log("Pobrane stacje z API:", data);
                 const stationsArray = Array.isArray(data) ? data : (data.content || data.data || data.stations || []);
-                
+
                 if (stationsArray && Array.isArray(stationsArray) && stationsArray.length > 0) {
                     setStations(stationsArray.map((s: any) => s.name ? s.name : s));
-                } else {
-                    console.warn("Backend nie zwrócił poprawnej tablicy stacji.");
                 }
             } catch (err) {
                 console.error("Błąd sieci lub parsowania stacji:", err);
@@ -138,18 +138,33 @@ export default function PassengerSearch() {
         fetchStationsFromDB();
     }, []);
 
-        const handleSearchRoutes = async () => {
-        setIsSearching(true); 
-        setHasSearched(true); 
+    // POBIERANIE DOSTĘPNYCH NAGRÓD KLIENTA
+    const fetchMyRewards = async () => {
+        setIsLoadingRewards(true);
+        try {
+            const res = await authFetch('/api/client/profile/user/my-rewards');
+            if (res.ok) {
+                const data = await res.json();
+                setMyRewards(data);
+            }
+        } catch (err) {
+            console.error("Błąd pobierania nagród:", err);
+        } finally {
+            setIsLoadingRewards(false);
+        }
+    };
+
+    const handleSearchRoutes = async () => {
+        setIsSearching(true);
+        setHasSearched(true);
         setDepartures([]);
-        
+
         try {
             const year = selectedDate.getFullYear();
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const day = String(selectedDate.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`; 
+            const dateStr = `${year}-${month}-${day}`;
 
-            
             const payload = {
                 from_station: fromStation,
                 to_station: toStation,
@@ -164,46 +179,38 @@ export default function PassengerSearch() {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
-            
-
 
             if (!res.ok) {
                 console.error("Serwer zwrócił błąd HTTP:", res.status);
                 return;
             }
-            
+
             const data = await res.json();
-            console.log(`Odpowiedź API dla trasy ${fromStation} -> ${toStation} (${dateStr}):`, data);
             const routesArray = Array.isArray(data) ? data : (data.content || data.data || data.routes);
 
-                        if (routesArray && Array.isArray(routesArray)) {
-                if (routesArray.length === 0) {
-                    console.log("Tablica z backendu jest pusta (brak kursów na ten dzień).");
-                }
-                
+            if (routesArray && Array.isArray(routesArray)) {
                 const mappedDepartures = routesArray.map((d: any) => ({
-                    id: String(d.tripId || d.id), 
-                    departureTime: formatTime(d.departureTime),
-                    arrivalTime: formatTime(d.arrivalTime),
-                    
+                    id: String(d.tripId || d.id || d.trip_id), // Zabezpieczenie na różne formaty id
+                    departureTime: formatTime(d.departureTime || d.departure_time),
+                    arrivalTime: formatTime(d.arrivalTime || d.arrival_time),
                     departureStation: fromStation,
                     arrivalStation: toStation,
-                    duration: d.duration || 'Brak danych', 
-                    seatsLeft: d.availableSeats !== undefined ? d.availableSeats : 'Brak danych', 
-                    price: d.totalPrice !== undefined ? d.totalPrice : null 
+                    duration: d.duration || 'Brak danych',
+                    seatsLeft: d.availableSeats !== undefined ? d.availableSeats : (d.available_seats !== undefined ? d.available_seats : 'Brak danych'),
+                    price: d.totalPrice !== undefined ? d.totalPrice : (d.total_price !== undefined ? d.total_price : null)
                 }));
                 setDepartures(mappedDepartures);
-            } else {
-                console.error("Format odpowiedzi jest nieznany. Frontend oczekiwał tablicy, a dostał:", typeof data);
             }
-            
+
         } catch (err) {
             console.error("Błąd sieci lub parsowania wyszukiwania tras:", err);
         } finally {
             setIsSearching(false);
         }
-        };
-        const fetchExactPrice = async (departure: Departure, voucherApplied: boolean) => {
+    };
+
+    // ZAKTUALIZOWANA FUNKCJA DO OBLICZANIA CENY Z UWZGLĘDNIENIEM KUPONU
+    const fetchExactPrice = async (departure: Departure, rewardId: number | null) => {
         setIsCalculating(true);
         try {
             const payload: any = {
@@ -216,8 +223,10 @@ export default function PassengerSearch() {
                     reduced: passengerCounts.reduced
                 }
             };
-            if (voucherApplied) {
-                payload.voucher_id = "FREE_RIDE_1000"; 
+
+            // Jeśli wybrano kupon, dodajemy go do JSON-a
+            if (rewardId) {
+                payload.applied_reward_id = rewardId;
             }
 
             const res = await authFetch('/api/client/reservations/calculate-price', {
@@ -230,7 +239,7 @@ export default function PassengerSearch() {
                 setCalculatedPrice(data.total_price);
             } else {
                 console.error("Błąd kalkulacji ceny");
-                setCalculatedPrice(departure.price); 
+                setCalculatedPrice(departure.price);
             }
         } catch (err) {
             console.error("Błąd sieci przy kalkulacji:", err);
@@ -240,11 +249,11 @@ export default function PassengerSearch() {
         }
     };
 
-        const handleBookTicket = async (isVoucherApplied: boolean = false) => {
+    // ZAKTUALIZOWANA FUNKCJA KUPUJĄCA Z UWZGLĘDNIENIEM KUPONU
+    const handleBookTicket = async () => {
         if (!selectedDep) return;
         setIsBooking(true);
-        console.log("Rezerwacja biletu dla trasy:", selectedDep);
-        
+
         const payload: any = {
             trip: {
                 id: parseInt(selectedDep.id, 10),
@@ -258,6 +267,11 @@ export default function PassengerSearch() {
             }
         };
 
+        // Dodajemy wybraną nagrodę do zamówienia
+        if (selectedRewardId) {
+            payload.applied_reward_id = selectedRewardId;
+        }
+
         try {
             const res = await authFetch('/api/client/reservations/checkout', {
                 method: 'POST',
@@ -266,10 +280,10 @@ export default function PassengerSearch() {
 
             if (res.ok) {
                 setReservationModalVisible(false);
-                setUseFreeRide(false);
-                Alert.alert("Sukces", "Bilet został pomyślnie zarezerwowany!");
+                setSelectedRewardId(null);
+                Alert.alert("Success", "Bilet został pomyślnie zarezerwowany!");
             } else {
-                Alert.alert("Błąd", "Nie udało się zarezerwować biletu.");
+                Alert.alert("Błąd", "Nie udało się zarezerwować biletu. Możliwe, że kupon wygasł.");
             }
         } catch (err) {
             console.error("Booking error:", err);
@@ -323,40 +337,45 @@ export default function PassengerSearch() {
                         <Text style={styles.primaryBtnText}>{isSearching ? 'Searching...' : 'Search Routes'}</Text>
                     </TouchableOpacity>
                 </View>
-                
+
                 {hasSearched && (
                     <View style={styles.resultsSection}>
                         <View style={styles.resultsHeader}>
                             <Text style={styles.resultsTitle}>Available Departures</Text>
                             <View style={styles.optionsBadge}><Text style={styles.optionsText}>{departures.length} options</Text></View>
                         </View>
-                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep => 
-                        <DepartureCard 
-                            key={dep.id} 
-                            departure={dep}
-                            onBook={async () => {
-                                let token = null;
-                                try {
-                                    if (Platform.OS === 'web') {
-                                        token = localStorage.getItem('userToken');
-                                    } else {
-                                        token = await SecureStore.getItemAsync('userToken');
+                        {isSearching ? <Text style={styles.loadingText}>Loading routes...</Text> : departures.map(dep =>
+                            <DepartureCard
+                                key={dep.id}
+                                departure={dep}
+                                onBook={async () => {
+                                    let token = null;
+                                    try {
+                                        if (Platform.OS === 'web') {
+                                            token = localStorage.getItem('userToken');
+                                        } else {
+                                            token = await SecureStore.getItemAsync('userToken');
+                                        }
+                                    } catch (error) {
+                                        console.error("Błąd podczas odczytu tokena", error);
                                     }
-                                } catch (error) {
-                                    console.error("Błąd podczas odczytu tokena", error);
-                                }
-                                if (!token) {
-                                    setGuestModalVisible(true);
-                                    return;
-                                }
-                                setSelectedDep(dep);
-                                setUseFreeRide(false);
-                                setCalculatedPrice(dep.price);
-                                setReservationModalVisible(true);
-                                fetchExactPrice(dep, false);
-                            }}
-                        />
-                    )}
+                                    if (!token) {
+                                        setGuestModalVisible(true);
+                                        return;
+                                    }
+
+                                    // Reset i przygotowanie modala rezerwacji
+                                    setSelectedDep(dep);
+                                    setSelectedRewardId(null);
+                                    setCalculatedPrice(dep.price);
+                                    setReservationModalVisible(true);
+
+                                    // Pobieramy nagrody usera oraz wyliczamy dokładną cenę
+                                    fetchMyRewards();
+                                    fetchExactPrice(dep, null);
+                                }}
+                            />
+                        )}
                     </View>
                 )}
             </ScrollView>
@@ -441,8 +460,8 @@ export default function PassengerSearch() {
                         <Text style={styles.modalTitle}>Confirm Reservation</Text>
                         <TouchableOpacity onPress={() => setReservationModalVisible(false)}><Ionicons name="close-circle" size={32} color="#aaa" /></TouchableOpacity>
                     </View>
-                    
-                                       {selectedDep && (
+
+                    {selectedDep && (
                         <View style={{ padding: 20 }}>
                             <View style={styles.searchCard}>
                                 <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Summary</Text>
@@ -459,8 +478,50 @@ export default function PassengerSearch() {
                                     <Text style={{ fontWeight: 'bold' }}>{totalSeats}</Text>
                                 </View>
 
+                                {/* NOWOŚĆ: SEKCJA WYBORU NAGRÓD / ZNIŻEK */}
+                                {isLoadingRewards ? (
+                                    <ActivityIndicator color="#e60000" style={{ marginVertical: 15 }} />
+                                ) : myRewards.length > 0 ? (
+                                    <View style={{ marginTop: 15, marginBottom: 5 }}>
+                                        <Text style={{ color: '#111', fontWeight: 'bold', marginBottom: 10 }}>Available Rewards / Vouchers:</Text>
+                                        {myRewards.map((reward) => {
+                                            const isSelected = selectedRewardId === reward.reward_id;
+                                            return (
+                                                <TouchableOpacity
+                                                    key={reward.reward_id}
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        padding: 10,
+                                                        borderRadius: 8,
+                                                        marginBottom: 8,
+                                                        borderWidth: 1,
+                                                        borderColor: isSelected ? '#e60000' : '#e5e7eb',
+                                                        backgroundColor: isSelected ? '#fff5f5' : '#f9fafb'
+                                                    }}
+                                                    onPress={() => {
+                                                        const newSelectedId = isSelected ? null : reward.reward_id;
+                                                        setSelectedRewardId(newSelectedId);
+                                                        // Pobierz nową cenę po nałożeniu / zdjęciu kuponu
+                                                        fetchExactPrice(selectedDep, newSelectedId);
+                                                    }}
+                                                >
+                                                    <Ionicons name={reward.icon as any} size={20} color={isSelected ? '#e60000' : '#6b7280'} style={{ marginRight: 10 }} />
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={{ fontWeight: 'bold', color: isSelected ? '#e60000' : '#374151' }}>
+                                                            {reward.name} (x{reward.quantity})
+                                                        </Text>
+                                                        <Text style={{ fontSize: 12, color: '#6b7280' }}>{reward.description}</Text>
+                                                    </View>
+                                                    {isSelected && <Ionicons name="checkmark-circle" size={20} color="#e60000" />}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+                                ) : null}
+
                                 <View style={{ height: 1, backgroundColor: '#e5e7eb', marginVertical: 15 }} />
-                                
+
                                 {/* WYNIKOWA CENA Z ENDPOINTU */}
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Total:</Text>
@@ -474,9 +535,9 @@ export default function PassengerSearch() {
                                 </View>
                             </View>
 
-                            <TouchableOpacity 
-                                style={[styles.primaryBtn, { marginTop: 30 }]} 
-                                onPress={() => handleBookTicket(useFreeRide)} 
+                            <TouchableOpacity
+                                style={[styles.primaryBtn, { marginTop: 30 }]}
+                                onPress={handleBookTicket}
                                 disabled={isBooking || isCalculating}
                             >
                                 {isBooking ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Confirm and Book</Text>}
@@ -485,9 +546,9 @@ export default function PassengerSearch() {
                     )}
                 </SafeAreaView>
             </Modal>
-            <GuestLoginModal 
-                visible={guestModalVisible} 
-                onClose={() => setGuestModalVisible(false)} 
+            <GuestLoginModal
+                visible={guestModalVisible}
+                onClose={() => setGuestModalVisible(false)}
             />
         </SafeAreaView>
     );
