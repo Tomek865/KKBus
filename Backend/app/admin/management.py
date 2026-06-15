@@ -197,5 +197,79 @@ def admin_purchase_ticket(current_admin_id):
             conn.rollback()
         return jsonify({"error": "Wystąpił błąd serwera podczas zakupu biletu przez admina."}), 500
     finally:
+<<<<<<< Updated upstream
+=======
+        if conn: conn.close()
+
+
+@admin_management_bp.route('/reservations', methods=['POST'])
+@admin_required
+def create_manual_reservation(current_admin_id):
+    data = request.get_json()
+    
+    client_id = data.get('client_id')
+    trip_id = data.get('trip_id')
+    tickets = data.get('tickets', {}) # Oczekuje: {'adult': 1, 'student': 0, 'child': 0}
+
+    total_seats = sum(tickets.values())
+    if total_seats == 0:
+        return jsonify({"error": "Nie wybrano żadnych biletów."}), 400
+
+    if not client_id or not trip_id:
+        return jsonify({"error": "Brak ID klienta lub kursu."}), 400
+
+    # Tymczasowa cena bazowa
+    base_price = 15.00 
+    
+    # Obliczanie sumy: Student/Uczeń -30% (mnożnik 0.70), Dziecko do 5 lat - za darmo
+    total_price = (tickets.get('adult', 0) * base_price) + \
+                  (tickets.get('student', 0) * base_price * 0.70) + \
+                  (tickets.get('child', 0) * 0.00)
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        
+        # 1. Tworzenie głównego rekordu rezerwacji
+        cur.execute("""
+            INSERT INTO Reservation (client_id, trip_id, reservation_date, status, total_price, seat_count)
+            VALUES (%s, %s, NOW(), 'Confirmed', %s, %s) RETURNING reservation_id;
+        """, (client_id, trip_id, total_price, total_seats))
+        
+        reservation_id = cur.fetchone()[0]
+
+        # 2. Generowanie pojedynczych biletów
+        ticket_query = """
+            INSERT INTO Ticket (reservation_id, ticket_type, final_price, issue_date)
+            VALUES (%s, %s, %s, NOW());
+        """
+        
+        # Bilety Normalne
+        for _ in range(tickets.get('adult', 0)):
+            cur.execute(ticket_query, (reservation_id, 'Normalny', base_price))
+            
+        # Bilety dla Uczniów/Studentów (-30%)
+        for _ in range(tickets.get('student', 0)):
+            cur.execute(ticket_query, (reservation_id, 'Uczeń/Student', base_price * 0.70))
+            
+        # Bilety dla Dzieci do lat 5 (Darmowe)
+        for _ in range(tickets.get('child', 0)):
+            cur.execute(ticket_query, (reservation_id, 'Dziecko do 5 lat', 0.00))
+
+        conn.commit()
+        cur.close()
+
+        return jsonify({
+            "message": "Rezerwacja manualna zakończona sukcesem.", 
+            "reservation_id": reservation_id
+        }), 201
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"DB Error w ręcznej rezerwacji: {e}")
+        return jsonify({"error": "Błąd serwera podczas zapisywania biletów w bazie."}), 500
+    finally:
+>>>>>>> Stashed changes
         if conn:
             conn.close()
