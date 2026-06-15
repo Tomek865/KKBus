@@ -24,6 +24,13 @@ export default function PassengerLayout() {
                 }}
             />
             <Tabs.Screen
+                name="store"
+                options={{
+                    title: 'Rewards',
+                    tabBarIcon: ({ color }) => <Ionicons name="gift-outline" size={24} color={color} />,
+                }}
+            />
+            <Tabs.Screen
                 name="profile"
                 options={{
                     title: 'Profile',
@@ -31,16 +38,16 @@ export default function PassengerLayout() {
                 }}
             />
             <Tabs.Screen
-            name="profileSettingsModal"
-            options={{
-                href: null,
-            }}
+                name="profileSettingsModal"
+                options={{
+                    href: null,
+                }}
             />
             <Tabs.Screen
                 name="ActiveTicketModal"
                 options={{
                     href: null,
-            }}
+                }}
             />
             <Tabs.Screen
                 name="GuestLoginModal"

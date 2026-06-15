@@ -10,24 +10,26 @@ import { IP_adress } from '../utils';
 export default function RegisterScreen() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [birthDate, setBirthDate] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [focusedField, setFocusedField] = useState<'name' | 'email' | 'password' | 'confirmPassword' | null>(null);
+    const [focusedField, setFocusedField] = useState<'name' | 'email' | 'phone' | 'birthDate' | 'password' | 'confirmPassword' | null>(null);
 
     const handleRegister = async () => {
-        if (!name || !email || !password || !confirmPassword) {
-            showRegisterAlert("Błąd", "Proszę wypełnić wszystkie pola.");
+        if (!name || !email || !phone || !birthDate || !password || !confirmPassword) {
+            showRegisterAlert("Error", "Please fill in all fields.");
             return;
         }
 
         if (password !== confirmPassword) {
-            showRegisterAlert("Błąd", "Podane hasła nie są identyczne.");
+            showRegisterAlert("Error", "The passwords entered do not match.");
             return;
         }
 
         if (password.length < 6) {
-            showRegisterAlert("Błąd", "Hasło musi mieć co najmniej 6 znaków.");
+            showRegisterAlert("Error", "The password must be at least 6 characters long.");
             return;
         }
 
@@ -40,6 +42,8 @@ export default function RegisterScreen() {
                 body: JSON.stringify({
                     name: name.trim(),
                     email: email.toLowerCase().trim(),
+                    phone: phone.trim(),
+                    birthDate: birthDate.trim(),
                     password: password,
                     role: 'client'
                 })
@@ -48,13 +52,13 @@ export default function RegisterScreen() {
             const data = await response.json();
 
             if (response.ok) {
-                showRegisterAlert("Sukces", "Konto zostało utworzone pomyślnie! Możesz się teraz zalogować.");
+                showRegisterAlert("Success", "Account created successfully! You can now log in.");
                 router.replace('/');
             } else {
-                showRegisterAlert("Błąd rejestracji", data.message || "Nie udało się utworzyć konto.");
+                showRegisterAlert("Registration Error", data.message || "Failed to create an account.");
             }
         } catch (e) {
-            showRegisterAlert("Błąd sieci", "Nie udało się połączyć z serwerem.");
+            showRegisterAlert("Network Error", "Failed to connect to the server.");
         } finally {
             setIsLoading(false);
         }
@@ -83,11 +87,12 @@ export default function RegisterScreen() {
                             <Text style={styles.logoText}>KK<Text style={{ color: '#e60000' }}>Bus</Text></Text>
                         </View>
 
-                        <Text style={styles.welcomeTitle}>Rejestracja Klienta</Text>
-                        <Text style={styles.welcomeSub}>Załóż darmowe konto, aby rezerwować bilety</Text>
+                        <Text style={styles.welcomeTitle}>Passenger Registration</Text>
+                        <Text style={styles.welcomeSub}>Create a free account to book tickets</Text>
 
+                        {/* Full Name */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>IMIĘ I NAZWISKO</Text>
+                            <Text style={styles.label}>FULL NAME</Text>
                             <View style={[styles.inputWrapper, focusedField === 'name' && styles.inputWrapperActive]}>
                                 <Ionicons name="person-outline" size={18} color={focusedField === 'name' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -101,8 +106,9 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
+                        {/* Email Address */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>ADRES E-MAIL</Text>
+                            <Text style={styles.label}>EMAIL ADDRESS</Text>
                             <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputWrapperActive]}>
                                 <Ionicons name="mail-outline" size={18} color={focusedField === 'email' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -118,8 +124,43 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
+                        {/* Phone Number */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>HASŁO</Text>
+                            <Text style={styles.label}>PHONE NUMBER</Text>
+                            <View style={[styles.inputWrapper, focusedField === 'phone' && styles.inputWrapperActive]}>
+                                <Ionicons name="call-outline" size={18} color={focusedField === 'phone' ? '#e60000' : '#9ca3af'} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder=""
+                                    value={phone}
+                                    onChangeText={setPhone}
+                                    keyboardType="phone-pad"
+                                    onFocus={() => setFocusedField('phone')}
+                                    onBlur={() => setFocusedField(null)}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Date of Birth */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>DATE OF BIRTH (DD-MM-YYYY)</Text>
+                            <View style={[styles.inputWrapper, focusedField === 'birthDate' && styles.inputWrapperActive]}>
+                                <Ionicons name="calendar-outline" size={18} color={focusedField === 'birthDate' ? '#e60000' : '#9ca3af'} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="e.g. 01-01-2000"
+                                    placeholderTextColor="#d1d5db"
+                                    value={birthDate}
+                                    onChangeText={setBirthDate}
+                                    onFocus={() => setFocusedField('birthDate')}
+                                    onBlur={() => setFocusedField(null)}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Password */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>PASSWORD</Text>
                             <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperActive]}>
                                 <Ionicons name="lock-closed-outline" size={18} color={focusedField === 'password' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -134,8 +175,9 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
+                        {/* Confirm Password */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>POWTÓRZ HASŁO</Text>
+                            <Text style={styles.label}>CONFIRM PASSWORD</Text>
                             <View style={[styles.inputWrapper, focusedField === 'confirmPassword' && styles.inputWrapperActive]}>
                                 <Ionicons name="lock-closed-outline" size={18} color={focusedField === 'confirmPassword' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -155,13 +197,13 @@ export default function RegisterScreen() {
                             onPress={handleRegister}
                             disabled={isLoading}
                         >
-                            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Zarejestruj się</Text>}
+                            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Register</Text>}
                         </TouchableOpacity>
 
                         <View style={styles.registerContainer}>
-                            <Text style={styles.registerText}>Masz już konto? </Text>
+                            <Text style={styles.registerText}>Already have an account? </Text>
                             <TouchableOpacity onPress={() => router.replace('/')}>
-                                <Text style={styles.registerLink}>Zaloguj się</Text>
+                                <Text style={styles.registerLink}>Log in</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
