@@ -82,8 +82,8 @@ INSERT INTO Reservation (client_id, trip_id, reservation_number, reservation_dat
 (1, 1, 'RES-1-1234567890', CURRENT_TIMESTAMP, 1, 'Zrealizowana', 'Opłacona');
 
 -- Odcinek Kraków -> Katowice za pełną stawkę 15 zł
-INSERT INTO Ticket (reservation_id, segment_id, final_price, discount_type) VALUES 
-(1, 1, 15.00, 'Brak');
+INSERT INTO Ticket (reservation_id, segment_id, final_price, ticket_summary) VALUES 
+(1, 1, 15.00, 'Brak zniżki');
 
 -- Testowe tankowanie dla autokaru (Kierowca: Tomasz Rajdowiec)
 INSERT INTO Refueling (vehicle_id, employee_id, refueling_date, liters_volume, price_per_liter, total_cost) VALUES 
