@@ -8,10 +8,8 @@ const formatTime = (dateString?: string) => {
     if (!dateString) return '--:--';
     try {
         const d = new Date(dateString);
-
         const hours = String(d.getUTCHours()).padStart(2, '0');
         const minutes = String(d.getUTCMinutes()).padStart(2, '0');
-
         return `${hours}:${minutes}`;
     } catch (e) {
         return '--:--';
@@ -25,11 +23,19 @@ const formatDate = (dateString?: string) => {
         const day = String(d.getUTCDate()).padStart(2, '0');
         const month = String(d.getUTCMonth() + 1).padStart(2, '0');
         const year = String(d.getUTCFullYear()).slice(-2);
-
         return `${day}.${month}.${year}`;
     } catch {
         return '';
     }
+};
+
+const isChangeAllowed = (departureDateStr?: string) => {
+    if (!departureDateStr) return false;
+    const depDate = new Date(departureDateStr);
+    const now = new Date();
+    const diffInMs = depDate.getTime() - now.getTime();
+    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+    return diffInDays >= 7;
 };
 
 export default function AdminSchedule() {
@@ -42,13 +48,16 @@ export default function AdminSchedule() {
     const [stationModalVisible, setStationModalVisible] = useState(false);
     const [routeStopsModalVisible, setRouteStopsModalVisible] = useState(false);
     const [faresModalVisible, setFaresModalVisible] = useState(false);
+    const [editDriverModalVisible, setEditDriverModalVisible] = useState(false);
 
     const [availableBuses, setAvailableBuses] = useState<any[]>([]);
     const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
     const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
     const [availableStations, setAvailableStations] = useState<any[]>([]);
+    const [dynamicDriversList, setDynamicDriversList] = useState<any[]>([]);
 
     const [openDropdown, setOpenDropdown] = useState<'bus' | 'route' | 'driver' | 'editRoute' | 'editFareRoute' | null>(null);
+    const [selectedTripToEdit, setSelectedTripToEdit] = useState<any>(null);
 
     const [newEntry, setNewEntry] = useState({
         busId: '',
@@ -101,12 +110,40 @@ export default function AdminSchedule() {
         fetchInitialData();
     }, []);
 
+    useEffect(() => {
+        const fetchAvailableDrivers = async () => {
+            if (!newEntry.date || !newEntry.departureTime || !newEntry.arrivalTime) {
+                setAvailableDrivers([]);
+                return;
+            }
+
+            const depIso = `${newEntry.date}T${newEntry.departureTime}:00Z`;
+            let arrIsoDate = new Date(`${newEntry.date}T${newEntry.arrivalTime}:00Z`);
+
+            if (newEntry.arrivalTime < newEntry.departureTime) {
+                arrIsoDate.setDate(arrIsoDate.getDate() + 1);
+            }
+            const arrIso = arrIsoDate.toISOString();
+
+            try {
+                const res = await authFetch(`/api/admin/fleet/drivers/available?departureTime=${depIso}&arrivalTime=${arrIso}`);
+                if (res && res.ok) {
+                    const data = await res.json();
+                    setAvailableDrivers(Array.isArray(data) ? data : []);
+                }
+            } catch (e) {
+                console.error("Błąd ładowania dostępnych kierowców:", e);
+            }
+        };
+
+        fetchAvailableDrivers();
+    }, [newEntry.date, newEntry.departureTime, newEntry.arrivalTime]);
+
     const fetchInitialData = async () => {
         setLoading(true);
         try {
             const response = await authFetch('/api/admin/fleet/');
             const data = await response.json();
-            console.log("Fetched fleet data:", data);
             setFleet(Array.isArray(data) ? data : []);
         } catch (e) {
             console.error("Błąd pobierania floty:", e);
@@ -124,10 +161,6 @@ export default function AdminSchedule() {
             const routeRes = await authFetch('/api/admin/fleet/routes');
             const routeData = await routeRes.json();
             setAvailableRoutes(Array.isArray(routeData) ? routeData : []);
-
-            const driverRes = await authFetch('/api/admin/fleet/drivers');
-            const userData = await driverRes.json();
-            setAvailableDrivers(Array.isArray(userData) ? userData : []);
 
             setScheduleModalVisible(true);
         } catch (e) {
@@ -210,7 +243,6 @@ export default function AdminSchedule() {
             { station_id: '', distance_from_prev: '' }
         ]);
     };
-
 
     const handleSaveRouteStopsSequence = async () => {
         if (!selectedRouteId) return;
@@ -296,7 +328,6 @@ export default function AdminSchedule() {
                 currentDate.setDate(currentDate.getDate() + 1);
             } else {
                 dates.push(dateString);
-
                 if (repeatConfig.frequency === 'daily') {
                     currentDate.setDate(currentDate.getDate() + 1);
                 } else if (repeatConfig.frequency === 'weekly') {
@@ -310,7 +341,7 @@ export default function AdminSchedule() {
     };
 
     const handleAddEntry = async () => {
-        if (!newEntry.busId || !newEntry.route || !newEntry.driver || !newEntry.date || !newEntry.departureTime || !newEntry.arrivalTime) {
+        if (!newEntry.busId || !newEntry.route || !newEntry.date || !newEntry.departureTime || !newEntry.arrivalTime) {
             showScheduleAlert("Błąd", "Proszę wypełnić wszystkie podstawowe pola (w tym czas odjazdu i przyjazdu).");
             return;
         }
@@ -320,9 +351,7 @@ export default function AdminSchedule() {
             return;
         }
 
-        const datesToSchedule = isRepeating
-            ? generateScheduleDates()
-            : [newEntry.date];
+        const datesToSchedule = isRepeating ? generateScheduleDates() : [newEntry.date];
 
         if (datesToSchedule.length === 0) {
             showScheduleAlert("Błąd", "Brak dat do zaplanowania w wybranym przedziale.");
@@ -332,22 +361,25 @@ export default function AdminSchedule() {
         try {
             const requests = datesToSchedule.map(dateStr => {
                 const departureIso = `${dateStr}T${newEntry.departureTime}:00`;
-                console.log("Departure ISO:", departureIso);
-                let arrivalDateObj = new Date(`${dateStr}T${newEntry.arrivalTime}`);
+                let arrivalIso = `${dateStr}T${newEntry.arrivalTime}:00`;
                 if (newEntry.arrivalTime < newEntry.departureTime) {
+                    let arrivalDateObj = new Date(`${dateStr}T${newEntry.arrivalTime}`);
                     arrivalDateObj.setDate(arrivalDateObj.getDate() + 1);
+                    const year = arrivalDateObj.getFullYear();
+                    const month = String(arrivalDateObj.getMonth() + 1).padStart(2, '0');
+                    const day = String(arrivalDateObj.getDate()).padStart(2, '0');
+                    arrivalIso = `${year}-${month}-${day}T${newEntry.arrivalTime}:00`;
                 }
-                const arrivalIso = `${dateStr}T${newEntry.arrivalTime}:00`;
-                console.log("Arrival ISO:", arrivalIso);
+
                 return authFetch('/api/admin/fleet/', {
                     method: 'POST',
                     body: JSON.stringify({
                         busId: parseInt(newEntry.busId),
                         route: parseInt(newEntry.route),
-                        driver: parseInt(newEntry.driver),
+                        driver: newEntry.driver ? parseInt(newEntry.driver) : null,
                         departureTime: departureIso,
                         arrivalTime: arrivalIso,
-                        status: 'Planned'
+                        status: newEntry.driver ? 'Planned' : 'Unassigned'
                     })
                 });
             });
@@ -357,12 +389,10 @@ export default function AdminSchedule() {
 
             if (allOk) {
                 fetchInitialData();
-
                 setScheduleModalVisible(false);
                 setNewEntry({ busId: '', route: '', driver: '', date: '', departureTime: '', arrivalTime: '', status: 'Planned' });
                 setIsRepeating(false);
                 setRepeatConfig({ endDate: '', frequency: 'daily', customDays: [] });
-
                 showScheduleAlert("Sukces", `Zaplanowano ${datesToSchedule.length} kursów.`);
             } else {
                 showScheduleAlert("Ostrzeżenie", "Niektóre kursy mogły nie zostać zapisane.");
@@ -434,31 +464,6 @@ export default function AdminSchedule() {
         }
     };
 
-    const handleAddRouteStops = async () => {
-        if (!selectedRouteId) {
-            showScheduleAlert("Błąd", "Wybierz trasę.");
-            return;
-        }
-
-        try {
-            const response = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    stations: routeStops.map((stop) => parseInt(stop.station_id))
-                })
-            });
-
-            if (response.ok) {
-                setRouteStopsModalVisible(false);
-                showScheduleAlert("Sukces", "Przystanki zostały zaktualizowane.");
-            } else {
-                showScheduleAlert("Błąd", "Nie udało się zapisać przystanków.");
-            }
-        } catch (e) {
-            showScheduleAlert("Błąd", "Problem z połączeniem sieciowym.");
-        }
-    };
-
     const handleCreateStation = async () => {
         if (!newStation.name || !newStation.exactAddress) {
             showScheduleAlert("Błąd", "Wprowadź nazwę i adres przystanku.");
@@ -483,6 +488,43 @@ export default function AdminSchedule() {
             }
         } catch (e) {
             showScheduleAlert("Błąd", "Błąd połączenia sieciowego.");
+        }
+    };
+
+    const handleOpenEditDriver = async (trip: any) => {
+        setSelectedTripToEdit(trip);
+        try {
+            const depIso = new Date(trip.departureTime).toISOString();
+            const arrIso = new Date(trip.arrivalTime).toISOString();
+            const res = await authFetch(`/api/admin/fleet/drivers/available?departureTime=${depIso}&arrivalTime=${arrIso}`);
+            if (res && res.ok) {
+                const data = await res.json();
+                setDynamicDriversList(Array.isArray(data) ? data : []);
+                setEditDriverModalVisible(true);
+            }
+        } catch (e) {
+            showScheduleAlert("Błąd", "Nie udało się pobrać listy kierowców.");
+        }
+    };
+
+    const submitDriverChange = async (newDriverId: number | null) => {
+        if (!selectedTripToEdit) return;
+        try {
+            const response = await authFetch(`/api/admin/fleet/${selectedTripToEdit.id}/driver`, {
+                method: 'PATCH',
+                body: JSON.stringify({ driverId: newDriverId })
+            });
+            const resData = await response.json();
+
+            if (response.ok) {
+                fetchInitialData();
+                setEditDriverModalVisible(false);
+                showScheduleAlert("Sukces", resData.message);
+            } else {
+                showScheduleAlert("Błąd", resData.error || "Wystąpił problem.");
+            }
+        } catch (e) {
+            showScheduleAlert("Błąd", "Błąd sieci.");
         }
     };
 
@@ -530,10 +572,8 @@ export default function AdminSchedule() {
 
     return (
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-
             <View style={styles.pageHeader}>
                 <Text style={styles.title}>Schedule & Fleet Management</Text>
-
                 <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                     <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#4b5563' }]} onPress={() => setBusModalVisible(true)}>
                         <Ionicons name="bus-outline" size={16} color="#fff" />
@@ -589,11 +629,19 @@ export default function AdminSchedule() {
                             </View>
 
                             <View style={{ flex: 1, alignItems: 'center' }}>
-                                <View style={[styles.statusBadge, { backgroundColor: bus.status === 'Planned' ? COLORS.greenLight : COLORS.redLight }]}>
-                                    <Text style={[styles.statusText, { color: bus.status === 'Planned' ? COLORS.green : COLORS.red }]}>{bus.status}</Text>
+                                <View style={[styles.statusBadge, { backgroundColor: bus.status === 'Planned' ? COLORS.greenLight : bus.status === 'Unassigned' ? COLORS.blueLight : COLORS.redLight }]}>
+                                    <Text style={[styles.statusText, { color: bus.status === 'Planned' ? COLORS.green : bus.status === 'Unassigned' ? COLORS.blue : COLORS.red }]}>{bus.status}</Text>
                                 </View>
                             </View>
-                            <Text style={[styles.cell, { flex: 1, textAlign: 'center' }]}>{bus.driver}</Text>
+
+                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                                <Text style={[styles.cell, { textAlign: 'center', flexShrink: 1 }]}>{bus.driver}</Text>
+                                {!isCancelled && isChangeAllowed(bus.departureTime) && (
+                                    <TouchableOpacity onPress={() => handleOpenEditDriver(bus)} style={{ padding: 4 }}>
+                                        <Ionicons name="swap-horizontal" size={16} color={COLORS.blue} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
 
                             <View style={{ width: 40, alignItems: 'flex-end' }}>
                                 {!isCancelled && (
@@ -650,25 +698,6 @@ export default function AdminSchedule() {
                             </View>
                         )}
 
-                        <Text style={[styles.inputLabel, { marginTop: 15 }]}>ASSIGN DRIVER</Text>
-                        <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(openDropdown === 'driver' ? null : 'driver')}>
-                            <Text style={{ color: newEntry.driver ? '#111' : '#9ca3af' }}>
-                                {availableDrivers.find(d => d.id?.toString() === newEntry.driver)?.name || "Select employee..."}
-                            </Text>
-                            <Ionicons name={openDropdown === 'driver' ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
-                        </TouchableOpacity>
-                        {openDropdown === 'driver' && (
-                            <View style={styles.dropdownContainer}>
-                                <ScrollView nestedScrollEnabled style={{ maxHeight: 150 }}>
-                                    {availableDrivers.map((driver) => (
-                                        <TouchableOpacity key={driver.id} style={styles.dropdownItem} onPress={() => { setNewEntry({ ...newEntry, driver: driver.id?.toString() || '' }); setOpenDropdown(null); }}>
-                                            <Text>{driver.name || "No name"} ({driver.id})</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
-
                         <View style={{ marginTop: 15 }}>
                             <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
                             <input
@@ -699,6 +728,35 @@ export default function AdminSchedule() {
                                 </View>
                             </View>
                         </View>
+
+                        <Text style={[styles.inputLabel, { marginTop: 15 }]}>ASSIGN DRIVER</Text>
+                        <TouchableOpacity 
+                            style={[styles.dropdownTrigger, (!newEntry.date || !newEntry.departureTime || !newEntry.arrivalTime) && { backgroundColor: '#f3f4f6', opacity: 0.6 }]} 
+                            disabled={!newEntry.date || !newEntry.departureTime || !newEntry.arrivalTime}
+                            onPress={() => setOpenDropdown(openDropdown === 'driver' ? null : 'driver')}
+                        >
+                            <Text style={{ color: newEntry.driver ? '#111' : '#9ca3af' }}>
+                                {!newEntry.date || !newEntry.departureTime || !newEntry.arrivalTime 
+                                    ? "Najpierw wybierz datę i godziny..." 
+                                    : (availableDrivers.find(d => d.id?.toString() === newEntry.driver)?.name || "Pozostaw nieprzypisany (Unassigned)...")}
+                            </Text>
+                            <Ionicons name={openDropdown === 'driver' ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
+                        </TouchableOpacity>
+                        {openDropdown === 'driver' && (
+                            <View style={styles.dropdownContainer}>
+                                <ScrollView nestedScrollEnabled style={{ maxHeight: 150 }}>
+                                    <TouchableOpacity style={styles.dropdownItem} onPress={() => { setNewEntry({ ...newEntry, driver: '' }); setOpenDropdown(null); }}>
+                                        <Text style={{ color: COLORS.red, fontWeight: 'bold' }}>Brak przypisania (Unassigned)</Text>
+                                    </TouchableOpacity>
+                                    {availableDrivers.map((driver) => (
+                                        <TouchableOpacity key={driver.id} style={styles.dropdownItem} onPress={() => { setNewEntry({ ...newEntry, driver: driver.id?.toString() || '' }); setOpenDropdown(null); }}>
+                                            <Text>{driver.name || "No name"}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
+
                         <TouchableOpacity
                             style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 }}
                             onPress={() => setIsRepeating(!isRepeating)}
@@ -709,7 +767,6 @@ export default function AdminSchedule() {
 
                         {isRepeating && (
                             <View style={{ backgroundColor: '#f9fafb', padding: 15, borderRadius: 12, marginTop: 10, borderWidth: 1, borderColor: COLORS.grayBorder }}>
-
                                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15 }}>
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.inputLabel}>END DATE</Text>
@@ -791,7 +848,6 @@ export default function AdminSchedule() {
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 500, paddingHorizontal: 25, paddingTop: 25, paddingBottom: 20 }]}>
                         <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>Add New Bus to Fleet</Text>
-
                         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.compactLabel}>VIN NUMBER</Text>
@@ -802,7 +858,6 @@ export default function AdminSchedule() {
                                 <TextInput style={styles.compactInput} placeholder="e.g. KR 12345" value={newBus.registrationNumber} onChangeText={(text) => setNewBus({ ...newBus, registrationNumber: text })} />
                             </View>
                         </View>
-
                         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.compactLabel}>BRAND</Text>
@@ -813,7 +868,6 @@ export default function AdminSchedule() {
                                 <TextInput style={styles.compactInput} placeholder="e.g. Tourismo" value={newBus.model} onChangeText={(text) => setNewBus({ ...newBus, model: text })} />
                             </View>
                         </View>
-
                         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.compactLabel}>PARKING LOCATION</Text>
@@ -824,7 +878,6 @@ export default function AdminSchedule() {
                                 <TextInput style={styles.compactInput} keyboardType="number-pad" placeholder="55" value={newBus.seatingCapacity} onChangeText={(text) => setNewBus({ ...newBus, seatingCapacity: text })} />
                             </View>
                         </View>
-
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 15 }}>
                             <TouchableOpacity onPress={() => setBusModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10, fontSize: 14 }}>Cancel</Text></TouchableOpacity>
                             <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20, height: 40 }]} onPress={handleAddBus}><Text style={styles.primaryBtnText}>Add Bus</Text></TouchableOpacity>
@@ -837,10 +890,8 @@ export default function AdminSchedule() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Create New Route</Text>
-
                         <Text style={styles.inputLabel}>ROUTE LINE NAME</Text>
                         <TextInput style={styles.input} placeholder="e.g. Kraków - Zakopane" value={newRoute.name} onChangeText={(text) => setNewRoute({ name: text })} />
-
                         <View style={{ flexDirection: 'row', gap: 15, justifyContent: 'flex-end', marginTop: 20 }}>
                             <TouchableOpacity onPress={() => setRouteModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
                             <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAddRoute}><Text style={styles.primaryBtnText}>Create Route</Text></TouchableOpacity>
@@ -853,13 +904,10 @@ export default function AdminSchedule() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Add New Destination Station</Text>
-
                         <Text style={styles.inputLabel}>STATION NAME</Text>
                         <TextInput style={styles.input} placeholder="e.g. Katowice Dworzec" value={newStation.name} onChangeText={(text) => setNewStation({ ...newStation, name: text })} />
-
                         <Text style={[styles.inputLabel, { marginTop: 15 }]}>EXACT ADDRESS</Text>
                         <TextInput style={styles.input} placeholder="e.g. ul. Piotra Skargi 4" value={newStation.exactAddress} onChangeText={(text) => setNewStation({ ...newStation, exactAddress: text })} />
-
                         <View style={{ flexDirection: 'row', gap: 15, justifyContent: 'flex-end', marginTop: 25 }}>
                             <TouchableOpacity onPress={() => setStationModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
                             <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleCreateStation}><Text style={styles.primaryBtnText}>Save Station</Text></TouchableOpacity>
@@ -872,7 +920,6 @@ export default function AdminSchedule() {
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 550, overflow: 'visible' }]}>
                         <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15 }}>Configure Route Stops Sequence</Text>
-
                         <Text style={styles.inputLabel}>SELECT ROUTE LINE</Text>
                         <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(openDropdown === 'editRoute' ? null : 'editRoute')}>
                             <Text style={{ color: selectedRouteId ? '#111' : '#9ca3af' }}>
@@ -901,7 +948,6 @@ export default function AdminSchedule() {
                                             <View style={styles.indexBadge}>
                                                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>{index + 1}</Text>
                                             </View>
-
                                             <View style={{ flex: 2, zIndex: 100 - index, position: 'relative' }}>
                                                 <select
                                                     style={styles.nativeSelectElement as any}
@@ -917,7 +963,6 @@ export default function AdminSchedule() {
                                                     ))}
                                                 </select>
                                             </View>
-
                                             <View style={{ width: 80 }}>
                                                 <TextInput
                                                     style={{
@@ -938,7 +983,6 @@ export default function AdminSchedule() {
                                                     }}
                                                 />
                                             </View>
-
                                             <TouchableOpacity onPress={() => setRouteStops(prev => prev.filter((_, i) => i !== index))} style={{ padding: 5 }}>
                                                 <Ionicons name="trash-outline" size={20} color={COLORS.red} />
                                             </TouchableOpacity>
@@ -959,102 +1003,34 @@ export default function AdminSchedule() {
                     </View>
                 </View>
             </Modal>
-
-            <Modal visible={faresModalVisible} transparent animationType="fade">
+            <Modal visible={editDriverModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { maxWidth: 650, overflow: 'visible' }]}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15 }}>Configure Route Fares</Text>
-
-                        <Text style={styles.inputLabel}>SELECT ROUTE LINE</Text>
-                        <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(openDropdown === 'editFareRoute' ? null : 'editFareRoute')}>
-                            <Text style={{ color: selectedFareRouteId ? '#111' : '#9ca3af' }}>
-                                {availableRoutes.find(r => r.id?.toString() === selectedFareRouteId)?.name || "Choose route line..."}
-                            </Text>
-                            <Ionicons name={openDropdown === 'editFareRoute' ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
-                        </TouchableOpacity>
-                        {openDropdown === 'editFareRoute' && (
-                            <View style={[styles.dropdownContainer, { left: 25, right: 25 }]}>
-                                <ScrollView nestedScrollEnabled style={{ maxHeight: 120 }}>
-                                    {availableRoutes.map((route) => (
-                                        <TouchableOpacity key={route.id} style={styles.dropdownItem} onPress={() => { setSelectedFareRouteId(route.id?.toString() || ''); setOpenDropdown(null); }}>
-                                            <Text>{route.name}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
-
-                        {selectedFareRouteId !== '' && (
-                            <View style={{ marginTop: 20, maxHeight: 300 }}>
-                                <Text style={[styles.inputLabel, { marginBottom: 10 }]}>FARE SEGMENTS</Text>
-                                <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
-                                    {routeFares.map((fare, index) => (
-                                        <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, backgroundColor: '#f9fafb', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>From Station</Text>
-                                                <select
-                                                    style={styles.nativeSelectElement}
-                                                    value={fare.start_station_id || ''}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        setRouteFares(prev => prev.map((f, i) => i === index ? { ...f, start_station_id: val } : f));
-                                                    }}
-                                                >
-                                                    <option value="">-- Start --</option>
-                                                    {availableStations.map(st => (
-                                                        <option key={st.id} value={st.id}>{st.name}</option>
-                                                    ))}
-                                                </select>
-                                            </View>
-
-                                            <Ionicons name="arrow-forward" size={16} color="#9ca3af" />
-
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>To Station</Text>
-                                                <select
-                                                    style={styles.nativeSelectElement}
-                                                    value={fare.end_station_id || ''}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        setRouteFares(prev => prev.map((f, i) => i === index ? { ...f, end_station_id: val } : f));
-                                                    }}
-                                                >
-                                                    <option value="">-- End --</option>
-                                                    {availableStations.map(st => (
-                                                        <option key={st.id} value={st.id}>{st.name}</option>
-                                                    ))}
-                                                </select>
-                                            </View>
-
-                                            <View style={{ width: 80 }}>
-                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>Price (PLN)</Text>
-                                                <TextInput
-                                                    style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14 }}
-                                                    keyboardType="numeric"
-                                                    value={fare.standard_price?.toString() || ''}
-                                                    onChangeText={(val) => {
-                                                        setRouteFares(prev => prev.map((f, i) => i === index ? { ...f, standard_price: val } : f));
-                                                    }}
-                                                />
-                                            </View>
-
-                                            <TouchableOpacity onPress={() => setRouteFares(prev => prev.filter((_, i) => i !== index))} style={{ padding: 5 }}>
-                                                <Ionicons name="trash-outline" size={20} color={COLORS.red} />
-                                            </TouchableOpacity>
-                                        </View>
-                                    ))}
-
-                                    <TouchableOpacity style={[styles.plusButtonRow, { marginTop: 10 }]} onPress={handleAddFareSegment}>
-                                        <Ionicons name="add-circle" size={26} color="#059669" />
-                                        <Text style={{ color: '#059669', fontWeight: 'bold', fontSize: 14 }}>Add Fare Segment</Text>
-                                    </TouchableOpacity>
-                                </ScrollView>
-                            </View>
-                        )}
-
-                        <View style={{ flexDirection: 'row', gap: 15, justifyContent: 'flex-end', marginTop: 25 }}>
-                            <TouchableOpacity onPress={() => { setFaresModalVisible(false); setSelectedFareRouteId(''); setRouteFares([]); setOpenDropdown(null); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20, backgroundColor: '#059669' }]} disabled={!selectedFareRouteId} onPress={handleSaveFares}><Text style={styles.primaryBtnText}>Save Fares</Text></TouchableOpacity>
+                    <View style={[styles.modalContent, { maxWidth: 400 }]}>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>Zmień przypisanie kierowcy</Text>
+                        <Text style={{ marginBottom: 15, fontSize: 13, color: COLORS.grayText }}>
+                            Dostępni kierowcy dla tego terminu ({formatDate(selectedTripToEdit?.departureTime)}):
+                        </Text>
+                        <ScrollView style={{ maxHeight: 200, marginBottom: 20 }}>
+                            {dynamicDriversList.length === 0 && (
+                                <Text style={{ fontStyle: 'italic', color: COLORS.red }}>Brak dostępnych kierowców w tym czasie.</Text>
+                            )}
+                            {dynamicDriversList.map(driver => (
+                                <TouchableOpacity 
+                                    key={driver.id} 
+                                    style={[styles.dropdownItem, { borderBottomWidth: 1, borderColor: '#eee' }]}
+                                    onPress={() => submitDriverChange(driver.id)}
+                                >
+                                    <Text style={{ fontWeight: '500' }}>{driver.name}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                            <TouchableOpacity onPress={() => submitDriverChange(null)}>
+                                <Text style={{ color: COLORS.red, fontWeight: 'bold', padding: 10 }}>Odepnij kierowcę</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setEditDriverModalVisible(false)}>
+                                <Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Anuluj</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>
