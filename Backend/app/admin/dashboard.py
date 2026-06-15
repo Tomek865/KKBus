@@ -61,10 +61,10 @@ def get_users(current_admin_id):
                 first_name || ' ' || last_name AS name, 
                 email, 
                 'Passenger' AS role, 
-                unfulfilled_reservations_count AS trips,
-                loyalty_points AS loyaltyPoints,
+                (SELECT COUNT(*) FROM Reservation WHERE client_id = c.client_id) AS trips,
+                loyalty_points,
                 is_active
-            FROM Client
+            FROM Client c
             UNION ALL
             SELECT 
                 'E_' || employee_id AS id, 

@@ -78,6 +78,10 @@ INSERT INTO Client (first_name, last_name, email, password, loyalty_points) VALU
 INSERT INTO Trip (route_id, vehicle_id, employee_id, departure_time, arrival_time, status) VALUES 
 (1, 5, 4, CURRENT_DATE + INTERVAL '1 day 08:00:00', CURRENT_DATE + INTERVAL '1 day 09:30:00', 'Planned');
 
+-- Testowy kurs powrotny: Trasa 2 (Katowice -> Kraków)
+INSERT INTO Trip (route_id, vehicle_id, employee_id, departure_time, arrival_time, status) VALUES 
+(2, 5, 4, CURRENT_DATE + INTERVAL '1 day 10:30:00', CURRENT_DATE + INTERVAL '1 day 12:00:00', 'Planned');
+
 INSERT INTO Reservation (client_id, trip_id, reservation_number, reservation_date, seat_count, status, payment_status) VALUES 
 (1, 1, 'RES-1-1234567890', CURRENT_TIMESTAMP, 1, 'Zrealizowana', 'Opłacona');
 
@@ -87,11 +91,4 @@ INSERT INTO Ticket (reservation_id, segment_id, final_price, ticket_summary) VAL
 
 -- Testowe tankowanie dla autokaru (Kierowca: Tomasz Rajdowiec)
 INSERT INTO Refueling (vehicle_id, employee_id, refueling_date, liters_volume, price_per_liter, total_cost) VALUES 
-(5, 4, CURRENT_TIMESTAMP, 120.0, 6.50, 780.00);
-
-
-INSERT INTO Reward (name, description, required_points) VALUES 
-('Free Ticket', 'Exchange points for a free ride on any route.', 1000),
-('50% Discount', 'Get a 50% discount on your next single ticket.', 500),
-('VIP Seat', 'Guarantee of the best seat and extra legroom.', 300),
-('Free Luggage', 'Take an extra suitcase at no additional cost.', 200);
+(5, 4, CURRENT_TIMESTAMP, 120.0, 6.50, 7

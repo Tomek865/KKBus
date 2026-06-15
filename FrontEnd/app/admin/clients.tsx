@@ -113,7 +113,7 @@ export default function AdminClients() {
                 </TouchableOpacity>
             </View>
 
-            <View style={[styles.card, { padding: 0, overflow: 'hidden', marginTop: 20 }]}>
+            <View style={[styles.card, { padding: 0, overflow: 'hidden', marginTop: 20, flex: 1 }]}>
                 <View style={styles.tableHeader}>
                     <Text style={[styles.headerCell, { flex: 1.5 }]}>USER DETAILS (ID)</Text>
                     <Text style={[styles.headerCell, { flex: 1 }]}>ROLE</Text>
@@ -122,7 +122,7 @@ export default function AdminClients() {
                     <Text style={[styles.headerCell, { flex: 0.5, textAlign: 'right' }]}>ACTIONS</Text>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 15 }}>
                     {users.map((user) => (
                         <View key={user.id} style={styles.tableRow}>
                             <View style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center' }}>
