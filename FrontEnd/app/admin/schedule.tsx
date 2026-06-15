@@ -225,7 +225,7 @@ export default function AdminSchedule() {
         try {
             const response = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`, {
                 method: 'POST',
-                body: JSON.stringify({ stations: stationIdsOnly })
+                body: JSON.stringify({ stations: payload })
             });
 
             if (response.ok) {
