@@ -225,7 +225,7 @@ def create_user_options():
         "Access-Control-Allow-Methods": "POST, OPTIONS"
     }
 
-@admin_management_bp.route("/reservations", methods=["POST"])
+@admin_management_bp.route("/users", methods=["POST"])
 @admin_required
 def create_user(current_admin_id):
     data = request.get_json()

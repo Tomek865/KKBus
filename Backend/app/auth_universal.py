@@ -100,13 +100,21 @@ def register():
     name = data.get("name")
     email = data.get("email")
     password = data.get("password")
+    phone_number = data.get("phone")
+    birth_date_str = data.get("birthDate")
     role = data.get("role", "client")
 
-    if not name or not email or not password:
+    if not name or not email or not password or not phone_number or not birth_date_str:
         return jsonify({"error": "Missing required fields"}), 400
 
     if role.lower() != "client":
         return jsonify({"error": "Invalid role for public registration"}), 403
+
+
+    try:
+        birth_date = datetime.strptime(birth_date_str, "%d-%m-%Y").date()
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Expected DD-MM-YYYY"}), 400
 
     name_parts = name.strip().split(" ", 1)
     first_name = name_parts[0]
@@ -127,10 +135,10 @@ def register():
             return jsonify({"error": "Email is already registered"}), 409
 
         query = """
-            INSERT INTO Client (first_name, last_name, email, password, is_active)
-            VALUES (%s, %s, %s, %s, TRUE) RETURNING client_id;
+            INSERT INTO Client (first_name, last_name, email, password, phone_number, birth_date, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING client_id;
         """
-        cur.execute(query, (first_name, last_name, email, hashed_password))
+        cur.execute(query, (first_name, last_name, email, phone_number, birth_date, hashed_password))
 
         conn.commit()
         cur.close()
