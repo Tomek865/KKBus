@@ -103,9 +103,9 @@ def search_routes():
             available_seats = dep["seating_capacity"] - dep["occupied_seats"]
 
             total_price = (
-                (adult_count * base_price)
-                + (student_count * (base_price * 0.49))
-                + (reduced_count * (base_price * 0.63))
+                (adult_count * base_price) +
+                (student_count * (base_price * 0.70)) +
+                (reduced_count * 0.0)
             )
 
             raw_dep = dep["raw_departure"]
@@ -344,7 +344,7 @@ def calculate_price_options():
     return res, 200
 
 
-@client_reservation_bp.route("/calculate-price", methods=["POST", "OPTIONS"])
+@client_reservation_bp.route("/calculate-price", methods=["POST"])
 @token_required
 def calculate_price(current_user_id):
     if request.method == "OPTIONS":
@@ -370,25 +370,28 @@ def calculate_price(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        query_stops = """
-            SELECT 
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS to_order
-            FROM Trip tr WHERE trip_id = %s;
+        # --- NOWY, POPRAWNY SPOSÓB POBIERANIA CENY ---
+        query_price = """
+            SELECT fs.standard_price 
+            FROM Fare_Segment fs
+            JOIN Trip tr ON fs.route_id = tr.route_id
+            JOIN Station s1 ON fs.start_station_id = s1.station_id
+            JOIN Station s2 ON fs.end_station_id = s2.station_id
+            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
         """
-        cur.execute(query_stops, (from_station, to_station, trip_id))
-        stops = cur.fetchone()
-
-        if not stops or not stops["from_order"] or not stops["to_order"]:
+        cur.execute(query_price, (trip_id, from_station, to_station))
+        price_row = cur.fetchone()
+        
+        if not price_row:
             return jsonify({"error": "Invalid stations for this trip"}), 400
+            
+        base_price = float(price_row["standard_price"])
 
-        stops_count = stops["to_order"] - stops["from_order"]
-        base_price = 15.00 + (stops_count * 5.00)
-
+        # --- KALKULACJA NOWYCH ZNIŻEK ---
         total_price = (
             (adult_count * base_price) +
-            (student_count * (base_price * 0.49)) +
-            (reduced_count * (base_price * 0.63))
+            (student_count * (base_price * 0.70)) +
+            (reduced_count * 0.0)
         )
 
         if applied_reward_id:
