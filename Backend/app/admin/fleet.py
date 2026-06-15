@@ -17,6 +17,7 @@ def get_fleet_assignments(current_admin_id):
         query = """
             SELECT 
                 tr.trip_id AS id, 
+                tr.route_id,
                 v.registration_number AS "busId", 
                 rt.name AS route, 
                 tr.status, 

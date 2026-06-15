@@ -19,7 +19,7 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert("Błąd", "Proszę wypełnić wszystkie pola.");
+            Alert.alert("Error", "Please fill in all fields.");
             return;
         }
 
@@ -32,7 +32,7 @@ export default function LoginScreen() {
             } else {
                 try {
                     await Promise.all(keysToRemove.map(key => SecureStore.deleteItemAsync(key)));
-                } catch (e) { console.log("Brak starych danych do usunięcia"); }
+                } catch (e) { console.log("No old data to remove"); }
             }
 
             const response = await fetch(`${IP_adress}/api/auth/login`, {
@@ -46,7 +46,7 @@ export default function LoginScreen() {
 
             const data = await response.json();
             if (response.ok) {
-                console.log('dane z logowania', data)
+                console.log('login data', data)
                 const role = data.role?.toLowerCase();
 
                 if (data.token) {
@@ -74,13 +74,13 @@ export default function LoginScreen() {
                 } else if (role === 'client') {
                     router.replace('/passenger');
                 } else {
-                    Alert.alert("Błąd roli", `Twoje konto ma przypisaną nieobsługiwaną rolę: ${data.role}`);
+                    Alert.alert("Role Error", `Your account has an unsupported role assigned: ${data.role}`);
                 }
             } else {
-                Alert.alert("Błąd", data.message || "Niepoprawny e-mail lub hasło.");
+                Alert.alert("Error", data.message || "Invalid email or password.");
             }
         } catch (e) {
-            Alert.alert("Błąd sieci", "Nie udało się połączyć z serwerem");
+            Alert.alert("Network Error", "Failed to connect to the server.");
         } finally {
             setIsLoading(false);
         }
@@ -95,11 +95,11 @@ export default function LoginScreen() {
                         <Text style={styles.logoText}>KK<Text style={{ color: '#e60000' }}>Bus</Text></Text>
                     </View>
 
-                    <Text style={styles.welcomeTitle}>Panel Logowania</Text>
-                    <Text style={styles.welcomeSub}>Zaloguj się, aby kontynuować</Text>
+                    <Text style={styles.welcomeTitle}>Login Panel</Text>
+                    <Text style={styles.welcomeSub}>Log in to continue</Text>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>ADRES E-MAIL</Text>
+                        <Text style={styles.label}>EMAIL ADDRESS</Text>
                         <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputWrapperActive]}>
                             <Ionicons name="mail-outline" size={20} color={focusedField === 'email' ? '#e60000' : '#9ca3af'} />
                             <TextInput
@@ -115,7 +115,7 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>HASŁO</Text>
+                        <Text style={styles.label}>PASSWORD</Text>
                         <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperActive]}>
                             <Ionicons name="lock-closed-outline" size={20} color={focusedField === 'password' ? '#e60000' : '#9ca3af'} />
                             <TextInput
@@ -135,44 +135,45 @@ export default function LoginScreen() {
                         onPress={handleLogin}
                         disabled={isLoading}
                     >
-                        {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Zaloguj się</Text>}
+                        {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Log in</Text>}
                     </TouchableOpacity>
 
                     <View style={styles.registerContainer}>
-                        <Text style={styles.registerText}>Nie masz konta? </Text>
+                        <Text style={styles.registerText}>Don't have an account? </Text>
                         <TouchableOpacity onPress={() => router.push('/register')}>
-                            <Text style={styles.registerLink}>Załóż konto klienta</Text>
+                            <Text style={styles.registerLink}>Create an account</Text>
                         </TouchableOpacity>
                     </View>
-                   <View style={styles.guestContainer}>
+                    <View style={styles.guestContainer}>
                         <TouchableOpacity onPress={() => router.replace('/passenger')}>
-                            <Text style={styles.guestLink}>Kontynuuj bez logowania</Text>
+                            <Text style={styles.guestLink}>Continue as guest</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => setInfoModalVisible(true)} style={{ marginTop: 15 }}>
-                            <Text style={{ color: '#e60000', fontSize: 14, fontWeight: '600' }}>O firmie i kontakt</Text>
+                            <Text style={{ color: '#e60000', fontSize: 14, fontWeight: '600' }}>About us & Contact</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
                 <Text style={styles.footer}>KKbus v1.0</Text>
             </KeyboardAvoidingView>
-                        {/* MODAL: O FIRMIE (DLA NIEZALOGOWANYCH) */}
+
+            {/* MODAL: ABOUT US (FOR GUEST USERS) */}
             <Modal visible={infoModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setInfoModalVisible(false)}>
                 <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
-                        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>O nas i Kontakt</Text>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>About us & Contact</Text>
                         <TouchableOpacity onPress={() => setInfoModalVisible(false)}>
                             <Ionicons name="close" size={28} color="#111" />
                         </TouchableOpacity>
                     </View>
                     <ScrollView contentContainerStyle={{ padding: 20 }}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Firma transportowa KKBus sp z.o.o</Text>
-                        
-                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>O nas</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Transport Company KKBus sp z.o.o</Text>
+
+                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>About us</Text>
                         <Text style={{ color: '#4b5563', marginBottom: 20, lineHeight: 22 }}>
-                            Firma zajmuje się transportem osób między Krakowem a Katowicami. Oferujemy bezpieczne przewozy z użyciem nowoczesnej floty pojazdów, a nasi niezalogowani klienci mogą zawsze liczyć na pełen dostęp do informacji o trasach i cenniku.
+                            The company handles passenger transport between Kraków and Katowice. We offer safe transport using a modern fleet of vehicles, and our guest users can always count on full access to route and pricing information.
                         </Text>
 
-                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>Dane kontaktowe</Text>
+                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>Contact Details</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
                             <Ionicons name="location" size={20} color="#e60000" style={{ marginRight: 10 }} />
                             <Text style={{ fontSize: 15, color: '#4b5563' }}>ul. Jana Pawła II 37, 31-864 Kraków</Text>

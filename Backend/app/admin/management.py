@@ -49,17 +49,22 @@ def deactivate_user(current_admin_id, user_id):
             conn.close()
 
 
-@admin_management_bp.route("/reservations", methods=["POST", "OPTIONS"])
+@admin_management_bp.route("/reservations", methods=["OPTIONS"])
+def admin_purchase_ticket_options():
+    return '', 200, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Methods": "POST, OPTIONS"
+    }
+
+
+@admin_management_bp.route("/reservations", methods=["POST"])
 @admin_required
 def admin_purchase_ticket(current_admin_id):
-    if request.method == "OPTIONS":
-        return jsonify({}), 200
-
     data = request.get_json()
     if not data:
         return jsonify({"error": "Brak danych w zapytaniu."}), 400
 
-    # 1. ROZPAKOWANIE DANYCH
     target_client_id = data.get("client_id")
     trip_data = data.get("trip", {})
     tickets_data = data.get("tickets", {})
@@ -68,7 +73,6 @@ def admin_purchase_ticket(current_admin_id):
     from_station = trip_data.get("from")
     to_station = trip_data.get("to")
 
-    # ZMIANA: Zmiana z 'reduced' na 'child'
     adult_count = tickets_data.get("adult", 0)
     student_count = tickets_data.get("student", 0)
     child_count = tickets_data.get("child", 0)
@@ -106,7 +110,6 @@ def admin_purchase_ticket(current_admin_id):
 
         loyalty_points = client_data[0] if client_data[0] is not None else 0
 
-        # --- B. SPRAWDZANIE DOSTĘPNOŚCI MIEJSC ---
         query_capacity = """
             SELECT v.seating_capacity, 
                    COALESCE((SELECT SUM(seat_count) FROM Reservation WHERE trip_id = %s AND status != 'Cancelled'), 0)
@@ -126,7 +129,6 @@ def admin_purchase_ticket(current_admin_id):
                 {"error": f"Brak wolnych miejsc. Dostępne: {available_seats}"}
             ), 409
 
-        # --- C. WYLICZANIE POZYCJI NA TRASIE I CENY ---
         query_stops = """
             SELECT 
                 (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s) AS from_order,
@@ -142,14 +144,12 @@ def admin_purchase_ticket(current_admin_id):
         stops_count = stops[1] - stops[0]
         base_price = 15.00 + (stops_count * 5.00)
 
-        # ZMIANA: Wyliczanie bazowej sumy z nowymi zniżkami (Student -30%, Dziecko -100%)
         total_price = (
             (adult_count * base_price)
             + (student_count * (base_price * 0.70))
             + (child_count * 0.00)
         )
 
-        # --- D. LOGIKA ZŁOTEJ ZNIŻKI ---
         earned_points = seat_count * 40
 
         query_update_points = """
@@ -161,7 +161,6 @@ def admin_purchase_ticket(current_admin_id):
 
         total_price = round(total_price, 2)
 
-        # --- E. TWORZENIE REZERWACJI ---
         reservation_number = f"RES-{target_client_id}-{int(time.time())}"
 
         query_insert_res = """
@@ -174,8 +173,6 @@ def admin_purchase_ticket(current_admin_id):
         )
         new_reservation_id = cur.fetchone()[0]
 
-        # --- F. TWORZENIE BILETU GRUPOWEGO ---
-        # ZMIANA: Etykiety biletów
         summary_parts = []
         if adult_count > 0:
             summary_parts.append(f"{adult_count}x Normalny")
@@ -197,7 +194,6 @@ def admin_purchase_ticket(current_admin_id):
         )
         new_ticket_id = cur.fetchone()[0]
 
-        # --- G. ZATWIERDZENIE TRANSAKCJI ---
         conn.commit()
         cur.close()
 
@@ -221,10 +217,17 @@ def admin_purchase_ticket(current_admin_id):
         if conn:
             conn.close()
 
+@admin_management_bp.route('/users', methods=['OPTIONS'])
+def create_user_options():
+    return '', 200, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Methods": "POST, OPTIONS"
+    }
 
 @admin_management_bp.route("/reservations", methods=["POST"])
 @admin_required
-def create_manual_reservation(current_admin_id):
+def create_user(current_admin_id):
     data = request.get_json()
 
     client_id = data.get("client_id")
