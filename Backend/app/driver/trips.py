@@ -131,6 +131,7 @@ def get_trip_details(current_driver_id, trip_id):
                 v.model,
                 v.registration_number,
                 v.vehicle_id,
+                v.seating_capacity,
                 TO_CHAR(tr.departure_time, 'YYYY-MM-DD HH24:MI') AS departure_time,
                 tr.status
             FROM Trip tr
@@ -153,6 +154,7 @@ def get_trip_details(current_driver_id, trip_id):
                 "routeName": trip["route_name"],
                 "busBrand": trip["brand"],
                 "busModel": trip["model"],
+                "busCapacity": trip["seating_capacity"],
                 "registrationNumber": trip["registration_number"],
                 "busNumber": str(trip["vehicle_id"]),
                 "departureTime": trip["departure_time"],
@@ -166,6 +168,7 @@ def get_trip_details(current_driver_id, trip_id):
     finally:
         if conn:
             conn.close()
+
 
 @driver_trips_bp.route("/fleet", methods=["GET"])
 @driver_required
@@ -187,6 +190,7 @@ def get_fleet(current_driver_id):
             cur.close()
             conn.close()
 
+
 @driver_trips_bp.route("/schedule", methods=["OPTIONS"])
 def schedule_options():
     res = jsonify({})
@@ -195,6 +199,7 @@ def schedule_options():
     res.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     return res, 200
 
+
 @driver_trips_bp.route("/schedule", methods=["GET", "POST"])
 @driver_required
 def handle_schedule(current_driver_id):
@@ -202,10 +207,10 @@ def handle_schedule(current_driver_id):
     cur = None
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        
+
         if request.method == "POST":
             data = request.get_json()
-            
+
             if isinstance(data, dict):
                 data = [data]
 
@@ -218,28 +223,33 @@ def handle_schedule(current_driver_id):
                 ON CONFLICT (employee_id, available_date) 
                 DO UPDATE SET is_available = EXCLUDED.is_available, notes = EXCLUDED.notes
             """
-            
+
             for item in data:
                 date_str = item.get("date")
                 is_available = item.get("is_available", True)
                 notes = item.get("notes", "")
 
                 if date_str:
-                    cur.execute(query, (current_driver_id, date_str, is_available, notes))
-            
+                    cur.execute(
+                        query, (current_driver_id, date_str, is_available, notes)
+                    )
+
             conn.commit()
             return jsonify({"message": "Zapisano dyspozycyjność dla wielu dni"}), 201
 
         else:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT TO_CHAR(available_date, 'YYYY-MM-DD') as date, is_available, notes 
                 FROM Driver_Availability 
                 WHERE employee_id = %s AND available_date >= CURRENT_DATE
                 ORDER BY available_date ASC
-            """, (current_driver_id,))
+            """,
+                (current_driver_id,),
+            )
             schedule = cur.fetchall()
             return jsonify(schedule), 200
-            
+
     except Exception as e:
         print(f"DB Error w schedule: {e}")
         if conn:

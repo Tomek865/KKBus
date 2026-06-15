@@ -5,15 +5,11 @@ import { useRouter } from 'expo-router';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 import { authFetch } from '../../utils';
 
-const StatCard = ({ title, value, icon, trend, trendColor, iconBg }: any) => (
+const StatCard = ({ title, value, icon, trendColor, iconBg }: any) => (
     <View style={[styles.card, { flex: 1 }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
             <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: iconBg, justifyContent: 'center', alignItems: 'center' }}>
                 <Ionicons name={icon} size={20} color={trendColor} />
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', paddingHorizontal: 8, borderRadius: 20 }}>
-                <Ionicons name={trendColor === COLORS.green ? 'arrow-up' : 'arrow-down'} size={12} color={trendColor} />
-                <Text style={{ fontSize: 12, fontWeight: 'bold', color: trendColor }}>{trend}</Text>
             </View>
         </View>
         <Text style={styles.headerCell}>{title}</Text>
@@ -93,10 +89,10 @@ export default function AdminDashboard() {
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20, marginBottom: 30 }}>
-                <StatCard title="TOTAL REVENUE" value={stats?.revenue || "0.00 PLN"} icon="cash-outline" trend="+14.5%" trendColor={COLORS.green} iconBg={COLORS.greenLight} />
-                <StatCard title="ACTIVE BUSES" value={stats?.buses || "0 / 0"} icon="bus-outline" trend="Zgodnie z planem" trendColor={COLORS.red} iconBg={COLORS.redLight} />
-                <StatCard title="TOTAL PASSENGERS" value={stats?.passengers || "0"} icon="people-outline" trend="+5.2%" trendColor={COLORS.green} iconBg={COLORS.blueLight} />
-                <StatCard title="SCHEDULED ROUTES" value={stats?.routes || "0"} icon="calendar-outline" trend="98% on time" trendColor={COLORS.green} iconBg="#e0e7ff" />
+                <StatCard title="TOTAL REVENUE" value={stats?.revenue || "0.00 PLN"} icon="cash-outline" iconBg={COLORS.greenLight} />
+                <StatCard title="ACTIVE BUSES" value={stats?.buses || "0 / 0"} icon="bus-outline" iconBg={COLORS.redLight} />
+                <StatCard title="TOTAL PASSENGERS" value={stats?.passengers || "0"} icon="people-outline" iconBg={COLORS.blueLight} />
+                <StatCard title="SCHEDULED ROUTES" value={stats?.routes || "0"} icon="calendar-outline" iconBg="#e0e7ff" />
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20, marginBottom: 30 }}>
