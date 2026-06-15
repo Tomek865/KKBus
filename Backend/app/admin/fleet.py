@@ -73,7 +73,7 @@ def cancel_fleet_assignment(current_admin_id, assignment_id):
 
 
 @admin_fleet_bp.route("/", methods=["POST"])
-@owner_required
+@admin_required
 def create_trip(current_admin_id):
     from datetime import datetime, timedelta
 

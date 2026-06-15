@@ -229,82 +229,55 @@ def create_user_options():
 @admin_required
 def create_user(current_admin_id):
     data = request.get_json()
+    name = data.get('name')
+    email = data.get('email')
+    role = data.get('role')
+    is_active = data.get('isActive', True)
+    
+    if not name or not email:
+        return jsonify({"message": "Imię, nazwisko i email są wymagane"}), 400
 
-    client_id = data.get("client_id")
-    trip_id = data.get("trip_id")
-    # Oczekuje: {'adult': 1, 'student': 0, 'child': 0}
-    tickets = data.get("tickets", {})
-
-    total_seats = sum(tickets.values())
-    if total_seats == 0:
-        return jsonify({"error": "Nie wybrano żadnych biletów."}), 400
-
-    if not client_id or not trip_id:
-        return jsonify({"error": "Brak ID klienta lub kursu."}), 400
-
-    # Tymczasowa cena bazowa
-    base_price = 15.00
-
-    # Obliczanie sumy: Student/Uczeń -30% (mnożnik 0.70), Dziecko do 5 lat - za darmo
-    total_price = (
-        (tickets.get("adult", 0) * base_price)
-        + (tickets.get("student", 0) * base_price * 0.70)
-        + (tickets.get("child", 0) * 0.00)
-    )
+    name_parts = name.split(' ', 1)
+    first_name = name_parts[0]
+    last_name = name_parts[1] if len(name_parts) > 1 else ""
+    
+    # Używamy bezpiecznego algorytmu pbkdf2, żeby ominąć błąd na Macu
+    default_password = generate_password_hash("haslo123", method="pbkdf2:sha256")
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
-
-        # 1. Tworzenie głównego rekordu rezerwacji
-        cur.execute(
+        
+        if role == 'Client':
+            query = """
+                INSERT INTO Client (first_name, last_name, email, password, is_active)
+                VALUES (%s, %s, %s, %s, %s) RETURNING client_id;
             """
-            INSERT INTO Reservation (client_id, trip_id, reservation_date, status, total_price, seat_count)
-            VALUES (%s, %s, NOW(), 'Confirmed', %s, %s) RETURNING reservation_id;
-        """,
-            (client_id, trip_id, total_price, total_seats),
-        )
-
-        reservation_id = cur.fetchone()[0]
-
-        # 2. Generowanie pojedynczych biletów
-        ticket_query = """
-            INSERT INTO Ticket (reservation_id, ticket_type, final_price, issue_date)
-            VALUES (%s, %s, %s, NOW());
-        """
-
-        # Bilety Normalne
-        for _ in range(tickets.get("adult", 0)):
-            cur.execute(ticket_query, (reservation_id, "Normalny", base_price))
-
-        # Bilety dla Uczniów/Studentów (-30%)
-        for _ in range(tickets.get("student", 0)):
-            cur.execute(
-                ticket_query, (reservation_id, "Uczeń/Student", base_price * 0.70)
-            )
-
-        # Bilety dla Dzieci do lat 5 (Darmowe)
-        for _ in range(tickets.get("child", 0)):
-            cur.execute(ticket_query, (reservation_id, "Dziecko do 5 lat", 0.00))
+            cur.execute(query, (first_name, last_name, email, default_password, is_active))
+            new_id = f"C_{cur.fetchone()[0]}"
+        else:
+            query = """
+                INSERT INTO Employee (first_name, last_name, email, password, role, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s) RETURNING employee_id;
+            """
+            cur.execute(query, (first_name, last_name, email, default_password, role, is_active))
+            new_id = f"E_{cur.fetchone()[0]}"
 
         conn.commit()
         cur.close()
 
-        return jsonify(
-            {
-                "message": "Rezerwacja manualna zakończona sukcesem.",
-                "reservation_id": reservation_id,
-            }
-        ), 201
+        return jsonify({
+            "id": new_id,
+            "name": name,
+            "email": email,
+            "role": role,
+            "isActive": is_active,
+            "trips": 0
+        }), 201
 
     except Exception as e:
-        if conn:
-            conn.rollback()
-        print(f"DB Error w ręcznej rezerwacji: {e}")
-        return jsonify(
-            {"error": "Błąd serwera podczas zapisywania biletów w bazie."}
-        ), 500
+        print(f"DB Error: {e}")
+        return jsonify({"message": "Email już istnieje lub wystąpił błąd serwera"}), 500
     finally:
-        if conn:
+        if conn: 
             conn.close()
-
