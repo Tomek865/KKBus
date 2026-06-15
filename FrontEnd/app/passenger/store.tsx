@@ -70,6 +70,7 @@ export default function LoyaltyStore() {
                     const resRewards = await authFetch('/api/client/profile/loyalty/rewards');
                     if (resRewards.ok) {
                         const rewardsData = await resRewards.json();
+                        console.log("Fetched rewards:", rewardsData);
                         setRewards(rewardsData);
                     }
                 } catch (err) {

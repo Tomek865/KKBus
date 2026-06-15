@@ -17,25 +17,53 @@ export default function RegisterScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<'name' | 'email' | 'phone' | 'birthDate' | 'password' | 'confirmPassword' | null>(null);
 
+    // Sprytne formatowanie daty (samo dodaje myślniki podczas wpisywania)
+    const handleDateChange = (text: string) => {
+        // Pozwala na swobodne usuwanie (backspace)
+        if (text.length < birthDate.length) {
+            setBirthDate(text);
+            return;
+        }
+
+        let cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = cleaned;
+        if (cleaned.length > 2) {
+            formatted = cleaned.slice(0, 2) + '-' + cleaned.slice(2);
+        }
+        if (cleaned.length > 4) {
+            formatted = formatted.slice(0, 5) + '-' + cleaned.slice(4, 8);
+        }
+        setBirthDate(formatted);
+    };
+
     const handleRegister = async () => {
         if (!name || !email || !phone || !birthDate || !password || !confirmPassword) {
-            showRegisterAlert("Error", "Please fill in all fields.");
+            showRegisterAlert("Błąd", "Proszę wypełnić wszystkie pola.");
+            return;
+        }
+
+        if (birthDate.length !== 10) {
+            showRegisterAlert("Błąd", "Wprowadź pełną datę urodzenia w formacie DD-MM-RRRR.");
             return;
         }
 
         if (password !== confirmPassword) {
-            showRegisterAlert("Error", "The passwords entered do not match.");
+            showRegisterAlert("Błąd", "Podane hasła nie są identyczne.");
             return;
         }
 
         if (password.length < 6) {
-            showRegisterAlert("Error", "The password must be at least 6 characters long.");
+            showRegisterAlert("Błąd", "Hasło musi mieć co najmniej 6 znaków.");
             return;
         }
 
         setIsLoading(true);
 
         try {
+            // Konwersja DD-MM-YYYY na YYYY-MM-DD dla bazy danych
+            const [day, month, year] = birthDate.split('-');
+            const backendFormattedDate = `${year}-${month}-${day}`;
+
             const response = await fetch(`${IP_adress}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -43,7 +71,7 @@ export default function RegisterScreen() {
                     name: name.trim(),
                     email: email.toLowerCase().trim(),
                     phone: phone.trim(),
-                    birthDate: birthDate.trim(),
+                    birthDate: backendFormattedDate,
                     password: password,
                     role: 'client'
                 })
@@ -52,13 +80,13 @@ export default function RegisterScreen() {
             const data = await response.json();
 
             if (response.ok) {
-                showRegisterAlert("Success", "Account created successfully! You can now log in.");
+                showRegisterAlert("Sukces", "Konto zostało pomyślnie utworzone! Możesz się teraz zalogować.");
                 router.replace('/');
             } else {
-                showRegisterAlert("Registration Error", data.message || "Failed to create an account.");
+                showRegisterAlert("Błąd Rejestracji", data.message || "Nie udało się utworzyć konta.");
             }
         } catch (e) {
-            showRegisterAlert("Network Error", "Failed to connect to the server.");
+            showRegisterAlert("Błąd Sieci", "Nie udało się połączyć z serwerem.");
         } finally {
             setIsLoading(false);
         }
@@ -87,17 +115,17 @@ export default function RegisterScreen() {
                             <Text style={styles.logoText}>KK<Text style={{ color: '#e60000' }}>Bus</Text></Text>
                         </View>
 
-                        <Text style={styles.welcomeTitle}>Passenger Registration</Text>
-                        <Text style={styles.welcomeSub}>Create a free account to book tickets</Text>
+                        <Text style={styles.welcomeTitle}>Rejestracja Pasażera</Text>
+                        <Text style={styles.welcomeSub}>Załóż darmowe konto, aby rezerwować bilety</Text>
 
-                        {/* Full Name */}
+                        {/* Imię i Nazwisko */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>FULL NAME</Text>
+                            <Text style={[styles.label, focusedField === 'name' && styles.labelActive]}>IMIĘ I NAZWISKO</Text>
                             <View style={[styles.inputWrapper, focusedField === 'name' && styles.inputWrapperActive]}>
                                 <Ionicons name="person-outline" size={18} color={focusedField === 'name' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder=""
+                                    placeholder="Jan Kowalski"
                                     value={name}
                                     onChangeText={setName}
                                     onFocus={() => setFocusedField('name')}
@@ -106,14 +134,14 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Email Address */}
+                        {/* Email */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>EMAIL ADDRESS</Text>
+                            <Text style={[styles.label, focusedField === 'email' && styles.labelActive]}>ADRES EMAIL</Text>
                             <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputWrapperActive]}>
                                 <Ionicons name="mail-outline" size={18} color={focusedField === 'email' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder=""
+                                    placeholder="jan@example.com"
                                     value={email}
                                     onChangeText={setEmail}
                                     autoCapitalize="none"
@@ -124,14 +152,14 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Phone Number */}
+                        {/* Telefon */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>PHONE NUMBER</Text>
+                            <Text style={[styles.label, focusedField === 'phone' && styles.labelActive]}>NUMER TELEFONU</Text>
                             <View style={[styles.inputWrapper, focusedField === 'phone' && styles.inputWrapperActive]}>
                                 <Ionicons name="call-outline" size={18} color={focusedField === 'phone' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder=""
+                                    placeholder="123 456 789"
                                     value={phone}
                                     onChangeText={setPhone}
                                     keyboardType="phone-pad"
@@ -141,31 +169,32 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Date of Birth */}
+                        {/* Data Urodzenia (Smart Input) */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>DATE OF BIRTH (DD-MM-YYYY)</Text>
+                            <Text style={[styles.label, focusedField === 'birthDate' && styles.labelActive]}>DATA URODZENIA (DD-MM-RRRR)</Text>
                             <View style={[styles.inputWrapper, focusedField === 'birthDate' && styles.inputWrapperActive]}>
                                 <Ionicons name="calendar-outline" size={18} color={focusedField === 'birthDate' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="e.g. 01-01-2000"
-                                    placeholderTextColor="#d1d5db"
+                                    placeholder="np. 15-06-1995"
                                     value={birthDate}
-                                    onChangeText={setBirthDate}
+                                    onChangeText={handleDateChange}
+                                    keyboardType="numeric"
+                                    maxLength={10}
                                     onFocus={() => setFocusedField('birthDate')}
                                     onBlur={() => setFocusedField(null)}
                                 />
                             </View>
                         </View>
 
-                        {/* Password */}
+                        {/* Hasło */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>PASSWORD</Text>
+                            <Text style={[styles.label, focusedField === 'password' && styles.labelActive]}>HASŁO</Text>
                             <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperActive]}>
                                 <Ionicons name="lock-closed-outline" size={18} color={focusedField === 'password' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder=""
+                                    placeholder="Min. 6 znaków"
                                     secureTextEntry
                                     value={password}
                                     onChangeText={setPassword}
@@ -175,14 +204,14 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Confirm Password */}
+                        {/* Potwierdzenie Hasła */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>CONFIRM PASSWORD</Text>
+                            <Text style={[styles.label, focusedField === 'confirmPassword' && styles.labelActive]}>POTWIERDŹ HASŁO</Text>
                             <View style={[styles.inputWrapper, focusedField === 'confirmPassword' && styles.inputWrapperActive]}>
                                 <Ionicons name="lock-closed-outline" size={18} color={focusedField === 'confirmPassword' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder=""
+                                    placeholder="Powtórz hasło"
                                     secureTextEntry
                                     value={confirmPassword}
                                     onChangeText={setConfirmPassword}
@@ -197,13 +226,13 @@ export default function RegisterScreen() {
                             onPress={handleRegister}
                             disabled={isLoading}
                         >
-                            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Register</Text>}
+                            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Zarejestruj się</Text>}
                         </TouchableOpacity>
 
                         <View style={styles.registerContainer}>
-                            <Text style={styles.registerText}>Already have an account? </Text>
+                            <Text style={styles.registerText}>Masz już konto? </Text>
                             <TouchableOpacity onPress={() => router.replace('/')}>
-                                <Text style={styles.registerLink}>Log in</Text>
+                                <Text style={styles.registerLink}>Zaloguj się</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -228,9 +257,18 @@ const styles = StyleSheet.create({
 
     inputGroup: { marginBottom: 12 },
     label: { fontSize: 9, fontWeight: 'bold', color: '#9ca3af', marginBottom: 5, letterSpacing: 1 },
+    labelActive: { color: '#e60000' }, // Nowy styl dla aktywnej etykiety
 
     inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderWidth: 1.5, borderColor: '#f3f4f6', borderRadius: 12, paddingHorizontal: 12, height: 48 },
-    inputWrapperActive: { borderColor: '#e60000', backgroundColor: '#fff' },
+    inputWrapperActive: { 
+        borderColor: '#e60000', 
+        backgroundColor: '#fff',
+        shadowColor: '#e60000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 3 
+    }, // Ulepszony aktywny styl z cieniem
     input: { flex: 1, fontSize: 14, color: '#111', marginLeft: 8 },
 
     loginBtn: { backgroundColor: '#111827', height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 12, elevation: 3 },

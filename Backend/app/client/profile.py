@@ -106,8 +106,16 @@ def get_all_rewards():
         if conn:
             conn.close()
 
+@client_profil_bp.route('/loyalty/purchase', methods=['OPTIONS'])
+def purchase_reward_options():
+    return '', 200, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Methods": "POST, OPTIONS"
+    }
 
-@client_profil_bp.route("/loyalty/purchase", methods=["POST", "OPTIONS"])
+
+@client_profil_bp.route("/loyalty/purchase", methods=["POST"])
 @token_required
 def purchase_reward(current_user_id):
     if request.method == "OPTIONS":
