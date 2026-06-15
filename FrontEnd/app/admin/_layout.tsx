@@ -75,6 +75,7 @@ export default function AdminLayout() {
                         {/* DODANY KOD: Przycisk do zakładki Shifts */}
                         <MenuItem icon="time-outline" label="Schedules & Shifts" path="/admin/shifts" pathname={pathname} />
                         <MenuItem icon="ticket-outline" label="Manual Booking" path="/admin/booking" pathname={pathname} />
+                        <MenuItem icon="gift-outline" label="Nagrody (Lojalność)" path="/admin/rewards" pathname={pathname} />
                     </View>
 
                     <View style={styles.menuSection}>

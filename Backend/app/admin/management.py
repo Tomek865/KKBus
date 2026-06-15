@@ -3,6 +3,7 @@ from db import get_db_connection
 from app.utils import admin_required
 from werkzeug.security import generate_password_hash
 import time
+from psycopg2.extras import RealDictCursor
 
 admin_management_bp = Blueprint("admin_management", __name__)
 
@@ -329,6 +330,94 @@ def create_user(current_admin_id):
     except Exception as e:
         print(f"DB Error: {e}")
         return jsonify({"message": "Email już istnieje lub wystąpił błąd serwera"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@admin_management_bp.route("/rewards", methods=["OPTIONS"])
+def rewards_options():
+    return (
+        "",
+        200,
+        {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        },
+    )
+
+@admin_management_bp.route("/rewards", methods=["GET"])
+@admin_required
+def get_rewards(current_admin_id):
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 1. Dokładnie takie samo zapytanie, jakie działa w aplikacji pasażera
+        query = """
+            SELECT reward_id, name, required_points, description 
+            FROM Reward 
+            ORDER BY required_points ASC;
+        """
+        cur.execute(query)
+        db_rewards = cur.fetchall()
+        
+        # 2. Skoro w Twojej bazie nie ma kolumny 'is_active', 
+        # dodajemy ją sztucznie do wyników, żeby panel Admina pokazywał zielony status
+        formatted_rewards = []
+        for reward in db_rewards:
+            reward_dict = dict(reward)
+            reward_dict['is_active'] = True  # Zawsze pokazuj jako Aktywne
+            formatted_rewards.append(reward_dict)
+            
+        # 3. Drukowanie do konsoli (żebyś widział, czy backend na pewno je znalazł)
+        print(f"\n>>> ADMIN POBRAŁ NAGRODY: {formatted_rewards}\n")
+        
+        return jsonify(formatted_rewards), 200
+
+    except Exception as e:
+        print(f"Błąd bazy danych (GET Rewards): {e}")
+        return jsonify({"error": "Wystąpił błąd podczas pobierania nagród"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@admin_management_bp.route("/rewards", methods=["POST"])
+@admin_required
+def create_reward(current_admin_id):
+    data = request.get_json()
+    name = data.get("name")
+    description = data.get("description", "")
+    # ZMIANA: Pobieramy required_points
+    required_points = data.get("required_points")
+
+    if not name or not required_points:
+        return jsonify({"error": "Nazwa nagrody oraz koszt punktowy są wymagane!"}), 400
+
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        # ZMIANA: Wstawiamy do kolumny required_points
+        query = """
+            INSERT INTO Reward (name, description, required_points) 
+            VALUES (%s, %s, %s) RETURNING reward_id;
+        """
+        cur.execute(query, (name, description, required_points))
+        new_id = cur.fetchone()[0]
+        
+        conn.commit()
+        return jsonify({
+            "message": "Nagroda została pomyślnie dodana!", 
+            "id": new_id,
+            "name": name,
+            "required_points": required_points
+        }), 201
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"Błąd bazy danych (POST Rewards): {e}")
+        return jsonify({"error": "Nie udało się zapisać nagrody do bazy."}), 500
     finally:
         if conn:
             conn.close()

@@ -134,6 +134,14 @@ CREATE TABLE Reward (
     description VARCHAR(255)
 );
 
+CREATE TABLE IF NOT EXISTS Reward (
+    reward_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    points_cost INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
 CREATE TABLE Client_Reward (
     client_id INTEGER NOT NULL REFERENCES Client(client_id) ON DELETE CASCADE,
     reward_id INTEGER NOT NULL REFERENCES Reward(reward_id) ON DELETE CASCADE,
