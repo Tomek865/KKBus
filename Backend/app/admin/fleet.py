@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from app.utils import admin_required
+from app.utils import owner_required
 
 admin_fleet_bp = Blueprint("admin_fleet", __name__)
 
@@ -71,7 +72,7 @@ def cancel_fleet_assignment(current_admin_id, assignment_id):
 
 
 @admin_fleet_bp.route("/", methods=["POST"])
-@admin_required
+@owner_required
 def create_trip(current_admin_id):
     from datetime import datetime, timedelta
 
@@ -201,7 +202,7 @@ def get_all_buses(current_admin_id):
 
 
 @admin_fleet_bp.route("/buses", methods=["POST"])
-@admin_required
+@owner_required
 def create_bus(current_admin_id):
     data = request.get_json()
 
@@ -274,7 +275,7 @@ def create_bus(current_admin_id):
 
 
 @admin_fleet_bp.route("/routes", methods=["POST"])
-@admin_required
+@owner_required
 def create_route(current_admin_id):
     data = request.get_json()
     name = data.get("name")
@@ -375,7 +376,7 @@ def get_fleet_stations(current_admin_id):
 
 
 @admin_fleet_bp.route("/stations", methods=["POST"])
-@admin_required
+@owner_required
 def create_station(current_admin_id):
     data = request.get_json()
     name = data.get("name")
@@ -403,7 +404,7 @@ def create_station(current_admin_id):
 
 
 @admin_fleet_bp.route("/routes/<int:route_id>/stations", methods=["POST"])
-@admin_required
+@owner_required
 def assign_stations_to_route(current_admin_id, route_id):
     data = request.get_json()
     station_ids = data.get("stations")
