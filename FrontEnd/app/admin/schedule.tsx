@@ -174,7 +174,10 @@ export default function AdminSchedule() {
             try {
                 const res = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`);
                 const data = await res.json();
-                setRouteStops(Array.isArray(data) ? data.map(st => ({ station_id: st.id?.toString() || st.station_id?.toString() || '' })) : []);
+                setRouteStops(Array.isArray(data) ? data.map(st => ({
+                    station_id: st.id?.toString() || st.station_id?.toString() || '',
+                    distance_from_prev: st.distance_from_prev?.toString() || '0'
+                })) : []);
             } catch (e) {
                 setRouteStops([]);
             }
@@ -204,16 +207,20 @@ export default function AdminSchedule() {
     const handleAddStopToRouteSequence = () => {
         setRouteStops(prev => [
             ...prev,
-            { station_id: '' }
+            { station_id: '', distance_from_prev: '' }
         ]);
     };
+
 
     const handleSaveRouteStopsSequence = async () => {
         if (!selectedRouteId) return;
 
-        const stationIdsOnly = routeStops
-            .map(stop => parseInt(stop.station_id))
-            .filter(id => !isNaN(id));
+        const payload = routeStops
+            .filter(stop => parseInt(stop.station_id))
+            .map((stop, index) => ({
+                station_id: parseInt(stop.station_id),
+                distance_from_prev: index === 0 ? 0 : (parseFloat(stop.distance_from_prev) || 0)
+            }));
 
         try {
             const response = await authFetch(`/api/admin/fleet/routes/${selectedRouteId}/stations`, {
@@ -225,7 +232,7 @@ export default function AdminSchedule() {
                 setRouteStopsModalVisible(false);
                 setSelectedRouteId('');
                 setRouteStops([]);
-                showScheduleAlert("Sukces", "Sekwencja stacji trasy została zaktualizowana.");
+                showScheduleAlert("Sukces", "Sekwencja stacji i odległości zostały zaktualizowane.");
             } else {
                 showScheduleAlert("Błąd", "Nie udało się zapisać punktów trasy.");
             }
@@ -890,14 +897,14 @@ export default function AdminSchedule() {
                                 <Text style={[styles.inputLabel, { marginBottom: 10 }]}>STATIONS TIMELINE ORDER</Text>
                                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
                                     {routeStops.map((stop, index) => (
-                                        <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                                        <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                                             <View style={styles.indexBadge}>
                                                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>{index + 1}</Text>
                                             </View>
 
-                                            <View style={{ flex: 1, zIndex: 100 - index, position: 'relative' }}>
+                                            <View style={{ flex: 2, zIndex: 100 - index, position: 'relative' }}>
                                                 <select
-                                                    style={styles.nativeSelectElement}
+                                                    style={styles.nativeSelectElement as any}
                                                     value={stop.station_id || ''}
                                                     onChange={(e) => {
                                                         const val = e.target.value;
@@ -911,12 +918,32 @@ export default function AdminSchedule() {
                                                 </select>
                                             </View>
 
-                                            <TouchableOpacity onPress={() => setRouteStops(prev => prev.filter((_, i) => i !== index))}>
-                                                <Ionicons name="trash-outline" size={18} color={COLORS.red} />
+                                            <View style={{ width: 80 }}>
+                                                <TextInput
+                                                    style={{
+                                                        backgroundColor: index === 0 ? '#f3f4f6' : '#fff',
+                                                        borderWidth: 1,
+                                                        borderColor: '#e5e7eb',
+                                                        borderRadius: 8,
+                                                        padding: 8,
+                                                        textAlign: 'center',
+                                                        color: index === 0 ? '#9ca3af' : '#111'
+                                                    }}
+                                                    editable={index !== 0}
+                                                    keyboardType="numeric"
+                                                    placeholder="+ km"
+                                                    value={index === 0 ? '0 km' : stop.distance_from_prev}
+                                                    onChangeText={(val) => {
+                                                        setRouteStops(prev => prev.map((s, i) => i === index ? { ...s, distance_from_prev: val } : s));
+                                                    }}
+                                                />
+                                            </View>
+
+                                            <TouchableOpacity onPress={() => setRouteStops(prev => prev.filter((_, i) => i !== index))} style={{ padding: 5 }}>
+                                                <Ionicons name="trash-outline" size={20} color={COLORS.red} />
                                             </TouchableOpacity>
                                         </View>
                                     ))}
-
                                     <TouchableOpacity style={styles.plusButtonRow} onPress={handleAddStopToRouteSequence}>
                                         <Ionicons name="add-circle" size={26} color="#059669" />
                                         <Text style={{ color: '#059669', fontWeight: 'bold', fontSize: 14 }}>Add Stop Location</Text>
