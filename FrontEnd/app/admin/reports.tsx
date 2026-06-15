@@ -3,8 +3,6 @@ import { View, Text, ScrollView, ActivityIndicator, StyleSheet, TouchableOpacity
 import { Ionicons } from '@expo/vector-icons';
 import { adminStyles as styles, COLORS } from '../src/styles/adminStyles';
 import { authFetch } from '../../utils';
-import * as Print from 'expo-print';
-import { shareAsync } from 'expo-sharing';
 
 const YEARS = [2023, 2024, 2025, 2026, 2027];
 const MONTHS = [
@@ -98,15 +96,44 @@ export default function AdminReports() {
         }
     };
 
+    const handlePDFDownload = async (response: Response, filename: string) => {
+        try {
+            // 1. Odbieramy odpowiedź z serwera jako surowy plik binarny (Blob)
+            const blob = await response.blob();
+
+            // 2. Tworzymy tymczasowy link URL w pamięci przeglądarki
+            const url = window.URL.createObjectURL(blob);
+
+            // 3. Tworzymy niewidzialny tag <a> (HTML)
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename; // Atrybut download wymusza pobranie na dysk zamiast otwierania w nowej karcie
+
+            // 4. Dodajemy do strony, "klikamy" i natychmiast sprzątamy
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url); // Zwalniamy pamięć
+
+            showNotification("Sukces", "Raport PDF został pobrany!");
+        } catch (error) {
+            console.error("Błąd podczas przetwarzania pliku PDF:", error);
+            showNotification("Błąd", "Nie udało się zapisać pliku na dysku.");
+        }
+    };
+
     const handleGenerateReservationReport = async () => {
         setResModalVisible(false);
         setIsGeneratingRes(true);
         try {
             const url = `/api/admin/reports/reservations?type=${resType}&year=${resYear}` + (resType === 'monthly' ? `&month=${resMonth}` : '');
+
+            // WAŻNE: Odbieramy pełny obiekt Response
             const response = await authFetch(url, { method: 'GET' });
 
             if (response.ok) {
-                showNotification("Success", `Reservation report (${resType}) generated successfully.`);
+                const filename = `Reservations_${resYear}_${resType}.pdf`;
+                await handlePDFDownload(response, filename);
             } else {
                 showNotification("Error", "Failed to generate reservation report.");
             }
@@ -127,14 +154,14 @@ export default function AdminReports() {
             if (tripType === 'weekly') url += `&week=${tripWeek}`;
             if (tripType === 'monthly') url += `&year=${tripYear}&month=${tripMonth}`;
             if (tripType === 'annual') url += `&year=${tripYear}`;
-
             if (selectedDriverId) url += `&driverId=${selectedDriverId}`;
             if (selectedBusId) url += `&busId=${selectedBusId}`;
 
             const response = await authFetch(url, { method: 'GET' });
 
             if (response.ok) {
-                showNotification("Success", `Trip performance report (${tripType}) generated successfully.`);
+                const filename = `Trips_${tripType}_Report.pdf`;
+                await handlePDFDownload(response, filename);
             } else {
                 showNotification("Error", "Failed to generate trip report.");
             }
@@ -144,6 +171,7 @@ export default function AdminReports() {
             setIsGeneratingTrip(false);
         }
     };
+
 
     if (loading) return <ActivityIndicator size="large" color={COLORS.red} style={{ marginTop: 50 }} />;
 
