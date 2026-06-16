@@ -8,11 +8,11 @@ import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { authFetch } from '../../utils';
 import GuestLoginModal from './GuestLoginModal';
 
-interface LoyaltyData { 
-    points: number; 
-    currentTier: string; 
-    nextTier: string; 
-    nextTierPoints: number; 
+interface LoyaltyData {
+    points: number;
+    currentTier: string;
+    nextTier: string;
+    nextTierPoints: number;
 }
 interface UserData { first_name: string; last_name: string; email: string; initials: string }
 
@@ -27,15 +27,15 @@ const ProfileMenuItem = ({ icon, title, onPress, isDestructive = false }: any) =
 );
 
 const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading: boolean }) => {
-    if (isLoading || !data) return (<View style={[styles.loyaltyCard, styles.loyaltyCardLoading]}><Text style={styles.loadingText}>Loading loyalty points...</Text></View>);
-    
+    if (isLoading || !data) return (<View style={[styles.loyaltyCard, styles.loyaltyCardLoading]}><Text style={styles.loadingText}>Pobieranie punktów lojalnościowych...</Text></View>);
+
     const isGold = data.points >= 2000;
     const progressPercentage = Math.min((data.points / data.nextTierPoints) * 100, 100);
-    
+
     return (
         <View style={[
-            styles.loyaltyCard, 
-            isGold ? localStyles.goldCardBackground : {} 
+            styles.loyaltyCard,
+            isGold ? localStyles.goldCardBackground : {}
         ]}>
             <View style={localStyles.chartBackgroundContainer}>
                 <View style={[localStyles.chartLineSegment, { backgroundColor: isGold ? 'rgba(0,0,0,0.1)' : '#22c55e', bottom: 12, left: '5%', width: '25%', transform: [{ rotate: '15deg' }] }]} />
@@ -48,12 +48,12 @@ const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading:
                 <View style={{ flex: 1, zIndex: 2 }}>
                     <View style={styles.loyaltyTitleRow}>
                         <Ionicons name={isGold ? "star" : "star-outline"} size={14} color={isGold ? "#000" : "#facc15"} />
-                        <Text style={[styles.loyaltyTitleText, isGold && { color: '#000' }]}>LOYALTY POINTS</Text>
+                        <Text style={[styles.loyaltyTitleText, isGold && { color: '#000' }]}>PUNKTY LOJALNOŚCIOWE</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
                         <Text style={[styles.pointsValue, isGold && { color: '#000' }]}>
                             {data.points.toLocaleString('en-US')}
-                            <Text style={[styles.pointsSuffix, isGold && { color: 'rgba(0,0,0,0.6)' }]}> pts</Text>
+                            <Text style={[styles.pointsSuffix, isGold && { color: 'rgba(0,0,0,0.6)' }]}> pkt</Text>
                         </Text>
                         <View style={[localStyles.stockTrendBadge, isGold && { backgroundColor: 'rgba(0,0,0,0.1)' }]}>
                             <Ionicons name="arrow-up" size={10} color={isGold ? "#000" : "#22c55e"} />
@@ -70,7 +70,7 @@ const LoyaltyCard = ({ data, isLoading }: { data: LoyaltyData | null, isLoading:
             <View style={[styles.tierInfoRow, { zIndex: 2 }]}>
                 <Text style={[styles.tierText, isGold && { color: '#000' }]}>{data.currentTier}</Text>
                 <Text style={[styles.nextTierText, isGold && { color: 'rgba(0,0,0,0.6)' }]}>
-                    {isGold ? 'VIP LEVEL' : `${data.nextTier} (${data.nextTierPoints})`}
+                    {isGold ? 'POZIOM VIP' : `${data.nextTier} (${data.nextTierPoints})`}
                 </Text>
             </View>
 
@@ -109,7 +109,7 @@ export default function PassengerProfile() {
                         setIsLoadingProfile(false);
                         return; // Przerywamy dalsze pobieranie
                     }
-                    
+
                     setIsGuest(false);
 
                     const resLoyalty = await authFetch('/api/client/profile/user/loyalty');
@@ -187,7 +187,7 @@ export default function PassengerProfile() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
-                <Text style={styles.headerTitle}>My Profile</Text>
+                <Text style={styles.headerTitle}>Mój Profil</Text>
 
                 <View style={styles.profileCard}>
                     <View style={styles.avatarContainer}>
@@ -196,25 +196,25 @@ export default function PassengerProfile() {
                     <View style={styles.userInfo}>
                         <Text style={styles.userName}>{userData.first_name} {userData.last_name}</Text>
                         <Text style={styles.userEmail}>{userData.email}</Text>
-                        <View style={styles.badge}><Text style={styles.badgeText}>Standard Passenger</Text></View>
+                        <View style={styles.badge}><Text style={styles.badgeText}>Pasażer Standardowy</Text></View>
                     </View>
                 </View>
 
                 <LoyaltyCard data={loyaltyData} isLoading={isLoadingLoyalty} />
 
-                <Text style={styles.sectionTitle}>Account</Text>
+                <Text style={styles.sectionTitle}>Konto</Text>
                 <View style={styles.menuContainer}>
-                    <ProfileMenuItem icon="person-outline" title="Personal Information" onPress={() => openSettings('personal')} />
-                    <ProfileMenuItem icon="notifications-outline" title="Notifications" onPress={() => openSettings('notifications')} />
+                    <ProfileMenuItem icon="person-outline" title="Dane Osobowe" onPress={() => openSettings('personal')} />
+                    <ProfileMenuItem icon="notifications-outline" title="Powiadomienia" onPress={() => openSettings('notifications')} />
                 </View>
-                <Text style={styles.sectionTitle}>Preferences</Text>
+                <Text style={styles.sectionTitle}>Preferencje</Text>
                 <View style={styles.menuContainer}>
-                    <ProfileMenuItem icon="language-outline" title="Language" onPress={() => openSettings('language')} />
-                    <ProfileMenuItem icon="help-circle-outline" title="Help & Support" onPress={() => openSettings('help')} />
-                    <ProfileMenuItem icon="document-text-outline" title="Terms of Service" onPress={() => openSettings('terms')} />
+                    <ProfileMenuItem icon="language-outline" title="Język" onPress={() => openSettings('language')} />
+                    <ProfileMenuItem icon="help-circle-outline" title="Pomoc i Wsparcie" onPress={() => openSettings('help')} />
+                    <ProfileMenuItem icon="document-text-outline" title="Regulamin" onPress={() => openSettings('terms')} />
                 </View>
                 <View style={[styles.menuContainer, { marginTop: 20 }]}>
-                    <ProfileMenuItem icon="log-out-outline" title="Log Out" isDestructive={true} onPress={handleLogout} />
+                    <ProfileMenuItem icon="log-out-outline" title="Wyloguj się" isDestructive={true} onPress={handleLogout} />
                 </View>
             </ScrollView>
             <ProfileSettingsModal visible={settingsModalVisible} onClose={() => setSettingsModalVisible(false)} activeSection={activeSection} />
@@ -236,7 +236,7 @@ const localStyles = StyleSheet.create({
     goldBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#334155', 
+        backgroundColor: '#334155',
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 12,
@@ -264,7 +264,7 @@ const localStyles = StyleSheet.create({
     stockTrendBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(34, 197, 94, 0.15)', 
+        backgroundColor: 'rgba(34, 197, 94, 0.15)',
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 6,

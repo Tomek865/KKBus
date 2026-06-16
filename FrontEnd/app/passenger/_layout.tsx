@@ -12,28 +12,28 @@ export default function PassengerLayout() {
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'Search',
+                    title: 'Szukaj',
                     tabBarIcon: ({ color }) => <Ionicons name="search" size={24} color={color} />,
                 }}
             />
             <Tabs.Screen
                 name="tickets"
                 options={{
-                    title: 'My Tickets',
+                    title: 'Moje bilety',
                     tabBarIcon: ({ color }) => <Ionicons name="ticket-outline" size={24} color={color} />,
                 }}
             />
             <Tabs.Screen
                 name="store"
                 options={{
-                    title: 'Rewards',
+                    title: 'Nagrody',
                     tabBarIcon: ({ color }) => <Ionicons name="gift-outline" size={24} color={color} />,
                 }}
             />
             <Tabs.Screen
                 name="profile"
                 options={{
-                    title: 'Profile',
+                    title: 'Profil',
                     tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={24} color={color} />,
                 }}
             />

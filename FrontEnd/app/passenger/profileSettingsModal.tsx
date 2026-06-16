@@ -66,7 +66,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                     const push = await AsyncStorage.getItem('pushNotifications');
                     const email = await AsyncStorage.getItem('emailNotifications');
                     setNotifications({
-                        push: push !== 'false', 
+                        push: push !== 'false',
                         email: email !== 'false'
                     });
                 } catch (err) { }
@@ -92,7 +92,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
         try {
             const res = await authFetch('/api/client/profile/user/update', {
                 method: 'PUT',
-                body: JSON.stringify(userData) 
+                body: JSON.stringify(userData)
             });
             if (res.ok) {
                 Alert.alert("Sukces", "Zaktualizowano profil.");
@@ -122,12 +122,12 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
 
     const getModalTitle = () => {
         switch (activeSection) {
-            case 'personal': return 'Personal Information';
-            case 'notifications': return 'Notifications';
-            case 'language': return 'Language';
-            case 'help': return 'Help & Support';
-            case 'terms': return 'Terms of Service';
-            default: return 'Settings';
+            case 'personal': return 'Dane Osobowe';
+            case 'notifications': return 'Powiadomienia';
+            case 'language': return 'Język';
+            case 'help': return 'Pomoc i Wsparcie';
+            case 'terms': return 'Regulamin';
+            default: return 'Ustawienia';
         }
     };
 
@@ -136,14 +136,14 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
             case 'personal':
                 return (
                     <View style={{ paddingVertical: 10 }}>
-                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Full Name</Text>
+                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Imię</Text>
                         <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16, backgroundColor: '#f9fafb' }}
                             value={userData.firstName}
                             placeholder="Wpisz imię"
                             onChangeText={(text) => setUserData(prev => ({ ...prev, firstName: text }))}
                         />
-                         <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Surname</Text>
+                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Nazwisko</Text>
                         <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16, backgroundColor: '#f9fafb' }}
                             value={userData.lastName}
@@ -151,7 +151,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             onChangeText={(text) => setUserData(prev => ({ ...prev, lastName: text }))}
                         />
 
-                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Email Address</Text>
+                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Adres Email</Text>
                         <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16, backgroundColor: '#f9fafb' }}
                             value={userData.email}
@@ -161,7 +161,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             onChangeText={(text) => setUserData(prev => ({ ...prev, email: text }))}
                         />
 
-                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Phone Number</Text>
+                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Numer Telefonu</Text>
                         <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 24, backgroundColor: '#f9fafb' }}
                             value={userData.phone}
@@ -169,7 +169,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             keyboardType="phone-pad"
                             onChangeText={(text) => setUserData(prev => ({ ...prev, phone: text }))}
                         />
-                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Password</Text>
+                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Hasło</Text>
                         <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 24, backgroundColor: '#f9fafb' }}
                             value={userData.password}
@@ -177,7 +177,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             secureTextEntry
                             onChangeText={(text) => setUserData(prev => ({ ...prev, password: text }))}
                         />
-                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Confirm Password</Text>
+                        <Text style={{ color: '#4b5563', marginBottom: 6, fontWeight: '600' }}>Potwierdź Hasło</Text>
                         {/* 3. PODPIĘCIE NOWEGO STANU POD DRUGIE POLE HASŁA */}
                         <TextInput
                             style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 24, backgroundColor: '#f9fafb' }}
@@ -188,7 +188,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                         />
 
                         <TouchableOpacity style={styles.primaryBtn} onPress={handleSavePersonal} disabled={isSaving}>
-                            {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Save Changes</Text>}
+                            {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Zapisz Zmiany</Text>}
                         </TouchableOpacity>
                     </View>
                 );
@@ -198,15 +198,15 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                     <View style={{ paddingVertical: 10 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
                             <View>
-                                <Text style={{ fontSize: 16, fontWeight: '600' }}>Push Notifications</Text>
-                                <Text style={{ color: '#6b7280', fontSize: 13, marginTop: 2 }}>Updates about your trips and tickets.</Text>
+                                <Text style={{ fontSize: 16, fontWeight: '600' }}>Powiadomienia Push</Text>
+                                <Text style={{ color: '#6b7280', fontSize: 13, marginTop: 2 }}>Aktualizacje o Twoich podróżach i biletach.</Text>
                             </View>
                             <Switch value={notifications.push} onValueChange={() => toggleNotification('push')} trackColor={{ false: '#d1d5db', true: '#e60000' }} />
                         </View>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
                             <View>
-                                <Text style={{ fontSize: 16, fontWeight: '600' }}>Email Notifications</Text>
-                                <Text style={{ color: '#6b7280', fontSize: 13, marginTop: 2 }}>Promotions, news, and invoices.</Text>
+                                <Text style={{ fontSize: 16, fontWeight: '600' }}>Powiadomienia Email</Text>
+                                <Text style={{ color: '#6b7280', fontSize: 13, marginTop: 2 }}>Promocje, nowości i faktury.</Text>
                             </View>
                             <Switch value={notifications.email} onValueChange={() => toggleNotification('email')} trackColor={{ false: '#d1d5db', true: '#e60000' }} />
                         </View>
@@ -231,7 +231,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                 return (
                     <View style={{ paddingVertical: 10 }}>
                         <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Firma transportowa KKBus sp z.o.o</Text>
-                        
+
                         <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>O nas</Text>
                         <Text style={{ color: '#4b5563', marginBottom: 20, lineHeight: 22 }}>
                             Firma zajmuje się transportem osób między Krakowem a Katowicami. Posiadamy nowoczesną flotę busów i autokarów. Zapewniamy komfortowe i bezpieczne przejazdy na naszych trasach.
@@ -242,7 +242,7 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
                             <Ionicons name="location" size={20} color="#e60000" style={{ marginRight: 10 }} />
                             <Text style={{ fontSize: 15, color: '#4b5563' }}>ul. Jana Pawła II 37, 31-864 Kraków</Text>
                         </View>
-                        
+
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
                             <Ionicons name="call" size={20} color="#e60000" style={{ marginRight: 10 }} />
                             <View>
@@ -261,17 +261,17 @@ export default function ProfileSettingsModal({ visible, onClose, activeSection }
             case 'terms':
                 return (
                     <View style={{ paddingVertical: 10 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>1. General Terms</Text>
+                        <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>1. Warunki Ogólne</Text>
                         <Text style={{ color: '#4b5563', marginBottom: 15, lineHeight: 22 }}>
-                            By using the KKBus application, you agree to comply with our general conditions of carriage. Tickets purchased are strictly for the assigned route and time.
+                            Korzystając z aplikacji KKBus, zgadzasz się na przestrzeganie naszych ogólnych warunków przewozu. Zakupione bilety obowiązują wyłącznie na przydzielonej trasie i w określonym czasie.
                         </Text>
-                        <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>2. Refund Policy</Text>
+                        <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>2. Polityka zwrotów</Text>
                         <Text style={{ color: '#4b5563', marginBottom: 15, lineHeight: 22 }}>
-                            Tickets can be canceled up to 24 hours before the departure for a full refund. Cancellations made later will not be refunded.
+                            Bilety można anulować do 24 godzin przed odjazdem, aby uzyskać pełny zwrot kosztów. Późniejsze anulacje nie podlegają zwrotowi.
                         </Text>
-                        <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>3. Data Privacy</Text>
+                        <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>3. Prywatność danych</Text>
                         <Text style={{ color: '#4b5563', marginBottom: 15, lineHeight: 22 }}>
-                            Your personal and payment data is secured and will not be shared with third parties without your explicit consent.
+                            Twoje dane osobowe i płatnicze są zabezpieczone i nie będą udostępniane stronom trzecim bez Twojej wyraźnej zgody.
                         </Text>
                     </View>
                 );

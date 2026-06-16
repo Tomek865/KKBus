@@ -27,11 +27,11 @@ const getRewardIcon = (name: string): string => {
 
 const getRewardDescription = (name: string): string => {
     const lowerName = name.toLowerCase();
-    if (lowerName.includes('ticket')) return 'Exchange points for a free ride on any route.';
-    if (lowerName.includes('discount')) return 'Get a 50% discount on your next single ticket.';
-    if (lowerName.includes('seat')) return 'Guarantee of the best seat and extra legroom.';
-    if (lowerName.includes('luggage')) return 'Take an extra suitcase at no additional cost.';
-    return 'Special loyalty reward for our frequent travelers.';
+    if (lowerName.includes('ticket')) return 'Wymień punkty na darmowy przejazd na dowolnej trasie.';
+    if (lowerName.includes('discount')) return 'Zdobądź 50% zniżki na kolejny pojedynczy bilet.';
+    if (lowerName.includes('seat')) return 'Gwarancja najlepszego miejsca i dodatkowego miejsca na nogi.';
+    if (lowerName.includes('luggage')) return 'Zabierz dodatkową walizkę bez dodatkowych opłat.';
+    return 'Specjalna nagroda lojalnościowa dla naszych stałych podróżnych.';
 };
 
 export default function LoyaltyStore() {
@@ -86,8 +86,8 @@ export default function LoyaltyStore() {
 
     const handlePurchase = (rewardId: number, cost: number, title: string) => {
         if (points < cost) {
-            const message = "You do not have enough points to redeem this reward.";
-            Platform.OS === 'web' ? window.alert(message) : Alert.alert("Not enough points", message);
+            const message = "Nie masz wystarczającej liczby punktów, aby odebrać tę nagrodę.";
+            Platform.OS === 'web' ? window.alert(message) : Alert.alert("Brak punktów", message);
             return;
         }
 
@@ -101,11 +101,11 @@ export default function LoyaltyStore() {
 
                 if (res.ok) {
                     setPoints(prev => prev - cost);
-                    const successMsg = `Successfully claimed: ${title}. You will find it in your available vouchers/options.`;
-                    Platform.OS === 'web' ? window.alert(`Success!\n${successMsg}`) : Alert.alert("Success!", successMsg);
+                    const successMsg = `Pomyślnie odebrano: ${title}. Znajdziesz to w swoich dostępnych voucherach/opcjach.`;
+                    Platform.OS === 'web' ? window.alert(`Sukces!\n${successMsg}`) : Alert.alert("Sukces!", successMsg);
                 } else {
-                    const failMsg = "Failed to process the transaction. Please try again.";
-                    Platform.OS === 'web' ? window.alert(`Error\n${failMsg}`) : Alert.alert("Error", failMsg);
+                    const failMsg = "Nie udało się przetworzyć transakcji. Spróbuj ponownie.";
+                    Platform.OS === 'web' ? window.alert(`Błąd\n${failMsg}`) : Alert.alert("Błąd", failMsg);
                 }
             } catch (error) {
                 console.error("Error during points purchase:", error);
@@ -115,15 +115,15 @@ export default function LoyaltyStore() {
         };
 
         if (Platform.OS === 'web') {
-            const confirmed = window.confirm(`Are you sure you want to exchange ${cost} points for: ${title}?`);
+            const confirmed = window.confirm(`Czy na pewno chcesz wymienić ${cost} punktów na: ${title}?`);
             if (confirmed) executePurchase();
         } else {
             Alert.alert(
-                "Confirmation",
-                `Are you sure you want to exchange ${cost} points for: ${title}?`,
+                "Potwierdzenie",
+                `Czy na pewno chcesz wymienić ${cost} punktów na: ${title}?`,
                 [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Redeem", style: "default", onPress: executePurchase }
+                    { text: "Anuluj", style: "cancel" },
+                    { text: "Odbierz", style: "default", onPress: executePurchase }
                 ]
             );
         }
@@ -142,10 +142,10 @@ export default function LoyaltyStore() {
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
                 <View style={localStyles.headerSection}>
-                    <Text style={styles.headerTitle}>Rewards Store</Text>
+                    <Text style={styles.headerTitle}>Sklep z Nagrodami</Text>
                     <View style={localStyles.balanceCard}>
                         <Ionicons name="gift" size={40} color="#facc15" style={localStyles.balanceIcon} />
-                        <Text style={localStyles.balanceLabel}>YOUR POINTS</Text>
+                        <Text style={localStyles.balanceLabel}>TWOJE PUNKTY</Text>
                         {isLoading ? (
                             <ActivityIndicator color="#fff" style={{ marginTop: 5 }} />
                         ) : (
@@ -154,7 +154,7 @@ export default function LoyaltyStore() {
                     </View>
                 </View>
 
-                <Text style={styles.sectionTitle}>Available Rewards</Text>
+                <Text style={styles.sectionTitle}>Dostępne Nagrody</Text>
 
                 <View style={localStyles.rewardsContainer}>
                     {isLoading && rewards.length === 0 ? (
@@ -174,7 +174,7 @@ export default function LoyaltyStore() {
                                         <Text style={localStyles.rewardDesc}>{description}</Text>
                                         <View style={localStyles.costContainer}>
                                             <Ionicons name="star" size={14} color="#facc15" />
-                                            <Text style={localStyles.costText}>{reward.required_points} pts</Text>
+                                            <Text style={localStyles.costText}>{reward.required_points} pkt</Text>
                                         </View>
                                     </View>
                                     <TouchableOpacity
@@ -188,7 +188,7 @@ export default function LoyaltyStore() {
                                         {isPurchasing === reward.reward_id ? (
                                             <ActivityIndicator color="#fff" size="small" />
                                         ) : (
-                                            <Text style={localStyles.buyButtonText}>Redeem</Text>
+                                            <Text style={localStyles.buyButtonText}>Odbierz</Text>
                                         )}
                                     </TouchableOpacity>
                                 </View>
