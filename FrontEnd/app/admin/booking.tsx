@@ -224,7 +224,7 @@ export default function AdminBooking() {
                 <View style={{ gap: 15, marginBottom: 30 }}>
                     {[
                         { key: 'adult', label: 'Bilet Normalny', type: 'adult' as const },
-                        { key: 'student', label: 'Bilet Ulgowy (-51%)', type: 'student' as const },
+                        { key: 'student', label: 'Bilet Studencki (-30%)', type: 'student' as const },
                         { key: 'child', label: 'Bilet Dziecięcy (Bezpłatny)', type: 'child' as const }
                     ].map((item) => (
                         <View key={item.key} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb', padding: 15, borderRadius: 8, borderWidth: 1, borderColor: '#eee' }}>

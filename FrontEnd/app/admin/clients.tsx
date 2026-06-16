@@ -135,7 +135,7 @@ export default function AdminClients() {
 
                             <View style={{ flex: 1 }}>
                                 <View style={[styles.statusBadge, { backgroundColor: user.role === 'Driver' ? COLORS.blueLight : '#f3f4f6' }]}>
-                                    <Text style={[styles.statusText, { color: user.role === 'Driver' ? COLORS.blue : '#6b7280' }]}>{user.role}</Text>
+                                    <Text style={[styles.statusText, { color: user.role === 'Driver' ? COLORS.blue : '#6b7280' }]}>{user.role === 'Driver' ? 'Kierowca' : user.role === 'Client' ? 'Klient' : user.role === 'Admin' ? 'Administrator' : 'Właścieiciel'}</Text>
                                 </View>
                             </View>
 
@@ -179,7 +179,11 @@ export default function AdminClients() {
                                     style={[styles.statusBadge, { flex: 1, paddingVertical: 10, backgroundColor: newUser.role === role ? COLORS.redLight : '#f3f4f6', borderColor: newUser.role === role ? COLORS.red : 'transparent', borderWidth: 1 }]}
                                     onPress={() => setNewUser({ ...newUser, role })}
                                 >
-                                    <Text style={{ color: newUser.role === role ? COLORS.red : '#6b7280', fontWeight: 'bold' }}>{role}</Text>
+                                    <Text style={{ color: newUser.role === role ? COLORS.red : '#6b7280', fontWeight: 'bold' }}>
+                                        { 
+                                           role === 'Client' ? 'Klient' : role === 'Driver' ? 'Kierowca' : 'Administrator'
+                                        }
+                                    </Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
