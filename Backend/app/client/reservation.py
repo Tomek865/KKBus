@@ -89,16 +89,10 @@ def search_routes():
 
         results = []
         for dep in departures:
-            cur.execute("""
-                SELECT fs.standard_price 
-                FROM Fare_Segment fs
-                JOIN Trip tr ON fs.route_id = tr.route_id
-                JOIN Station s1 ON fs.start_station_id = s1.station_id
-                JOIN Station s2 ON fs.end_station_id = s2.station_id
-                WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
-            """, (dep["trip_id"], from_station, to_station))
-            price_row = cur.fetchone()
-            base_price = float(price_row["standard_price"]) if price_row else 12.00
+            from_order = dep["from_order"]
+            to_order = dep["to_order"]
+            stops_count = to_order - from_order
+            base_price = 12.00 + ((stops_count - 1) * 1.50) if stops_count > 0 else 12.00
 
             available_seats = dep["seating_capacity"] - dep["occupied_seats"]
 
@@ -196,17 +190,20 @@ def create_reservation(current_user_id):
                 {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
-        query_price = """
-            SELECT fs.standard_price 
-            FROM Fare_Segment fs
-            JOIN Trip tr ON fs.route_id = tr.route_id
-            JOIN Station s1 ON fs.start_station_id = s1.station_id
-            JOIN Station s2 ON fs.end_station_id = s2.station_id
-            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
+        query_orders = """
+            SELECT 
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s LIMIT 1) AS from_order,
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s LIMIT 1) AS to_order
+            FROM Trip tr WHERE trip_id = %s;
         """
-        cur.execute(query_price, (trip_id, from_station, to_station))
-        price_row = cur.fetchone()
-        base_price = float(price_row["standard_price"]) if price_row else 12.00
+        cur.execute(query_orders, (from_station, to_station, trip_id))
+        orders = cur.fetchone()
+        
+        if not orders or orders["from_order"] is None or orders["to_order"] is None or orders["from_order"] >= orders["to_order"]:
+            return jsonify({"error": "Invalid stations for this trip"}), 400
+            
+        stops_count = orders["to_order"] - orders["from_order"]
+        base_price = 12.00 + ((stops_count - 1) * 1.50) if stops_count > 0 else 12.00
 
         total_price = (
             (adult_count * base_price)
@@ -370,22 +367,20 @@ def calculate_price(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        # --- NOWY, POPRAWNY SPOSÓB POBIERANIA CENY ---
-        query_price = """
-            SELECT fs.standard_price 
-            FROM Fare_Segment fs
-            JOIN Trip tr ON fs.route_id = tr.route_id
-            JOIN Station s1 ON fs.start_station_id = s1.station_id
-            JOIN Station s2 ON fs.end_station_id = s2.station_id
-            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
+        query_orders = """
+            SELECT 
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s LIMIT 1) AS from_order,
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = tr.route_id AND s.name = %s LIMIT 1) AS to_order
+            FROM Trip tr WHERE trip_id = %s;
         """
-        cur.execute(query_price, (trip_id, from_station, to_station))
-        price_row = cur.fetchone()
+        cur.execute(query_orders, (from_station, to_station, trip_id))
+        orders = cur.fetchone()
         
-        if not price_row:
+        if not orders or orders["from_order"] is None or orders["to_order"] is None or orders["from_order"] >= orders["to_order"]:
             return jsonify({"error": "Invalid stations for this trip"}), 400
             
-        base_price = float(price_row["standard_price"])
+        stops_count = orders["to_order"] - orders["from_order"]
+        base_price = 12.00 + ((stops_count - 1) * 1.50) if stops_count > 0 else 12.00
 
         # --- KALKULACJA NOWYCH ZNIŻEK ---
         total_price = (
@@ -510,21 +505,19 @@ def process_checkout(current_user_id):
                 {"error": f"Not enough seats available. Available: {available_seats}"}
             ), 409
 
-        query_price = """
-            SELECT fs.standard_price 
-            FROM Fare_Segment fs
-            JOIN Trip tr ON fs.route_id = tr.route_id
-            JOIN Station s1 ON fs.start_station_id = s1.station_id
-            JOIN Station s2 ON fs.end_station_id = s2.station_id
-            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s
+        query_orders = """
+            SELECT 
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = %s AND s.name = %s LIMIT 1) AS from_order,
+                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = %s AND s.name = %s LIMIT 1) AS to_order;
         """
-        cur.execute(query_price, (trip_id, from_station, to_station))
-        price_row = cur.fetchone()
+        cur.execute(query_orders, (route_id, from_station, route_id, to_station))
+        orders = cur.fetchone()
         
-        if not price_row:
+        if not orders or orders["from_order"] is None or orders["to_order"] is None or orders["from_order"] >= orders["to_order"]:
             return jsonify({"error": "Invalid stations for this trip"}), 400
             
-        base_price = float(price_row["standard_price"])
+        stops_count = orders["to_order"] - orders["from_order"]
+        base_price = 12.00 + ((stops_count - 1) * 1.50) if stops_count > 0 else 12.00
 
         total_price = (
             (adult_count * base_price)
@@ -566,14 +559,6 @@ def process_checkout(current_user_id):
             elif applied_reward_id == 4:
                 ticket_summary += " [+ Darmowy Bagaż]"
 
-
-        query_orders = """
-            SELECT 
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = %s AND s.name = %s LIMIT 1) AS from_order,
-                (SELECT order_on_route FROM Route_Station rs JOIN Station s ON rs.station_id = s.station_id WHERE rs.route_id = %s AND s.name = %s LIMIT 1) AS to_order;
-        """
-        cur.execute(query_orders, (route_id, from_station, route_id, to_station))
-        orders = cur.fetchone()
 
         total_km = 0
         if orders and orders["from_order"] is not None and orders["to_order"] is not None:

@@ -148,29 +148,12 @@ def admin_purchase_ticket(current_admin_id):
         if not stops or stops[0] is None or stops[1] is None or stops[0] >= stops[1]:
             return jsonify({"error": "Nieprawidłowe stacje dla tego kursu."}), 400
 
-        # Pobieranie ceny z bazy Fare_Segment
-        query_price = """
-            SELECT fs.standard_price
-            FROM Fare_Segment fs
-            JOIN Station s1 ON fs.start_station_id = s1.station_id
-            JOIN Station s2 ON fs.end_station_id = s2.station_id
-            JOIN Trip tr ON fs.route_id = tr.route_id
-            WHERE tr.trip_id = %s AND s1.name = %s AND s2.name = %s;
-        """
-        cur.execute(query_price, (trip_id, from_station, to_station))
-        price_row = cur.fetchone()
-        
-        if price_row and price_row[0] is not None:
-            base_price = float(price_row[0])
-        else:
-            # Fallback domyślny, gdyby odcinka nie było w bazie
-            base_price = 15.00
         from_order = stops[0]
         to_order = stops[1]
         route_id = stops[2]
 
         stops_count = to_order - from_order
-        base_price = 15.00 + (stops_count * 5.00)
+        base_price = 12.00 + ((stops_count - 1) * 1.50) if stops_count > 0 else 12.00
 
         total_price = (
             (adult_count * base_price)
