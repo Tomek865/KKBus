@@ -6,12 +6,12 @@ import { authFetch } from '../../utils';
 
 const YEARS = [2023, 2024, 2025, 2026, 2027];
 const MONTHS = [
-    { label: 'Jan', value: 1 }, { label: 'Feb', value: 2 },
-    { label: 'Mar', value: 3 }, { label: 'Apr', value: 4 },
-    { label: 'May', value: 5 }, { label: 'Jun', value: 6 },
-    { label: 'Jul', value: 7 }, { label: 'Aug', value: 8 },
-    { label: 'Sep', value: 9 }, { label: 'Oct', value: 10 },
-    { label: 'Nov', value: 11 }, { label: 'Dec', value: 12 }
+    { label: 'Sty', value: 1 }, { label: 'Lut', value: 2 },
+    { label: 'Mar', value: 3 }, { label: 'Kwi', value: 4 },
+    { label: 'Maj', value: 5 }, { label: 'Cze', value: 6 },
+    { label: 'Lip', value: 7 }, { label: 'Sie', value: 8 },
+    { label: 'Wrz', value: 9 }, { label: 'Paź', value: 10 },
+    { label: 'Lis', value: 11 }, { label: 'Gru', value: 12 }
 ];
 
 export default function AdminReports() {
@@ -135,10 +135,10 @@ export default function AdminReports() {
                 const filename = `Reservations_${resYear}_${resType}.pdf`;
                 await handlePDFDownload(response, filename);
             } else {
-                showNotification("Error", "Failed to generate reservation report.");
+                showNotification("Błąd", "Nie udało się wygenerować raportu rezerwacji.");
             }
         } catch (error) {
-            showNotification("Network Error", "Could not connect to the server.");
+            showNotification("Błąd Sieci", "Nie można połączyć się z serwerem.");
         } finally {
             setIsGeneratingRes(false);
         }
@@ -163,10 +163,10 @@ export default function AdminReports() {
                 const filename = `Trips_${tripType}_Report.pdf`;
                 await handlePDFDownload(response, filename);
             } else {
-                showNotification("Error", "Failed to generate trip report.");
+                showNotification("Błąd", "Nie udało się wygenerować raportu kursów.");
             }
         } catch (error) {
-            showNotification("Network Error", "Could not connect to the server.");
+            showNotification("Błąd Sieci", "Nie można połączyć się z serwerem.");
         } finally {
             setIsGeneratingTrip(false);
         }
@@ -178,12 +178,12 @@ export default function AdminReports() {
     return (
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             <View style={styles.pageHeader}>
-                <Text style={styles.title}>Data & Reports Center</Text>
-                <Text style={styles.subtitle}>GENERATE REQUIRED SYSTEM REPORTS</Text>
+                <Text style={styles.title}>Centrum Danych i Raportów</Text>
+                <Text style={styles.subtitle}>GENERUJ WYMAGANE RAPORTY SYSTEMOWE</Text>
             </View>
 
             {/* SEKCJA Z PRZYCISKAMI EKSPORTU */}
-            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: COLORS.dark }}>Export Documents</Text>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: COLORS.dark }}>Eksportuj Dokumenty</Text>
             <View style={{ flexDirection: 'row', gap: 20, marginBottom: 30 }}>
 
                 {/* 7. RAPORT Z REZERWACJI */}
@@ -196,8 +196,8 @@ export default function AdminReports() {
                         {isGeneratingRes ? <ActivityIndicator color={COLORS.blue} /> : <Ionicons name="ticket-outline" size={24} color={COLORS.blue} />}
                     </View>
                     <View>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Reservation Reports</Text>
-                        <Text style={{ fontSize: 12, color: COLORS.grayText }}>Monthly and annual bookings</Text>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Raporty Rezerwacji</Text>
+                        <Text style={{ fontSize: 12, color: COLORS.grayText }}>Miesięczne i roczne rezerwacje</Text>
                     </View>
                 </TouchableOpacity>
 
@@ -211,46 +211,46 @@ export default function AdminReports() {
                         {isGeneratingTrip ? <ActivityIndicator color={COLORS.red} /> : <Ionicons name="bus-outline" size={24} color={COLORS.red} />}
                     </View>
                     <View>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Trip & Fleet Reports</Text>
-                        <Text style={{ fontSize: 12, color: COLORS.grayText }}>Passengers, fuel, specific buses/drivers</Text>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Raporty Kursów i Floty</Text>
+                        <Text style={{ fontSize: 12, color: COLORS.grayText }}>Pasażerowie, paliwo, konkretne autobusy/kierowcy</Text>
                     </View>
                 </TouchableOpacity>
 
             </View>
 
-            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: COLORS.dark }}>Current Month Summary (MTD)</Text>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: COLORS.dark }}>Podsumowanie Bieżącego Miesiąca (MTD)</Text>
             <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>
                 <View style={[styles.card, { flex: 1, alignItems: 'center', paddingVertical: 30 }]}>
                     <View style={localStyles.iconWrapperGreen}><Ionicons name="cash-outline" size={28} color={COLORS.green} /></View>
                     <Text style={{ fontSize: 22, fontWeight: 'bold', marginTop: 15 }}>{reportData?.ticketSales || '0'} PLN</Text>
-                    <Text style={styles.subtitle}>Ticket Sales</Text>
+                    <Text style={styles.subtitle}>Sprzedaż Biletów</Text>
                 </View>
                 <View style={[styles.card, { flex: 1, alignItems: 'center', paddingVertical: 30 }]}>
                     <View style={localStyles.iconWrapperRed}><Ionicons name="water-outline" size={28} color={COLORS.red} /></View>
                     <Text style={{ fontSize: 22, fontWeight: 'bold', marginTop: 15 }}>{reportData?.fuelCosts || '0'} PLN</Text>
-                    <Text style={styles.subtitle}>Fuel Costs</Text>
+                    <Text style={styles.subtitle}>Koszty Paliwa</Text>
                 </View>
                 <View style={[styles.card, { flex: 1, alignItems: 'center', paddingVertical: 30 }]}>
                     <View style={localStyles.iconWrapperBlue}><Ionicons name="people-outline" size={28} color={COLORS.blue} /></View>
                     <Text style={{ fontSize: 22, fontWeight: 'bold', marginTop: 15 }}>{statsData?.passengers || '0'}</Text>
-                    <Text style={styles.subtitle}>Total Passengers</Text>
+                    <Text style={styles.subtitle}>Całkowita Liczba Pasażerów</Text>
                 </View>
             </View>
 
             {/* ORYGINALNE PODSUMOWANIA KTÓRE MIAŁY ZOSTAĆ NIENARUSZONE */}
             <View style={{ flexDirection: 'row', gap: 20 }}>
                 <View style={[styles.card, { flex: 1 }]}>
-                    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>Monthly P&L Summary</Text>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>Miesięczne Podsumowanie Zysków i Strat</Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-                        <Text style={{ color: COLORS.grayText, fontWeight: '500' }}>Gross Revenue</Text>
+                        <Text style={{ color: COLORS.grayText, fontWeight: '500' }}>Przychód Brutto</Text>
                         <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{reportData?.grossRevenue || '0'} PLN</Text>
                     </View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-                        <Text style={{ color: COLORS.grayText, fontWeight: '500' }}>Operating Costs</Text>
+                        <Text style={{ color: COLORS.grayText, fontWeight: '500' }}>Koszty Operacyjne</Text>
                         <Text style={{ fontWeight: 'bold', fontSize: 16, color: COLORS.red }}>- {reportData?.operatingCosts || '0'} PLN</Text>
                     </View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderColor: COLORS.grayBorder, marginTop: 10, paddingTop: 15 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: 18 }}>Net Profit</Text>
+                        <Text style={{ fontWeight: 'bold', fontSize: 18 }}>Zysk Netto</Text>
                         <Text style={{ fontWeight: 'bold', color: reportData?.netProfit < 0 ? COLORS.red : COLORS.green, fontSize: 20 }}>
                             {reportData?.netProfit || '0'} PLN
                         </Text>
@@ -259,12 +259,12 @@ export default function AdminReports() {
 
                 <View style={[styles.card, { flex: 2 }]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Revenue by Trip</Text>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Przychód wg Kursu</Text>
                     </View>
 
                     <View style={styles.tableHeader}>
-                        <Text style={[styles.headerCell, { flex: 2 }]}>ROUTE</Text>
-                        <Text style={[styles.headerCell, { flex: 1, textAlign: 'right' }]}>REVENUE</Text>
+                        <Text style={[styles.headerCell, { flex: 2 }]}>TRASA</Text>
+                        <Text style={[styles.headerCell, { flex: 1, textAlign: 'right' }]}>PRZYCHÓD</Text>
                     </View>
 
                     <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
@@ -277,7 +277,7 @@ export default function AdminReports() {
                             </View>
                         ))}
                         {tripRevenues.length === 0 && (
-                            <Text style={{ textAlign: 'center', color: COLORS.grayText, marginTop: 20, fontStyle: 'italic' }}>No route data available.</Text>
+                            <Text style={{ textAlign: 'center', color: COLORS.grayText, marginTop: 20, fontStyle: 'italic' }}>Brak danych o trasach.</Text>
                         )}
                     </ScrollView>
                 </View>
@@ -288,21 +288,21 @@ export default function AdminReports() {
                 <View style={localStyles.modalOverlay}>
                     <View style={localStyles.modalContent}>
                         <View style={localStyles.modalHeader}>
-                            <Text style={localStyles.modalTitle}>Reservation Report</Text>
+                            <Text style={localStyles.modalTitle}>Raport Rezerwacji</Text>
                             <TouchableOpacity onPress={() => setResModalVisible(false)}><Ionicons name="close" size={24} color="#111" /></TouchableOpacity>
                         </View>
 
-                        <Text style={localStyles.sectionLabel}>REPORT TYPE</Text>
+                        <Text style={localStyles.sectionLabel}>TYP RAPORTU</Text>
                         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
                             <TouchableOpacity style={[localStyles.typeBtn, resType === 'monthly' && localStyles.typeBtnActive]} onPress={() => setResType('monthly')}>
-                                <Text style={[localStyles.typeText, resType === 'monthly' && localStyles.typeTextActive]}>Monthly</Text>
+                                <Text style={[localStyles.typeText, resType === 'monthly' && localStyles.typeTextActive]}>Miesięczny</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={[localStyles.typeBtn, resType === 'annual' && localStyles.typeBtnActive]} onPress={() => setResType('annual')}>
-                                <Text style={[localStyles.typeText, resType === 'annual' && localStyles.typeTextActive]}>Annual</Text>
+                                <Text style={[localStyles.typeText, resType === 'annual' && localStyles.typeTextActive]}>Roczny</Text>
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={localStyles.sectionLabel}>YEAR</Text>
+                        <Text style={localStyles.sectionLabel}>ROK</Text>
                         <View style={localStyles.pickerRow}>
                             {YEARS.map(year => (
                                 <TouchableOpacity key={year} style={[localStyles.pickerItem, resYear === year && localStyles.pickerItemActive]} onPress={() => setResYear(year)}>
@@ -313,7 +313,7 @@ export default function AdminReports() {
 
                         {resType === 'monthly' && (
                             <>
-                                <Text style={localStyles.sectionLabel}>MONTH</Text>
+                                <Text style={localStyles.sectionLabel}>MIESIĄC</Text>
                                 <FlatList
                                     data={MONTHS}
                                     keyExtractor={(item) => item.value.toString()}
@@ -328,7 +328,7 @@ export default function AdminReports() {
                             </>
                         )}
                         <TouchableOpacity style={[localStyles.confirmBtn, { backgroundColor: COLORS.blue }]} onPress={handleGenerateReservationReport}>
-                            <Text style={localStyles.confirmBtnText}>Download Reservations Report</Text>
+                            <Text style={localStyles.confirmBtnText}>Pobierz Raport Rezerwacji</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -339,20 +339,23 @@ export default function AdminReports() {
                 <View style={localStyles.modalOverlay}>
                     <View style={[localStyles.modalContent, { maxWidth: 550 }]}>
                         <View style={localStyles.modalHeader}>
-                            <Text style={localStyles.modalTitle}>Trip & Fleet Report</Text>
+                            <Text style={localStyles.modalTitle}>Raport Kursów i Floty</Text>
                             <TouchableOpacity onPress={() => setTripModalVisible(false)}><Ionicons name="close" size={24} color="#111" /></TouchableOpacity>
                         </View>
 
-                        <Text style={localStyles.sectionLabel}>TIME FRAME</Text>
+                        <Text style={localStyles.sectionLabel}>RAMY CZASOWE</Text>
                         <View style={{ flexDirection: 'row', gap: 5, marginBottom: 20 }}>
-                            {['daily', 'weekly', 'monthly', 'annual'].map((type) => (
-                                <TouchableOpacity key={type} style={[localStyles.typeBtn, { flex: 1 }, tripType === type && localStyles.typeBtnActiveRed]} onPress={() => setTripType(type as any)}>
-                                    <Text style={[localStyles.typeText, { fontSize: 12 }, tripType === type && localStyles.typeTextActiveRed]}>{type.toUpperCase()}</Text>
-                                </TouchableOpacity>
-                            ))}
+                            {['daily', 'weekly', 'monthly', 'annual'].map((type) => {
+                                const typeLabel = type === 'daily' ? 'DZIENNY' : type === 'weekly' ? 'TYGODNIOWY' : type === 'monthly' ? 'MIESIĘCZNY' : 'ROCZNY';
+                                return (
+                                    <TouchableOpacity key={type} style={[localStyles.typeBtn, { flex: 1 }, tripType === type && localStyles.typeBtnActiveRed]} onPress={() => setTripType(type as any)}>
+                                        <Text style={[localStyles.typeText, { fontSize: 12 }, tripType === type && localStyles.typeTextActiveRed]}>{typeLabel}</Text>
+                                    </TouchableOpacity>
+                                )
+                            })}
                         </View>
 
-                        <Text style={localStyles.sectionLabel}>SELECT DATE</Text>
+                        <Text style={localStyles.sectionLabel}>WYBIERZ DATĘ</Text>
                         {tripType === 'daily' && (
                             <input type="date" style={styles.nativeSelectElement as any} value={tripDate} onChange={(e: any) => setTripDate(e.target.value)} />
                         )}
@@ -383,27 +386,27 @@ export default function AdminReports() {
 
                         <View style={{ flexDirection: 'row', gap: 15, marginTop: 20 }}>
                             <View style={{ flex: 1 }}>
-                                <Text style={localStyles.sectionLabel}>FILTER BY DRIVER</Text>
+                                <Text style={localStyles.sectionLabel}>FILTRUJ PO KIEROWCY</Text>
                                 <select style={styles.nativeSelectElement as any} value={selectedDriverId} onChange={(e: any) => setSelectedDriverId(e.target.value)}>
-                                    <option value="">All Drivers</option>
+                                    <option value="">Wszyscy Kierowcy</option>
                                     {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                 </select>
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={localStyles.sectionLabel}>FILTER BY VEHICLE</Text>
+                                <Text style={localStyles.sectionLabel}>FILTRUJ PO POJEŹDZIE</Text>
                                 <select style={styles.nativeSelectElement as any} value={selectedBusId} onChange={(e: any) => setSelectedBusId(e.target.value)}>
-                                    <option value="">All Vehicles</option>
+                                    <option value="">Wszystkie Pojazdy</option>
                                     {buses.map(b => <option key={b.id} value={b.id}>{b.registrationNumber}</option>)}
                                 </select>
                             </View>
                         </View>
 
                         <Text style={{ fontSize: 11, color: COLORS.grayText, fontStyle: 'italic', marginTop: 15 }}>
-                            * Report includes passengers per route segment, fuel vs revenue statistics, and specific filters.
+                            * Raport zawiera pasażerów na odcinek trasy, statystyki paliwo vs przychód oraz określone filtry.
                         </Text>
 
                         <TouchableOpacity style={[localStyles.confirmBtn, { backgroundColor: COLORS.red }]} onPress={handleGenerateTripReport}>
-                            <Text style={localStyles.confirmBtnText}>Download Trip Report</Text>
+                            <Text style={localStyles.confirmBtnText}>Pobierz Raport Kursów</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

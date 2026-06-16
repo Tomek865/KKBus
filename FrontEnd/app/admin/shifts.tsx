@@ -88,17 +88,17 @@ export default function AdminShifts() {
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.pageHeader}>
-                <Text style={styles.title}>Schedules & Shifts</Text>
+                <Text style={styles.title}>Grafiki i Zmiany</Text>
                 <TouchableOpacity style={styles.primaryBtn} onPress={() => setModalVisible(true)}>
                     <Ionicons name="calendar" size={20} color="#fff" />
-                    <Text style={styles.primaryBtnText}>Assign Shift</Text>
+                    <Text style={styles.primaryBtnText}>Przypisz Zmianę</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20, flex: 1, marginTop: 20 }}>
                 <View style={[styles.card, { flex: 1, padding: 0, overflow: 'hidden' }]}>
                     <View style={{ padding: 15, borderBottomWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }}>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Declared Availability (Kierowcy)</Text>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Zgłoszona Dyspozycyjność (Kierowcy)</Text>
                     </View>
                     <ScrollView showsVerticalScrollIndicator={false}>
                         {availabilities.length === 0 && <Text style={{ padding: 15, color: '#6b7280', fontStyle: 'italic' }}>Brak zgłoszonej dyspozycyjności.</Text>}
@@ -119,7 +119,7 @@ export default function AdminShifts() {
 
                 <View style={[styles.card, { flex: 1, padding: 0, overflow: 'hidden' }]}>
                     <View style={{ padding: 15, borderBottomWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }}>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Assigned Work Shifts</Text>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Przydzielone Zmiany Pracy</Text>
                     </View>
                     <ScrollView showsVerticalScrollIndicator={false}>
                         {shifts.length === 0 && <Text style={{ padding: 15, color: '#6b7280', fontStyle: 'italic' }}>Brak ustalonych zmian w grafiku.</Text>}
@@ -143,12 +143,12 @@ export default function AdminShifts() {
             <Modal visible={modalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { overflow: 'visible' }]}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Assign New Shift</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Przypisz Nową Zmianę</Text>
 
-                        <Text style={styles.inputLabel}>SELECT EMPLOYEE</Text>
+                        <Text style={styles.inputLabel}>WYBIERZ PRACOWNIKA</Text>
                         <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(!openDropdown)}>
                             <Text style={{ color: newShift.employee_id ? '#111' : '#9ca3af' }}>
-                                {employees.find(e => e.id === newShift.employee_id)?.name || "Choose employee..."}
+                                {employees.find(e => e.id === newShift.employee_id)?.name || "Wybierz pracownika..."}
                             </Text>
                             <Ionicons name={openDropdown ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
                         </TouchableOpacity>
@@ -165,24 +165,24 @@ export default function AdminShifts() {
                         )}
 
                         <View style={{ marginTop: 15 }}>
-                            <Text style={styles.inputLabel}>SHIFT DATE</Text>
+                            <Text style={styles.inputLabel}>DATA ZMIANY</Text>
                             <input type="date" style={styles.nativeDateInput as any} value={newShift.date} onChange={(e) => setNewShift({ ...newShift, date: e.target.value })} />
                         </View>
 
                         <View style={{ flexDirection: 'row', gap: 12, marginTop: 15 }}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.inputLabel}>START TIME</Text>
+                                <Text style={styles.inputLabel}>CZAS ROZPOCZĘCIA</Text>
                                 <input type="time" style={styles.nativeDateInput as any} value={newShift.start_time} onChange={(e) => setNewShift({ ...newShift, start_time: e.target.value })} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.inputLabel}>END TIME</Text>
+                                <Text style={styles.inputLabel}>CZAS ZAKOŃCZENIA</Text>
                                 <input type="time" style={styles.nativeDateInput as any} value={newShift.end_time} onChange={(e) => setNewShift({ ...newShift, end_time: e.target.value })} />
                             </View>
                         </View>
 
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 25 }}>
-                            <TouchableOpacity onPress={() => { setModalVisible(false); setOpenDropdown(false); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAssignShift}><Text style={styles.primaryBtnText}>Assign Shift</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => { setModalVisible(false); setOpenDropdown(false); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Anuluj</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAssignShift}><Text style={styles.primaryBtnText}>Przypisz Zmianę</Text></TouchableOpacity>
                         </View>
                     </View>
                 </View>

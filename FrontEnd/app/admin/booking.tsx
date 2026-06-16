@@ -16,7 +16,7 @@ export default function AdminBooking() {
     const [selectedTrip, setSelectedTrip] = useState('');
     const [fromStation, setFromStation] = useState('');
     const [toStation, setToStation] = useState('');
-    
+
     const [tickets, setTickets] = useState({ adult: 1, student: 0, child: 0 });
 
     useEffect(() => {
@@ -33,7 +33,7 @@ export default function AdminBooking() {
                     // Filter passengers only
                     setClients(usersData.filter((u: any) => u.role === 'Passenger'));
                 }
-                
+
                 if (tripsRes.ok) {
                     const tripsData = await tripsRes.json();
                     // Show only planned trips
@@ -42,10 +42,10 @@ export default function AdminBooking() {
 
                 if (stationsRes.ok) {
                     const stationsData = await stationsRes.json();
-                    setStations(stationsData); 
+                    setStations(stationsData);
                 }
             } catch (error) {
-                console.error("Error fetching booking data:", error);
+                console.error("Błąd pobierania danych rezerwacji:", error);
             } finally {
                 setLoading(false);
             }
@@ -86,14 +86,14 @@ export default function AdminBooking() {
 
     const handleBooking = async () => {
         const totalTickets = tickets.adult + tickets.student + tickets.child;
-        
+
         if (!selectedClient || !selectedTrip || !fromStation || !toStation) {
-            showAlert("Error", "Please fill in all fields (Client, Trip, Stations).");
+            showAlert("Błąd", "Proszę wypełnić wszystkie pola (Klient, Kurs, Stacje).");
             return;
         }
 
         if (totalTickets === 0) {
-            showAlert("Error", "Please select at least one ticket.");
+            showAlert("Błąd", "Proszę wybrać co najmniej jeden bilet.");
             return;
         }
 
@@ -111,12 +111,12 @@ export default function AdminBooking() {
                     tickets
                 })
             });
-            console.log("Booking response:", response);
+            console.log("Odpowiedź rezerwacji:", response);
 
             const data = await response.json();
 
             if (response.ok) {
-                showAlert("Success", "The ticket has been successfully booked for the client.");
+                showAlert("Sukces", "Bilet został pomyślnie zarezerwowany dla klienta.");
                 // Resetowanie formularza
                 setSelectedClient('');
                 setSelectedTrip('');
@@ -124,10 +124,10 @@ export default function AdminBooking() {
                 setToStation('');
                 setTickets({ adult: 1, student: 0, child: 0 });
             } else {
-                showAlert("Error", data.error || data.message || "Error during booking.");
+                showAlert("Błąd", data.error || data.message || "Błąd podczas rezerwacji.");
             }
         } catch (error) {
-            showAlert("Error", "Failed to connect to the server.");
+            showAlert("Błąd", "Nie udało się połączyć z serwerem.");
         } finally {
             setIsSubmitting(false);
         }
@@ -147,41 +147,41 @@ export default function AdminBooking() {
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             <View style={styles.pageHeader}>
                 <View>
-                    <Text style={styles.title}>Manual Ticket Booking</Text>
-                    <Text style={styles.subtitle}>OFFICE RESERVATION SYSTEM</Text>
+                    <Text style={styles.title}>Ręczna Rezerwacja Biletów</Text>
+                    <Text style={styles.subtitle}>SYSTEM REZERWACJI BIUROWEJ</Text>
                 </View>
             </View>
 
             <View style={[styles.card, { maxWidth: 800 }]}>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>Booking Details</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>Szczegóły Rezerwacji</Text>
 
                 <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.inputLabel}>SELECT CLIENT</Text>
-                        <select 
+                        <Text style={styles.inputLabel}>WYBIERZ KLIENTA</Text>
+                        <select
                             style={styles.nativeSelectElement as any}
                             value={selectedClient}
                             onChange={(e) => setSelectedClient(e.target.value)}
                         >
-                            <option value="">-- Select passenger --</option>
+                            <option value="">-- Wybierz pasażera --</option>
                             {clients.map(c => (
                                 <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
                             ))}
                         </select>
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.inputLabel}>SELECT TRIP</Text>
-                        <select 
+                        <Text style={styles.inputLabel}>WYBIERZ KURS</Text>
+                        <select
                             style={styles.nativeSelectElement as any}
                             value={selectedTrip}
                             onChange={(e) => setSelectedTrip(e.target.value)}
                         >
-                            <option value="">-- Select scheduled trip --</option>
+                            <option value="">-- Wybierz zaplanowany kurs --</option>
                             {trips.map(t => {
                                 const d = new Date(t.departureTime);
-                                const formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                const formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                                 return (
-                                    <option key={t.id} value={t.id}>{t.route} | Departure: {formattedDate}</option>
+                                    <option key={t.id} value={t.id}>{t.route} | Odjazd: {formattedDate}</option>
                                 )
                             })}
                         </select>
@@ -190,13 +190,13 @@ export default function AdminBooking() {
 
                 <View style={{ flexDirection: 'row', gap: 20, marginBottom: 30 }}>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.inputLabel}>DEPARTURE STATION</Text>
-                        <select 
+                        <Text style={styles.inputLabel}>STACJA POCZĄTKOWA</Text>
+                        <select
                             style={styles.nativeSelectElement as any}
                             value={fromStation}
                             onChange={(e) => setFromStation(e.target.value)}
                         >
-                            <option value="">-- Select station --</option>
+                            <option value="">-- Wybierz stację --</option>
                             {/* ZMIANA: mapujemy po routeStops zamiast stations */}
                             {routeStops.map(s => (
                                 <option key={s.id} value={s.name}>{s.orderOnRoute}. {s.name}</option>
@@ -204,13 +204,13 @@ export default function AdminBooking() {
                         </select>
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.inputLabel}>ARRIVAL STATION</Text>
-                        <select 
+                        <Text style={styles.inputLabel}>STACJA KOŃCOWA</Text>
+                        <select
                             style={styles.nativeSelectElement as any}
                             value={toStation}
                             onChange={(e) => setToStation(e.target.value)}
                         >
-                            <option value="">-- Select station --</option>
+                            <option value="">-- Wybierz stację --</option>
                             {/* ZMIANA: mapujemy po routeStops zamiast stations */}
                             {routeStops.map(s => (
                                 <option key={s.id} value={s.name}>{s.orderOnRoute}. {s.name}</option>
@@ -219,13 +219,13 @@ export default function AdminBooking() {
                     </View>
                 </View>
 
-                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: COLORS.dark }}>Tickets</Text>
-                
+                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: COLORS.dark }}>Bilety</Text>
+
                 <View style={{ gap: 15, marginBottom: 30 }}>
                     {[
-                        { key: 'adult', label: 'Standard Ticket', type: 'adult' as const },
-                        { key: 'student', label: 'Student Ticket (-51%)', type: 'student' as const },
-                        { key: 'child', label: 'Child Ticket (Free)', type: 'child' as const }
+                        { key: 'adult', label: 'Bilet Normalny', type: 'adult' as const },
+                        { key: 'student', label: 'Bilet Ulgowy (-51%)', type: 'student' as const },
+                        { key: 'child', label: 'Bilet Dziecięcy (Bezpłatny)', type: 'child' as const }
                     ].map((item) => (
                         <View key={item.key} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb', padding: 15, borderRadius: 8, borderWidth: 1, borderColor: '#eee' }}>
                             <Text style={{ fontWeight: '600', color: COLORS.dark }}>{item.label}</Text>
@@ -242,12 +242,12 @@ export default function AdminBooking() {
                     ))}
                 </View>
 
-                <TouchableOpacity 
-                    style={[styles.primaryBtn, { alignSelf: 'flex-start', paddingHorizontal: 30, paddingVertical: 15 }]} 
+                <TouchableOpacity
+                    style={[styles.primaryBtn, { alignSelf: 'flex-start', paddingHorizontal: 30, paddingVertical: 15 }]}
                     onPress={handleBooking}
                     disabled={isSubmitting}
                 >
-                    {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Book Ticket</Text>}
+                    {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Rezerwuj Bilet</Text>}
                 </TouchableOpacity>
 
             </View>

@@ -60,8 +60,8 @@ export default function AdminClients() {
     };
 
     const handleDelete = (userId: string) => {
-        const title = "Delete User";
-        const message = "Are you sure you want to permanently delete this user?";
+        const title = "Usuń Użytkownika";
+        const message = "Czy na pewno chcesz trwale usunąć tego użytkownika?";
 
         if (Platform.OS === 'web') {
             const confirmed = window.confirm(`${title}\n\n${message}`);
@@ -70,8 +70,8 @@ export default function AdminClients() {
         }
 
         Alert.alert(title, message, [
-            { text: "Cancel", style: "cancel" },
-            { text: "Delete", style: "destructive", onPress: () => runDeleteConfirm(userId) }
+            { text: "Anuluj", style: "cancel" },
+            { text: "Usuń", style: "destructive", onPress: () => runDeleteConfirm(userId) }
         ]);
     };
 
@@ -82,7 +82,7 @@ export default function AdminClients() {
 
             if (response.ok) {
                 setUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: false } : u));
-                showAlert("Success", resData.message || "User deactivated successfully.");
+                showAlert("Sukces", resData.message || "Użytkownik został pomyślnie dezaktywowany.");
             } else {
                 showAlert("Błąd", resData.message || "Nie udało się dezaktywować użytkownika.");
             }
@@ -104,22 +104,22 @@ export default function AdminClients() {
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.pageHeader}>
-                <Text style={styles.title}>Client & Employee Accounts</Text>
+                <Text style={styles.title}>Konta Klientów i Pracowników</Text>
 
                 {/* PRZYWRÓCONY PRZYCISK DODAWANIA UŻYTKOWNIKA */}
                 <TouchableOpacity style={styles.primaryBtn} onPress={() => setModalVisible(true)}>
                     <Ionicons name="person-add" size={20} color="#fff" />
-                    <Text style={styles.primaryBtnText}>Add User</Text>
+                    <Text style={styles.primaryBtnText}>Dodaj Użytkownika</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={[styles.card, { padding: 0, overflow: 'hidden', marginTop: 20, flex: 1 }]}>
                 <View style={styles.tableHeader}>
-                    <Text style={[styles.headerCell, { flex: 1.5 }]}>USER DETAILS (ID)</Text>
-                    <Text style={[styles.headerCell, { flex: 1 }]}>ROLE</Text>
+                    <Text style={[styles.headerCell, { flex: 1.5 }]}>DANE UŻYTKOWNIKA (ID)</Text>
+                    <Text style={[styles.headerCell, { flex: 1 }]}>ROLA</Text>
                     <Text style={[styles.headerCell, { flex: 0.8, textAlign: 'center' }]}>STATUS</Text>
-                    <Text style={[styles.headerCell, { flex: 0.5, textAlign: 'center' }]}>TRIPS</Text>
-                    <Text style={[styles.headerCell, { flex: 0.5, textAlign: 'right' }]}>ACTIONS</Text>
+                    <Text style={[styles.headerCell, { flex: 0.5, textAlign: 'center' }]}>KURSY</Text>
+                    <Text style={[styles.headerCell, { flex: 0.5, textAlign: 'right' }]}>AKCJE</Text>
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 15 }}>
@@ -142,7 +142,7 @@ export default function AdminClients() {
                             <View style={{ flex: 0.8, alignItems: 'center' }}>
                                 <View style={[styles.statusBadge, { backgroundColor: user.isActive ?? true ? COLORS.greenLight : COLORS.redLight }]}>
                                     <Text style={[styles.statusText, { color: user.isActive ?? true ? COLORS.green : COLORS.red }]}>
-                                        {user.isActive ?? true ? 'Active' : 'Inactive'}
+                                        {user.isActive ?? true ? 'Aktywny' : 'Nieaktywny'}
                                     </Text>
                                 </View>
                             </View>
@@ -163,15 +163,15 @@ export default function AdminClients() {
             <Modal visible={modalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Create Account</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Utwórz Konto</Text>
 
-                        <Text style={styles.inputLabel}>FULL NAME</Text>
+                        <Text style={styles.inputLabel}>IMIĘ I NAZWISKO</Text>
                         <TextInput style={styles.input} placeholder="" value={newUser.name} onChangeText={(text) => setNewUser({ ...newUser, name: text })} />
 
-                        <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+                        <Text style={styles.inputLabel}>ADRES EMAIL</Text>
                         <TextInput style={styles.input} placeholder="" keyboardType="email-address" autoCapitalize="none" value={newUser.email} onChangeText={(text) => setNewUser({ ...newUser, email: text })} />
 
-                        <Text style={styles.inputLabel}>ACCOUNT TYPE / ROLE</Text>
+                        <Text style={styles.inputLabel}>TYP KONTA / ROLA</Text>
                         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
                             {['Client', 'Driver', 'Admin'].map((role) => (
                                 <TouchableOpacity
@@ -185,8 +185,8 @@ export default function AdminClients() {
                         </View>
 
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 10 }}>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleCreateUser}><Text style={styles.primaryBtnText}>Create</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Anuluj</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleCreateUser}><Text style={styles.primaryBtnText}>Utwórz</Text></TouchableOpacity>
                         </View>
                     </View>
                 </View>
