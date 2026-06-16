@@ -14,12 +14,12 @@ export default function RegisterScreen() {
     const [birthDate, setBirthDate] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [isAgreed, setIsAgreed] = useState(false); // NOWY STAN DLA CHECKBOXA
     const [isLoading, setIsLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<'name' | 'email' | 'phone' | 'birthDate' | 'password' | 'confirmPassword' | null>(null);
 
     // Sprytne formatowanie daty (samo dodaje myślniki podczas wpisywania)
     const handleDateChange = (text: string) => {
-        // Pozwala na swobodne usuwanie (backspace)
         if (text.length < birthDate.length) {
             setBirthDate(text);
             return;
@@ -42,6 +42,12 @@ export default function RegisterScreen() {
             return;
         }
 
+        // WALIDACJA WYMAGANEGO CHECKBOXA
+        if (!isAgreed) {
+            showRegisterAlert("Błąd", "Musisz zaakceptować regulamin programu lojalnościowego.");
+            return;
+        }
+
         if (birthDate.length !== 10) {
             showRegisterAlert("Błąd", "Wprowadź pełną datę urodzenia w formacie DD-MM-RRRR.");
             return;
@@ -60,7 +66,6 @@ export default function RegisterScreen() {
         setIsLoading(true);
 
         try {
-            // Konwersja DD-MM-YYYY na YYYY-MM-DD dla bazy danych
             const [day, month, year] = birthDate.split('-');
             const backendFormattedDate = `${year}-${month}-${day}`;
 
@@ -120,7 +125,7 @@ export default function RegisterScreen() {
 
                         {/* Imię i Nazwisko */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, focusedField === 'name' && styles.labelActive]}>IMIĘ I NAZWISKO</Text>
+                            <Text style={[styles.label, focusedField === 'name' && styles.labelActive]}>IMIĘ I NAZWISKO *</Text>
                             <View style={[styles.inputWrapper, focusedField === 'name' && styles.inputWrapperActive]}>
                                 <Ionicons name="person-outline" size={18} color={focusedField === 'name' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -136,7 +141,7 @@ export default function RegisterScreen() {
 
                         {/* Email */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, focusedField === 'email' && styles.labelActive]}>ADRES EMAIL</Text>
+                            <Text style={[styles.label, focusedField === 'email' && styles.labelActive]}>ADRES EMAIL *</Text>
                             <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputWrapperActive]}>
                                 <Ionicons name="mail-outline" size={18} color={focusedField === 'email' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -154,7 +159,7 @@ export default function RegisterScreen() {
 
                         {/* Telefon */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, focusedField === 'phone' && styles.labelActive]}>NUMER TELEFONU</Text>
+                            <Text style={[styles.label, focusedField === 'phone' && styles.labelActive]}>NUMER TELEFONU *</Text>
                             <View style={[styles.inputWrapper, focusedField === 'phone' && styles.inputWrapperActive]}>
                                 <Ionicons name="call-outline" size={18} color={focusedField === 'phone' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -169,9 +174,9 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
-                        {/* Data Urodzenia (Smart Input) */}
+                        {/* Data Urodzenia */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, focusedField === 'birthDate' && styles.labelActive]}>DATA URODZENIA (DD-MM-RRRR)</Text>
+                            <Text style={[styles.label, focusedField === 'birthDate' && styles.labelActive]}>DATA URODZENIA (DD-MM-RRRR) *</Text>
                             <View style={[styles.inputWrapper, focusedField === 'birthDate' && styles.inputWrapperActive]}>
                                 <Ionicons name="calendar-outline" size={18} color={focusedField === 'birthDate' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -189,7 +194,7 @@ export default function RegisterScreen() {
 
                         {/* Hasło */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, focusedField === 'password' && styles.labelActive]}>HASŁO</Text>
+                            <Text style={[styles.label, focusedField === 'password' && styles.labelActive]}>HASŁO *</Text>
                             <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperActive]}>
                                 <Ionicons name="lock-closed-outline" size={18} color={focusedField === 'password' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -206,7 +211,7 @@ export default function RegisterScreen() {
 
                         {/* Potwierdzenie Hasła */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, focusedField === 'confirmPassword' && styles.labelActive]}>POTWIERDŹ HASŁO</Text>
+                            <Text style={[styles.label, focusedField === 'confirmPassword' && styles.labelActive]}>POTWIERDŹ HASŁO *</Text>
                             <View style={[styles.inputWrapper, focusedField === 'confirmPassword' && styles.inputWrapperActive]}>
                                 <Ionicons name="lock-closed-outline" size={18} color={focusedField === 'confirmPassword' ? '#e60000' : '#9ca3af'} />
                                 <TextInput
@@ -221,10 +226,26 @@ export default function RegisterScreen() {
                             </View>
                         </View>
 
+                        {/* POPRAWIONY I AKTYWNY CHECKBOX */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 15 }}>
+                            <TouchableOpacity onPress={() => setIsAgreed(!isAgreed)} style={{ padding: 6 }}>
+                                <Ionicons name={isAgreed ? 'checkbox' : 'square-outline'} size={22} color="#e60000" />
+                            </TouchableOpacity>
+                            <Text 
+                                style={{ fontSize: 13, color: '#4b5563', flex: 1, marginLeft: 8 }}
+                                onPress={() => setIsAgreed(!isAgreed)}
+                            >
+                                Zgadzam się na warunki korzystania z usługi karty lojalnościowej. *
+                            </Text>
+                        </View>
+
                         <TouchableOpacity
-                            style={[styles.loginBtn, isLoading && { opacity: 0.7 }]}
+                            style={[
+                                styles.loginBtn, 
+                                (isLoading || !isAgreed) && { opacity: 0.5 } // Wizualne zablokowanie przycisku
+                            ]}
                             onPress={handleRegister}
-                            disabled={isLoading}
+                            disabled={isLoading || !isAgreed} // Fizyczna blokada kliknięcia
                         >
                             {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Zarejestruj się</Text>}
                         </TouchableOpacity>
@@ -246,19 +267,15 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f4f5f7' },
     scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 15, paddingTop: 20, paddingBottom: 25 },
     loginCard: { position: 'relative', backgroundColor: '#fff', paddingHorizontal: 30, paddingTop: 35, paddingBottom: 25, borderRadius: 24, width: '100%', maxWidth: 430, elevation: 6, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 15 },
-
     backButtonTop: { position: 'absolute', top: 18, left: 20, padding: 5, borderRadius: 8, backgroundColor: '#f3f4f6' },
-
     logoWrapper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
     logoIcon: { backgroundColor: '#e60000', padding: 6, borderRadius: 10, marginRight: 10 },
     logoText: { fontSize: 22, fontWeight: 'bold', color: '#111827' },
-    welcomeTitle: { fontSize: 19, fontWeight: 'bold', textAlign: 'center', color: '#111' },
+    welcomeTitle: { fontSize: 19, fontWeight: 'bold', textAlign: 'center', color: '#11' },
     welcomeSub: { textAlign: 'center', color: '#9ca3af', fontSize: 12, marginTop: 4, marginBottom: 20 },
-
     inputGroup: { marginBottom: 12 },
     label: { fontSize: 9, fontWeight: 'bold', color: '#9ca3af', marginBottom: 5, letterSpacing: 1 },
-    labelActive: { color: '#e60000' }, // Nowy styl dla aktywnej etykiety
-
+    labelActive: { color: '#e60000' },
     inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderWidth: 1.5, borderColor: '#f3f4f6', borderRadius: 12, paddingHorizontal: 12, height: 48 },
     inputWrapperActive: { 
         borderColor: '#e60000', 
@@ -268,12 +285,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 4,
         elevation: 3 
-    }, // Ulepszony aktywny styl z cieniem
+    },
     input: { flex: 1, fontSize: 14, color: '#111', marginLeft: 8 },
-
     loginBtn: { backgroundColor: '#111827', height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 12, elevation: 3 },
     loginBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-
     registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 15 },
     registerText: { color: '#6b7280', fontSize: 13 },
     registerLink: { color: '#e60000', fontSize: 13, fontWeight: 'bold' }

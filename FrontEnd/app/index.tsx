@@ -182,13 +182,14 @@ export default function LoginScreen() {
                             <Ionicons name="call" size={20} color="#e60000" style={{ marginRight: 10 }} />
                             <View>
                                 <Text style={{ fontSize: 15, color: '#4b5563' }}>(070) 012-34-56</Text>
-                                <Text style={{ fontSize: 15, color: '#4b5563', marginTop: 4 }}>(070) 011-22-33</Text>
+                                <Text style={{ fontSize: 15, color: '#4b5563', marginTop: 4 }}>(067) 011-22-33</Text>
                             </View>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Ionicons name="mail" size={20} color="#e60000" style={{ marginRight: 10 }} />
                             <Text style={{ fontSize: 15, color: '#4b5563' }}>sekretariat@kkbus.pl</Text>
                         </View>
+                       
                     </ScrollView>
                 </SafeAreaView>
             </Modal>
