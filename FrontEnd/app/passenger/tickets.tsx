@@ -3,7 +3,7 @@ import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Animated, 
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
-import ActiveTicketModal from './ActiveTicketModal'; 
+import ActiveTicketModal from './ActiveTicketModal';
 import { passengerStyles as styles } from '../src/styles/passengerStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authFetch } from '../../utils';
@@ -11,12 +11,12 @@ import * as SecureStore from 'expo-secure-store';
 import GuestLoginModal from './GuestLoginModal';
 
 export interface TicketData {
-    id: string;             
-    ticketNumber: string;   
+    id: string;
+    ticketNumber: string;
     depTime: string;
     depStation: string;
     arrStation: string;
-    seats: string | number; 
+    seats: string | number;
     status: string;
     isPast: boolean;
     rawDepTime?: string;
@@ -35,7 +35,7 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
             const depDate = new Date(ticket.rawDepTime);
             const now = new Date();
             const diffHours = (depDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-            
+
             if (diffHours < 24) {
                 showNotification("Niedozwolona operacja", "Zgodnie z regulaminem, bilet można anulować najpóźniej 24 godziny przed wyjazdem.");
                 return;
@@ -44,7 +44,7 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
         const executeCancellation = async () => {
             try {
                 const res = await authFetch(`/api/client/reservations/tickets/${ticket.id}/cancel`, {
-                    method: 'PATCH', 
+                    method: 'PATCH',
                 });
 
                 if (res.ok) {
@@ -85,7 +85,7 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
                     <Text style={(styles as any).ticketRoute}>{ticket.depStation.toUpperCase()} - {ticket.arrStation.toUpperCase()}</Text>
                 </View>
                 <View style={(styles as any).ticketTopRow}>
-                    <Text style={(styles as any).ticketTime}>Today, {ticket.depTime}</Text>
+                    <Text style={(styles as any).ticketTime}>Dzisiaj, {ticket.depTime}</Text>
                 </View>
             </View>
 
@@ -102,7 +102,7 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
                         <Ionicons name="qr-code-outline" size={240} color="#111827" />
                     )}
                 </View>
-                <Text style={(styles as any).scanText}>SCAN WHEN BOARDING</Text>
+                <Text style={(styles as any).scanText}>ZESKANUJ PRZY WEJŚCIU</Text>
                 <View style={(styles as any).dividerContainer}>
                     <View style={(styles as any).cutoutLeft} />
                     <View style={(styles as any).dashedLine} />
@@ -110,7 +110,7 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
                 </View>
                 <View style={(styles as any).ticketActions}>
                     <TouchableOpacity style={(styles as any).viewDetailsBtn} onPress={() => onViewDetails(ticket)}>
-                        <Text style={(styles as any).viewDetailsText}>View Details</Text>
+                        <Text style={(styles as any).viewDetailsText}>Szczegóły</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={(styles as any).closeTicketBtn} onPress={handleArchiveTicket}>
                         <Ionicons name="close" size={26} color="#d32f2f" />
@@ -123,19 +123,23 @@ const ActiveTicketCard = ({ ticket, onViewDetails, onArchiveSuccess }: { ticket:
 
 const PastTicketCard = ({ ticket }: { ticket: TicketData }) => {
     const statusNormalized = ticket.status.toLowerCase();
-    
-    let statusLabel = 'Archived';
+
+    let statusLabel = 'Zarchiwizowany';
     let statusColor = '#9ca3af';
     let iconName: any = 'checkmark-circle';
 
     if (statusNormalized.includes('cancel')) {
-        statusLabel = 'Cancelled';
+        statusLabel = 'Anulowany';
         statusColor = '#ef4444';
         iconName = 'close-circle';
     } else if (statusNormalized.includes('realized')) {
-        statusLabel = 'Realized';
+        statusLabel = 'Zrealizowany';
         statusColor = '#10b981';
         iconName = 'checkmark-done-circle';
+    } else if (statusNormalized.includes('paid')) {
+        statusLabel = 'Opłacony';
+        statusColor = '#3b82f6';
+        iconName = 'checkmark-circle';
     }
 
     return (
@@ -148,11 +152,11 @@ const PastTicketCard = ({ ticket }: { ticket: TicketData }) => {
                     {ticket.depTime}
                 </Text>
             </View>
-            
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View style={{ backgroundColor: '#e5e7eb', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
                     <Text style={{ fontSize: 12, color: '#4b5563', fontWeight: '700' }}>
-                        TICKETS: {ticket.seats}
+                        BILETY: {ticket.seats}
                     </Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -190,7 +194,7 @@ export default function PassengerTickets() {
                         setIsLoading(false);
                         return; // Przerywamy dalsze pobieranie
                     }
-                    
+
                     setIsGuest(false);
 
                     const res = await authFetch('/api/client/profile/tickets');
@@ -199,7 +203,7 @@ export default function PassengerTickets() {
                         return;
                     }
                     const data = await res.json();
-                    
+
                     const mappedTickets = data.map((t: any) => {
                         const rawTicketStatus = (t.ticketStatus || '').toLowerCase();
                         const rawReservationStatus = (t.reservationStatus || '').toLowerCase();
@@ -210,7 +214,7 @@ export default function PassengerTickets() {
 
                         const isCancelled = combinedStatus.includes('cancel');
                         const isRealized = combinedStatus.includes('realized');
-    
+
                         const isPast = isTimePast || isCancelled || isRealized;
 
                         let displayStatus = 'Paid';
@@ -224,18 +228,18 @@ export default function PassengerTickets() {
                         const timeOnly = t.departureTime ? (t.departureTime.includes(' ') ? t.departureTime.split(' ')[1] : t.departureTime) : 'Brak danych';
 
                         return {
-                            id: String(t.ticketId || Math.random()), 
+                            id: String(t.ticketId || Math.random()),
                             ticketNumber: String(t.reservationNumber || 'Brak'),
                             depTime: timeOnly,
                             rawDepTime: validDateString,
-                            depStation: depStation, 
+                            depStation: depStation,
                             arrStation: arrStation,
-                            seats: t.ticketsSummary || 1, 
+                            seats: t.ticketsSummary || 1,
                             status: displayStatus,
                             isPast: isPast
                         };
                     });
-                    
+
                     setTickets(mappedTickets);
                 } catch (err) {
                     console.error("Błąd pobierania biletów:", err);
@@ -247,14 +251,14 @@ export default function PassengerTickets() {
         }, [])
     );
 
-    const handleOpenDetails = (ticket: TicketData) => { 
-        setSelectedTicket(ticket); 
-        setModalVisible(true); 
+    const handleOpenDetails = (ticket: TicketData) => {
+        setSelectedTicket(ticket);
+        setModalVisible(true);
     };
 
     const handleArchiveSuccess = (ticketId: string) => {
-        setTickets(prevTickets => 
-            prevTickets.map(ticket => 
+        setTickets(prevTickets =>
+            prevTickets.map(ticket =>
                 ticket.id === ticketId ? { ...ticket, isPast: true, status: 'Cancelled' } : ticket
             )
         );
@@ -277,15 +281,15 @@ export default function PassengerTickets() {
                     <View style={styles.activeSection}>
                         <View style={styles.activeHeader}>
                             <Ionicons name="ticket-outline" size={26} color="#d32f2f" style={{ transform: [{ rotate: '-45deg' }] }} />
-                            <Text style={styles.activeTitle}>Active Tickets</Text>
+                            <Text style={styles.activeTitle}>Aktywne Bilety</Text>
                         </View>
 
                         {/* Listujemy wszystkie aktywne bilety */}
                         {activeTickets.length > 0 ? (
                             activeTickets.map(ticket => (
-                                <ActiveTicketCard 
-                                    key={ticket.id} 
-                                    ticket={ticket} 
+                                <ActiveTicketCard
+                                    key={ticket.id}
+                                    ticket={ticket}
                                     onViewDetails={handleOpenDetails}
                                     onArchiveSuccess={handleArchiveSuccess}
                                 />
@@ -293,17 +297,17 @@ export default function PassengerTickets() {
                         ) : (
                             <View style={styles.emptyStateContainer}>
                                 <Ionicons name="ticket" size={48} color="#d1d5db" />
-                                <Text style={styles.emptyStateTitle}>No Active Tickets</Text>
-                                <Text style={styles.emptyStateSub}>You have cancelled your upcoming trip or have no bookings.</Text>
+                                <Text style={styles.emptyStateTitle}>Brak Aktywnych Biletów</Text>
+                                <Text style={styles.emptyStateSub}>Anulowałeś nadchodzącą podróż lub nie masz żadnych rezerwacji.</Text>
                             </View>
                         )}
                     </View>
 
-                    <Text style={styles.sectionTitle}>Travel History</Text>
+                    <Text style={styles.sectionTitle}>Historia Podróży</Text>
                     <View style={(styles as any).historyContainer}>
                         {pastTickets.map(ticket => (
-                            <TouchableOpacity 
-                                key={ticket.id} 
+                            <TouchableOpacity
+                                key={ticket.id}
                                 onPress={() => handleOpenDetails(ticket)}
                                 style={(styles as any).pastTicketWrapper}
                             >

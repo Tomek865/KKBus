@@ -21,8 +21,8 @@ export default function GuestLoginModal({ visible, onClose }: GuestLoginModalPro
                         Musisz posiadać konto i być zalogowanym, aby uzyskać dostęp do tej sekcji, przeglądać swoje bilety lub dokonać rezerwacji.
                     </Text>
 
-                    <TouchableOpacity 
-                        style={styles.loginBtn} 
+                    <TouchableOpacity
+                        style={styles.loginBtn}
                         onPress={() => {
                             onClose();
                             router.replace('/'); // Przekierowanie do ekranu logowania

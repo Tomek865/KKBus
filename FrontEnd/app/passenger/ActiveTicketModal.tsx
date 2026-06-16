@@ -19,17 +19,17 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
     useEffect(() => {
         if (visible && ticket) {
             setIsLoading(true);
-            
+
             const fetchJourneyDetails = async () => {
                 try {
                     const res = await authFetch(`/api/client/reservations/journey-details/${ticket.ticketNumber}`);
-                 
+
                     if (res.ok) {
                         const data = await res.json();
                         console.log("Journey details data:", data);
-                        
+
                         if (data.busDetails) {
-                             setBusDetails({
+                            setBusDetails({
                                 busNumber: data.busDetails.vehicleName || "Brak danych",
                                 operator: data.busDetails.operator || "Brak danych",
                                 amenities: data.busDetails.amenities || []
@@ -39,26 +39,26 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                         }
 
                         setRouteDetails(data.routeDetails || []);
-                        
+
                         if (data.ticketInfo) {
                             setTicketInfo({
                                 class: data.ticketInfo.class || "Standard",
                                 reservationNumber: data.ticketInfo.reservationNumber || ticket.ticketNumber,
-                                seat: data.ticketInfo.seat || "TBD",
+                                seat: data.ticketInfo.seat || "Do ustalenia",
                                 seatCount: data.ticketInfo.seatCount !== undefined ? data.ticketInfo.seatCount : 1
                             });
                         } else {
-                             setTicketInfo(null);
+                            setTicketInfo(null);
                         }
 
                     } else {
-                        setBusDetails(null); 
+                        setBusDetails(null);
                         setRouteDetails([]);
                         setTicketInfo(null);
                     }
                 } catch (error) {
                     console.error("Błąd pobierania szczegółów podróży:", error);
-                    setBusDetails(null); 
+                    setBusDetails(null);
                     setRouteDetails([]);
                     setTicketInfo(null);
                 } finally {
@@ -67,9 +67,9 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
             };
 
             fetchJourneyDetails();
-        } else { 
-            setBusDetails(null); 
-            setRouteDetails([]); 
+        } else {
+            setBusDetails(null);
+            setRouteDetails([]);
             setTicketInfo(null);
         }
     }, [visible, ticket]);
@@ -80,14 +80,14 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
         <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <SafeAreaView style={styles.modalContainerAlt}>
                 <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Journey Details</Text>
+                    <Text style={styles.modalTitle}>Szczegóły Podróży</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeBtnIcon}><Ionicons name="close" size={24} color="#111" /></TouchableOpacity>
                 </View>
 
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#e60000" />
-                        <Text style={styles.loadingText}>Fetching journey details...</Text>
+                        <Text style={styles.loadingText}>Pobieranie szczegółów podróży...</Text>
                     </View>
                 ) : (
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -113,20 +113,20 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                                 <Text style={styles.operatorText}>Brak danych o pojeździe</Text>
                             </View>
                         )}
-                        
+
                         <View style={styles.infoGrid}>
                             <View style={styles.infoBox}>
-                                <Text style={styles.infoLabel}>SEATS</Text>
+                                <Text style={styles.infoLabel}>MIEJSCA</Text>
                                 <Text style={styles.infoValue}>
                                     {ticketInfo ? ticketInfo.seatCount : ticket.seats}
                                 </Text>
                             </View>
                             <View style={styles.infoBox}>
-                                <Text style={styles.infoLabel}>CLASS</Text>
+                                <Text style={styles.infoLabel}>KLASA</Text>
                                 <Text style={styles.infoValue}>{ticketInfo ? ticketInfo.class : 'Standard'}</Text>
                             </View>
                             <View style={[styles.infoBox, { borderRightWidth: 0 }]}>
-                                <Text style={styles.infoLabel}>TICKET</Text>
+                                <Text style={styles.infoLabel}>BILET</Text>
                                 <Text style={[styles.infoValue, { fontSize: 13 }]}>
                                     {ticketInfo ? ticketInfo.reservationNumber : ticket.ticketNumber}
                                 </Text>
@@ -135,7 +135,7 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
 
                         {routeDetails.length > 0 ? (
                             <View style={styles.timelineCard}>
-                                <Text style={styles.sectionTitle}>Full Route Schedule</Text>
+                                <Text style={styles.sectionTitle}>Pełny harmonogram trasy</Text>
                                 {routeDetails.map((stop, index) => (
                                     <View key={index} style={styles.timelineItem}>
                                         <View style={styles.timelineLeft}>
@@ -147,8 +147,8 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                                         </View>
                                         <View style={styles.timelineRight}>
                                             <Text style={[styles.timelineStation, stop.isPassed && styles.textPassed]}>{stop.station || 'Brak danych'}</Text>
-                                            {index === 0 && <Text style={styles.statusLabel}>Departure</Text>}
-                                            {index === routeDetails.length - 1 && <Text style={styles.statusLabel}>Final Destination</Text>}
+                                            {index === 0 && <Text style={styles.statusLabel}>Odjazd</Text>}
+                                            {index === routeDetails.length - 1 && <Text style={styles.statusLabel}>Stacja końcowa</Text>}
                                         </View>
                                     </View>
                                 ))}
@@ -160,7 +160,7 @@ export default function ActiveTicketModal({ visible, onClose, ticket }: ActiveTi
                         )}
                         <View style={styles.footerInfo}>
                             <Ionicons name="information-circle-outline" size={20} color="#9ca3af" />
-                            <Text style={styles.footerText}>Please arrive at the platform 15 minutes before departure. Ticket valid only for the selected time.</Text>
+                            <Text style={styles.footerText}>Prosimy o przybycie na peron 15 minut przed odjazdem. Bilet ważny tylko na wybraną godzinę.</Text>
                         </View>
                     </ScrollView>
                 )}
