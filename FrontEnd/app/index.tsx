@@ -19,7 +19,7 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert("Error", "Please fill in all fields.");
+            Alert.alert("Błąd", "Proszę wypełnić wszystkie pola.");
             return;
         }
 
@@ -74,13 +74,13 @@ export default function LoginScreen() {
                 } else if (role === 'client') {
                     router.replace('/passenger');
                 } else {
-                    Alert.alert("Role Error", `Your account has an unsupported role assigned: ${data.role}`);
+                    Alert.alert("Błąd Roli", `Twoje konto ma przypisaną nieobsługiwaną rolę: ${data.role}`);
                 }
             } else {
-                Alert.alert("Error", data.message || "Invalid email or password.");
+                Alert.alert("Błąd", data.message || "Nieprawidłowy adres email lub hasło.");
             }
         } catch (e) {
-            Alert.alert("Network Error", "Failed to connect to the server.");
+            Alert.alert("Błąd Sieci", "Nie udało się połączyć z serwerem.");
         } finally {
             setIsLoading(false);
         }
@@ -95,11 +95,11 @@ export default function LoginScreen() {
                         <Text style={styles.logoText}>KK<Text style={{ color: '#e60000' }}>Bus</Text></Text>
                     </View>
 
-                    <Text style={styles.welcomeTitle}>Login Panel</Text>
-                    <Text style={styles.welcomeSub}>Log in to continue</Text>
+                    <Text style={styles.welcomeTitle}>Panel Logowania</Text>
+                    <Text style={styles.welcomeSub}>Zaloguj się, aby kontynuować</Text>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>EMAIL ADDRESS</Text>
+                        <Text style={styles.label}>ADRES EMAIL</Text>
                         <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputWrapperActive]}>
                             <Ionicons name="mail-outline" size={20} color={focusedField === 'email' ? '#e60000' : '#9ca3af'} />
                             <TextInput
@@ -115,7 +115,7 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>PASSWORD</Text>
+                        <Text style={styles.label}>HASŁO</Text>
                         <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperActive]}>
                             <Ionicons name="lock-closed-outline" size={20} color={focusedField === 'password' ? '#e60000' : '#9ca3af'} />
                             <TextInput
@@ -135,21 +135,21 @@ export default function LoginScreen() {
                         onPress={handleLogin}
                         disabled={isLoading}
                     >
-                        {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Log in</Text>}
+                        {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Zaloguj się</Text>}
                     </TouchableOpacity>
 
                     <View style={styles.registerContainer}>
-                        <Text style={styles.registerText}>Dont have an account? </Text>
+                        <Text style={styles.registerText}>Nie masz konta? </Text>
                         <TouchableOpacity onPress={() => router.push('/register')}>
-                            <Text style={styles.registerLink}>Create an account</Text>
+                            <Text style={styles.registerLink}>Załóż konto</Text>
                         </TouchableOpacity>
                     </View>
                     <View style={styles.guestContainer}>
                         <TouchableOpacity onPress={() => router.replace('/passenger')}>
-                            <Text style={styles.guestLink}>Continue as guest</Text>
+                            <Text style={styles.guestLink}>Kontynuuj jako gość</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => setInfoModalVisible(true)} style={{ marginTop: 15 }}>
-                            <Text style={{ color: '#e60000', fontSize: 14, fontWeight: '600' }}>About us & Contact</Text>
+                            <Text style={{ color: '#e60000', fontSize: 14, fontWeight: '600' }}>O nas i Kontakt</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -160,20 +160,20 @@ export default function LoginScreen() {
             <Modal visible={infoModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setInfoModalVisible(false)}>
                 <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
-                        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>About us & Contact</Text>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>O nas i Kontakt</Text>
                         <TouchableOpacity onPress={() => setInfoModalVisible(false)}>
                             <Ionicons name="close" size={28} color="#111" />
                         </TouchableOpacity>
                     </View>
                     <ScrollView contentContainerStyle={{ padding: 20 }}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Transport Company KKBus sp z.o.o</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#111' }}>Firma transportowa KKBus sp. z o.o.</Text>
 
-                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>About us</Text>
+                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>O nas</Text>
                         <Text style={{ color: '#4b5563', marginBottom: 20, lineHeight: 22 }}>
-                            The company handles passenger transport between Kraków and Katowice. We offer safe transport using a modern fleet of vehicles, and our guest users can always count on full access to route and pricing information.
+                            Firma zajmuje się transportem osób między Krakowem a Katowicami. Oferujemy bezpieczne przejazdy nowoczesną flotą pojazdów, a nasi goście mogą zawsze liczyć na pełny dostęp do informacji o trasach i cenach.
                         </Text>
 
-                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>Contact Details</Text>
+                        <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 8, color: '#4b5563' }}>Dane kontaktowe</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
                             <Ionicons name="location" size={20} color="#e60000" style={{ marginRight: 10 }} />
                             <Text style={{ fontSize: 15, color: '#4b5563' }}>ul. Jana Pawła II 37, 31-864 Kraków</Text>

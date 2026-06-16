@@ -69,19 +69,19 @@ export default function AdminLayout() {
                     </View>
 
                     <View style={styles.menuSection}>
-                        <Text style={styles.sectionTitle}>OPERATIONS</Text>
-                        <MenuItem icon="grid-outline" label="Dashboard Overview" path="/admin" pathname={pathname} />
-                        <MenuItem icon="calendar-outline" label="Schedule & Fleet" path="/admin/schedule" pathname={pathname} />
+                        <Text style={styles.sectionTitle}>OPERACJE</Text>
+                        <MenuItem icon="grid-outline" label="Panel Główny" path="/admin" pathname={pathname} />
+                        <MenuItem icon="calendar-outline" label="Harmonogram i Flota" path="/admin/schedule" pathname={pathname} />
                         {/* DODANY KOD: Przycisk do zakładki Shifts */}
-                        <MenuItem icon="time-outline" label="Schedules & Shifts" path="/admin/shifts" pathname={pathname} />
-                        <MenuItem icon="ticket-outline" label="Manual Booking" path="/admin/booking" pathname={pathname} />
+                        <MenuItem icon="time-outline" label="Grafiki i Zmiany" path="/admin/shifts" pathname={pathname} />
+                        <MenuItem icon="ticket-outline" label="Ręczna Rezerwacja" path="/admin/booking" pathname={pathname} />
                         <MenuItem icon="gift-outline" label="Nagrody (Lojalność)" path="/admin/rewards" pathname={pathname} />
                     </View>
 
                     <View style={styles.menuSection}>
-                        <Text style={styles.sectionTitle}>MANAGEMENT</Text>
-                        <MenuItem icon="people-outline" label="Client Accounts" path="/admin/clients" pathname={pathname} />
-                        <MenuItem icon="document-text-outline" label="Financial Reports" path="/admin/reports" pathname={pathname} />
+                        <Text style={styles.sectionTitle}>ZARZĄDZANIE</Text>
+                        <MenuItem icon="people-outline" label="Konta Klientów" path="/admin/clients" pathname={pathname} />
+                        <MenuItem icon="document-text-outline" label="Raporty Finansowe" path="/admin/reports" pathname={pathname} />
                     </View>
 
                     <View style={styles.profileSection}>
@@ -100,7 +100,7 @@ export default function AdminLayout() {
                     <View style={[styles.topbar, { justifyContent: 'flex-end' }]}>
                         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                             <Ionicons name="log-out-outline" size={20} color="#111" />
-                            <Text style={styles.logoutText}>Logout</Text>
+                            <Text style={styles.logoutText}>Wyloguj</Text>
                         </TouchableOpacity>
                     </View>
                     <View style={styles.content}>

@@ -487,8 +487,8 @@ export default function AdminSchedule() {
     };
 
     const handleDeleteRoute = (id: number) => {
-        const title = "Cancel Course";
-        const message = "Are you sure you want to cancel this scheduled course Assignment?";
+        const title = "Anuluj Kurs";
+        const message = "Czy na pewno chcesz anulować przypisanie tego zaplanowanego kursu?";
 
         if (Platform.OS === 'web') {
             const confirmed = window.confirm(`${title}\n\n${message}`);
@@ -497,8 +497,8 @@ export default function AdminSchedule() {
         }
 
         Alert.alert(title, message, [
-            { text: "Cancel", style: "cancel" },
-            { text: "Confirm", style: "destructive", onPress: () => runCancelRouteConfirm(id) }
+            { text: "Anuluj", style: "cancel" },
+            { text: "Zatwierdź", style: "destructive", onPress: () => runCancelRouteConfirm(id) }
         ]);
     };
 
@@ -509,7 +509,7 @@ export default function AdminSchedule() {
 
             if (response.ok) {
                 setFleet(prev => prev.map(item => item.id === id ? { ...item, status: 'Cancelled' } : item));
-                showScheduleAlert("Cancelled", resData.message || "Fleet assignment cancelled successfully.");
+                showScheduleAlert("Anulowano", resData.message || "Przypisanie floty zostało pomyślnie anulowane.");
             } else {
                 showScheduleAlert("Błąd", resData.message || "Nie udało się anulować przypisania.");
             }
@@ -532,43 +532,43 @@ export default function AdminSchedule() {
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
 
             <View style={styles.pageHeader}>
-                <Text style={styles.title}>Schedule & Fleet Management</Text>
+                <Text style={styles.title}>Zarządzanie Harmonogramem i Flotą</Text>
 
                 <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                     <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#4b5563' }]} onPress={() => setBusModalVisible(true)}>
                         <Ionicons name="bus-outline" size={16} color="#fff" />
-                        <Text style={styles.primaryBtnText}>+ Bus</Text>
+                        <Text style={styles.primaryBtnText}>+ Autobus</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#4b5563' }]} onPress={() => setRouteModalVisible(true)}>
                         <Ionicons name="git-branch-outline" size={16} color="#fff" />
-                        <Text style={styles.primaryBtnText}>+ Route</Text>
+                        <Text style={styles.primaryBtnText}>+ Trasa</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#4b5563' }]} onPress={() => setStationModalVisible(true)}>
                         <Ionicons name="location-outline" size={16} color="#fff" />
-                        <Text style={styles.primaryBtnText}>+ Station</Text>
+                        <Text style={styles.primaryBtnText}>+ Stacja</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#059669' }]} onPress={loadRouteStopsConfigurator}>
                         <Ionicons name="create-outline" size={16} color="#fff" />
-                        <Text style={styles.primaryBtnText}>+ Edit Stops</Text>
+                        <Text style={styles.primaryBtnText}>+ Edytuj Przystanki</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#059669' }]} onPress={loadFaresConfigurator}>
                         <Ionicons name="cash-outline" size={16} color="#fff" />
-                        <Text style={styles.primaryBtnText}>+ Edit Fares</Text>
+                        <Text style={styles.primaryBtnText}>+ Edytuj Cennik</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.primaryBtn} onPress={loadFormOptions}>
                         <Ionicons name="add" size={18} color="#fff" />
-                        <Text style={styles.primaryBtnText}>Add New Entry</Text>
+                        <Text style={styles.primaryBtnText}>Dodaj Nowy Wpis</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             <View style={[styles.card, { padding: 0, overflow: 'hidden' }]}>
                 <View style={styles.tableHeader}>
-                    <Text style={[styles.headerCell, { flex: 1 }]}>BUS ID / REJ</Text>
-                    <Text style={[styles.headerCell, { flex: 1.5 }]}>ROUTE</Text>
-                    <Text style={[styles.headerCell, { flex: 1.5 }]}>SCHEDULE</Text>
+                    <Text style={[styles.headerCell, { flex: 1 }]}>ID AUTOBUSU / REJ</Text>
+                    <Text style={[styles.headerCell, { flex: 1.5 }]}>TRASA</Text>
+                    <Text style={[styles.headerCell, { flex: 1.5 }]}>HARMONOGRAM</Text>
                     <Text style={[styles.headerCell, { flex: 1, textAlign: 'center' }]}>STATUS</Text>
-                    <Text style={[styles.headerCell, { flex: 1, textAlign: 'center' }]}>DRIVER</Text>
+                    <Text style={[styles.headerCell, { flex: 1, textAlign: 'center' }]}>KIEROWCA</Text>
                     <Text style={{ width: 40 }}></Text>
                 </View>
 
@@ -590,7 +590,7 @@ export default function AdminSchedule() {
 
                             <View style={{ flex: 1, alignItems: 'center' }}>
                                 <View style={[styles.statusBadge, { backgroundColor: bus.status === 'Planned' ? COLORS.greenLight : COLORS.redLight }]}>
-                                    <Text style={[styles.statusText, { color: bus.status === 'Planned' ? COLORS.green : COLORS.red }]}>{bus.status}</Text>
+                                    <Text style={[styles.statusText, { color: bus.status === 'Planned' ? COLORS.green : COLORS.red }]}>{bus.status === 'Planned' ? 'Zaplanowany' : bus.status === 'Cancelled' ? 'Anulowany' : bus.status}</Text>
                                 </View>
                             </View>
                             <Text style={[styles.cell, { flex: 1, textAlign: 'center' }]}>{bus.driver}</Text>
@@ -610,12 +610,12 @@ export default function AdminSchedule() {
             <Modal visible={scheduleModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { overflow: 'visible', zIndex: 10 }]}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Add New Fleet Entry</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Dodaj Nowy Wpis Floty</Text>
 
-                        <Text style={styles.inputLabel}>CHOOSE VEHICLE</Text>
+                        <Text style={styles.inputLabel}>WYBIERZ POJAZD</Text>
                         <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(openDropdown === 'bus' ? null : 'bus')}>
                             <Text style={{ color: newEntry.busId ? '#111' : '#9ca3af' }}>
-                                {availableBuses.find(b => b.id?.toString() === newEntry.busId)?.registrationNumber || "Select active bus..."}
+                                {availableBuses.find(b => b.id?.toString() === newEntry.busId)?.registrationNumber || "Wybierz aktywny autobus..."}
                             </Text>
                             <Ionicons name={openDropdown === 'bus' ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
                         </TouchableOpacity>
@@ -624,17 +624,17 @@ export default function AdminSchedule() {
                                 <ScrollView nestedScrollEnabled style={{ maxHeight: 150 }}>
                                     {availableBuses.map((bus) => (
                                         <TouchableOpacity key={bus.id} style={styles.dropdownItem} onPress={() => { setNewEntry({ ...newEntry, busId: bus.id?.toString() || '' }); setOpenDropdown(null); }}>
-                                            <Text>{bus.registrationNumber || "No registration"} ({bus.seatingCapacity || 0} seats)</Text>
+                                            <Text>{bus.registrationNumber || "Brak rejestracji"} ({bus.seatingCapacity || 0} miejsc)</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
                             </View>
                         )}
 
-                        <Text style={[styles.inputLabel, { marginTop: 15 }]}>CHOOSE ROUTE</Text>
+                        <Text style={[styles.inputLabel, { marginTop: 15 }]}>WYBIERZ TRASĘ</Text>
                         <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(openDropdown === 'route' ? null : 'route')}>
                             <Text style={{ color: newEntry.route ? '#111' : '#9ca3af' }}>
-                                {availableRoutes.find(r => r.id?.toString() === newEntry.route)?.name || "Select route..."}
+                                {availableRoutes.find(r => r.id?.toString() === newEntry.route)?.name || "Wybierz trasę..."}
                             </Text>
                             <Ionicons name={openDropdown === 'route' ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
                         </TouchableOpacity>
@@ -643,17 +643,17 @@ export default function AdminSchedule() {
                                 <ScrollView nestedScrollEnabled style={{ maxHeight: 150 }}>
                                     {availableRoutes.map((route) => (
                                         <TouchableOpacity key={route.id} style={styles.dropdownItem} onPress={() => { setNewEntry({ ...newEntry, route: route.id?.toString() || '' }); setOpenDropdown(null); }}>
-                                            <Text>{route.name || "Unnamed route"}</Text>
+                                            <Text>{route.name || "Trasa nienazwana"}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
                             </View>
                         )}
 
-                        <Text style={[styles.inputLabel, { marginTop: 15 }]}>ASSIGN DRIVER</Text>
+                        <Text style={[styles.inputLabel, { marginTop: 15 }]}>PRZYPISZ KIEROWCĘ</Text>
                         <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(openDropdown === 'driver' ? null : 'driver')}>
                             <Text style={{ color: newEntry.driver ? '#111' : '#9ca3af' }}>
-                                {availableDrivers.find(d => d.id?.toString() === newEntry.driver)?.name || "Select employee..."}
+                                {availableDrivers.find(d => d.id?.toString() === newEntry.driver)?.name || "Wybierz pracownika..."}
                             </Text>
                             <Ionicons name={openDropdown === 'driver' ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
                         </TouchableOpacity>
@@ -662,7 +662,7 @@ export default function AdminSchedule() {
                                 <ScrollView nestedScrollEnabled style={{ maxHeight: 150 }}>
                                     {availableDrivers.map((driver) => (
                                         <TouchableOpacity key={driver.id} style={styles.dropdownItem} onPress={() => { setNewEntry({ ...newEntry, driver: driver.id?.toString() || '' }); setOpenDropdown(null); }}>
-                                            <Text>{driver.name || "No name"} ({driver.id})</Text>
+                                            <Text>{driver.name || "Brak imienia"} ({driver.id})</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
@@ -670,7 +670,7 @@ export default function AdminSchedule() {
                         )}
 
                         <View style={{ marginTop: 15 }}>
-                            <Text style={styles.inputLabel}>SCHEDULE DATE</Text>
+                            <Text style={styles.inputLabel}>DATA HARMONOGRAMU</Text>
                             <input
                                 type="date"
                                 style={{ ...(styles.nativeDateInput as any), marginBottom: 12 }}
@@ -680,7 +680,7 @@ export default function AdminSchedule() {
 
                             <View style={{ flexDirection: 'row', gap: 12 }}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabel}>DEPARTURE TIME</Text>
+                                    <Text style={styles.inputLabel}>CZAS ODJAZDU</Text>
                                     <input
                                         type="time"
                                         style={styles.nativeDateInput as any}
@@ -689,7 +689,7 @@ export default function AdminSchedule() {
                                     />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabel}>ARRIVAL TIME</Text>
+                                    <Text style={styles.inputLabel}>CZAS PRZYJAZDU</Text>
                                     <input
                                         type="time"
                                         style={styles.nativeDateInput as any}
@@ -704,7 +704,7 @@ export default function AdminSchedule() {
                             onPress={() => setIsRepeating(!isRepeating)}
                         >
                             <Ionicons name={isRepeating ? "checkbox" : "square-outline"} size={22} color={isRepeating ? COLORS.red : COLORS.grayText} />
-                            <Text style={{ fontWeight: 'bold', color: '#111' }}>Repeat schedule</Text>
+                            <Text style={{ fontWeight: 'bold', color: '#111' }}>Powtarzaj harmonogram</Text>
                         </TouchableOpacity>
 
                         {isRepeating && (
@@ -712,7 +712,7 @@ export default function AdminSchedule() {
 
                                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15 }}>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={styles.inputLabel}>END DATE</Text>
+                                        <Text style={styles.inputLabel}>DATA KOŃCOWA</Text>
                                         <input
                                             type="date"
                                             style={styles.nativeDateInput as any}
@@ -722,23 +722,23 @@ export default function AdminSchedule() {
                                         />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={styles.inputLabel}>FREQUENCY</Text>
+                                        <Text style={styles.inputLabel}>CZĘSTOTLIWOŚĆ</Text>
                                         <select
                                             style={styles.nativeDateInput as any}
                                             value={repeatConfig.frequency}
                                             onChange={(e) => setRepeatConfig({ ...repeatConfig, frequency: e.target.value as any })}
                                         >
-                                            <option value="daily">Every day</option>
-                                            <option value="weekly">Every week</option>
-                                            <option value="biweekly">Every 2 weeks</option>
-                                            <option value="custom">Selected days</option>
+                                            <option value="daily">Codziennie</option>
+                                            <option value="weekly">Co tydzień</option>
+                                            <option value="biweekly">Co 2 tygodnie</option>
+                                            <option value="custom">Wybrane dni</option>
                                         </select>
                                     </View>
                                 </View>
 
                                 {repeatConfig.frequency === 'custom' && (
                                     <View>
-                                        <Text style={styles.inputLabel}>SELECT DAYS</Text>
+                                        <Text style={styles.inputLabel}>WYBIERZ DNI</Text>
                                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 5 }}>
                                             {DAYS_OF_WEEK.map(day => {
                                                 const isSelected = repeatConfig.customDays.includes(day.value);
@@ -780,8 +780,8 @@ export default function AdminSchedule() {
                                 setScheduleModalVisible(false);
                                 setOpenDropdown(null);
                                 setIsRepeating(false);
-                            }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAddEntry}><Text style={styles.primaryBtnText}>Save</Text></TouchableOpacity>
+                            }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Anuluj</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAddEntry}><Text style={styles.primaryBtnText}>Zapisz</Text></TouchableOpacity>
                         </View>
                     </View>
                 </View>
@@ -790,44 +790,44 @@ export default function AdminSchedule() {
             <Modal visible={busModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 500, paddingHorizontal: 25, paddingTop: 25, paddingBottom: 20 }]}>
-                        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>Add New Bus to Fleet</Text>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>Dodaj Nowy Autobus do Floty</Text>
 
                         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.compactLabel}>VIN NUMBER</Text>
-                                <TextInput style={styles.compactInput} placeholder="e.g. WBA000000..." value={newBus.vin} onChangeText={(text) => setNewBus({ ...newBus, vin: text })} />
+                                <Text style={styles.compactLabel}>NUMER VIN</Text>
+                                <TextInput style={styles.compactInput} placeholder="np. WBA000000..." value={newBus.vin} onChangeText={(text) => setNewBus({ ...newBus, vin: text })} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.compactLabel}>REGISTRATION NUMBER</Text>
-                                <TextInput style={styles.compactInput} placeholder="e.g. KR 12345" value={newBus.registrationNumber} onChangeText={(text) => setNewBus({ ...newBus, registrationNumber: text })} />
+                                <Text style={styles.compactLabel}>NUMER REJESTRACYJNY</Text>
+                                <TextInput style={styles.compactInput} placeholder="np. KR 12345" value={newBus.registrationNumber} onChangeText={(text) => setNewBus({ ...newBus, registrationNumber: text })} />
                             </View>
                         </View>
 
                         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.compactLabel}>BRAND</Text>
-                                <TextInput style={styles.compactInput} placeholder="e.g. Mercedes" value={newBus.brand} onChangeText={(text) => setNewBus({ ...newBus, brand: text })} />
+                                <Text style={styles.compactLabel}>MARKA</Text>
+                                <TextInput style={styles.compactInput} placeholder="np. Mercedes" value={newBus.brand} onChangeText={(text) => setNewBus({ ...newBus, brand: text })} />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.compactLabel}>MODEL</Text>
-                                <TextInput style={styles.compactInput} placeholder="e.g. Tourismo" value={newBus.model} onChangeText={(text) => setNewBus({ ...newBus, model: text })} />
+                                <TextInput style={styles.compactInput} placeholder="np. Tourismo" value={newBus.model} onChangeText={(text) => setNewBus({ ...newBus, model: text })} />
                             </View>
                         </View>
 
                         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.compactLabel}>PARKING LOCATION</Text>
-                                <TextInput style={styles.compactInput} placeholder="e.g. Baza Główna" value={newBus.parkingLocation} onChangeText={(text) => setNewBus({ ...newBus, parkingLocation: text })} />
+                                <Text style={styles.compactLabel}>MIEJSCE PARKOWANIA</Text>
+                                <TextInput style={styles.compactInput} placeholder="np. Baza Główna" value={newBus.parkingLocation} onChangeText={(text) => setNewBus({ ...newBus, parkingLocation: text })} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.compactLabel}>SEATING CAPACITY</Text>
+                                <Text style={styles.compactLabel}>LICZBA MIEJSC</Text>
                                 <TextInput style={styles.compactInput} keyboardType="number-pad" placeholder="55" value={newBus.seatingCapacity} onChangeText={(text) => setNewBus({ ...newBus, seatingCapacity: text })} />
                             </View>
                         </View>
 
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 15, marginTop: 15 }}>
-                            <TouchableOpacity onPress={() => setBusModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10, fontSize: 14 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20, height: 40 }]} onPress={handleAddBus}><Text style={styles.primaryBtnText}>Add Bus</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setBusModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10, fontSize: 14 }}>Anuluj</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20, height: 40 }]} onPress={handleAddBus}><Text style={styles.primaryBtnText}>Dodaj Autobus</Text></TouchableOpacity>
                         </View>
                     </View>
                 </View>
@@ -836,14 +836,14 @@ export default function AdminSchedule() {
             <Modal visible={routeModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Create New Route</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Utwórz Nową Trasę</Text>
 
-                        <Text style={styles.inputLabel}>ROUTE LINE NAME</Text>
-                        <TextInput style={styles.input} placeholder="e.g. Kraków - Zakopane" value={newRoute.name} onChangeText={(text) => setNewRoute({ name: text })} />
+                        <Text style={styles.inputLabel}>NAZWA LINII TRASY</Text>
+                        <TextInput style={styles.input} placeholder="np. Kraków - Zakopane" value={newRoute.name} onChangeText={(text) => setNewRoute({ name: text })} />
 
                         <View style={{ flexDirection: 'row', gap: 15, justifyContent: 'flex-end', marginTop: 20 }}>
-                            <TouchableOpacity onPress={() => setRouteModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAddRoute}><Text style={styles.primaryBtnText}>Create Route</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setRouteModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Anuluj</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleAddRoute}><Text style={styles.primaryBtnText}>Utwórz Trasę</Text></TouchableOpacity>
                         </View>
                     </View>
                 </View>
@@ -852,17 +852,17 @@ export default function AdminSchedule() {
             <Modal visible={stationModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Add New Destination Station</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>Dodaj Nową Stację Docelową</Text>
 
-                        <Text style={styles.inputLabel}>STATION NAME</Text>
-                        <TextInput style={styles.input} placeholder="e.g. Katowice Dworzec" value={newStation.name} onChangeText={(text) => setNewStation({ ...newStation, name: text })} />
+                        <Text style={styles.inputLabel}>NAZWA STACJI</Text>
+                        <TextInput style={styles.input} placeholder="np. Katowice Dworzec" value={newStation.name} onChangeText={(text) => setNewStation({ ...newStation, name: text })} />
 
-                        <Text style={[styles.inputLabel, { marginTop: 15 }]}>EXACT ADDRESS</Text>
-                        <TextInput style={styles.input} placeholder="e.g. ul. Piotra Skargi 4" value={newStation.exactAddress} onChangeText={(text) => setNewStation({ ...newStation, exactAddress: text })} />
+                        <Text style={[styles.inputLabel, { marginTop: 15 }]}>DOKŁADNY ADRES</Text>
+                        <TextInput style={styles.input} placeholder="np. ul. Piotra Skargi 4" value={newStation.exactAddress} onChangeText={(text) => setNewStation({ ...newStation, exactAddress: text })} />
 
                         <View style={{ flexDirection: 'row', gap: 15, justifyContent: 'flex-end', marginTop: 25 }}>
-                            <TouchableOpacity onPress={() => setStationModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleCreateStation}><Text style={styles.primaryBtnText}>Save Station</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setStationModalVisible(false)}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Anuluj</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20 }]} onPress={handleCreateStation}><Text style={styles.primaryBtnText}>Zapisz Stację</Text></TouchableOpacity>
                         </View>
                     </View>
                 </View>
@@ -871,12 +871,12 @@ export default function AdminSchedule() {
             <Modal visible={routeStopsModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 550, overflow: 'visible' }]}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15 }}>Configure Route Stops Sequence</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15 }}>Konfiguruj Sekwencję Przystanków Trasy</Text>
 
-                        <Text style={styles.inputLabel}>SELECT ROUTE LINE</Text>
+                        <Text style={styles.inputLabel}>WYBIERZ LINIĘ TRASY</Text>
                         <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(openDropdown === 'editRoute' ? null : 'editRoute')}>
                             <Text style={{ color: selectedRouteId ? '#111' : '#9ca3af' }}>
-                                {availableRoutes.find(r => r.id?.toString() === selectedRouteId)?.name || "Choose route line..."}
+                                {availableRoutes.find(r => r.id?.toString() === selectedRouteId)?.name || "Wybierz linię trasy..."}
                             </Text>
                             <Ionicons name={openDropdown === 'editRoute' ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
                         </TouchableOpacity>
@@ -894,7 +894,7 @@ export default function AdminSchedule() {
 
                         {selectedRouteId !== '' && (
                             <View style={{ marginTop: 20, maxHeight: 220 }}>
-                                <Text style={[styles.inputLabel, { marginBottom: 10 }]}>STATIONS TIMELINE ORDER</Text>
+                                <Text style={[styles.inputLabel, { marginBottom: 10 }]}>KOLEJNOŚĆ PRZYSTANKÓW</Text>
                                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
                                     {routeStops.map((stop, index) => (
                                         <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -911,7 +911,7 @@ export default function AdminSchedule() {
                                                         setRouteStops(prev => prev.map((s, i) => i === index ? { ...s, station_id: val } : s));
                                                     }}
                                                 >
-                                                    <option value="">-- Choose stop --</option>
+                                                    <option value="">-- Wybierz przystanek --</option>
                                                     {availableStations.map(st => (
                                                         <option key={st.id} value={st.id}>{st.name}</option>
                                                     ))}
@@ -946,15 +946,15 @@ export default function AdminSchedule() {
                                     ))}
                                     <TouchableOpacity style={styles.plusButtonRow} onPress={handleAddStopToRouteSequence}>
                                         <Ionicons name="add-circle" size={26} color="#059669" />
-                                        <Text style={{ color: '#059669', fontWeight: 'bold', fontSize: 14 }}>Add Stop Location</Text>
+                                        <Text style={{ color: '#059669', fontWeight: 'bold', fontSize: 14 }}>Dodaj Lokalizację Przystanku</Text>
                                     </TouchableOpacity>
                                 </ScrollView>
                             </View>
                         )}
 
                         <View style={{ flexDirection: 'row', gap: 15, justifyContent: 'flex-end', marginTop: 25 }}>
-                            <TouchableOpacity onPress={() => { setRouteStopsModalVisible(false); setSelectedRouteId(''); setRouteStops([]); setOpenDropdown(null); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20, backgroundColor: '#059669' }]} disabled={!selectedRouteId} onPress={handleSaveRouteStopsSequence}><Text style={styles.primaryBtnText}>Save Sequence</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => { setRouteStopsModalVisible(false); setSelectedRouteId(''); setRouteStops([]); setOpenDropdown(null); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Anuluj</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20, backgroundColor: '#059669' }]} disabled={!selectedRouteId} onPress={handleSaveRouteStopsSequence}><Text style={styles.primaryBtnText}>Zapisz Sekwencję</Text></TouchableOpacity>
                         </View>
                     </View>
                 </View>
@@ -963,12 +963,12 @@ export default function AdminSchedule() {
             <Modal visible={faresModalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { maxWidth: 650, overflow: 'visible' }]}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15 }}>Configure Route Fares</Text>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 15 }}>Konfiguruj Cennik Trasy</Text>
 
-                        <Text style={styles.inputLabel}>SELECT ROUTE LINE</Text>
+                        <Text style={styles.inputLabel}>WYBIERZ LINIĘ TRASY</Text>
                         <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpenDropdown(openDropdown === 'editFareRoute' ? null : 'editFareRoute')}>
                             <Text style={{ color: selectedFareRouteId ? '#111' : '#9ca3af' }}>
-                                {availableRoutes.find(r => r.id?.toString() === selectedFareRouteId)?.name || "Choose route line..."}
+                                {availableRoutes.find(r => r.id?.toString() === selectedFareRouteId)?.name || "Wybierz linię trasy..."}
                             </Text>
                             <Ionicons name={openDropdown === 'editFareRoute' ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
                         </TouchableOpacity>
@@ -986,12 +986,12 @@ export default function AdminSchedule() {
 
                         {selectedFareRouteId !== '' && (
                             <View style={{ marginTop: 20, maxHeight: 300 }}>
-                                <Text style={[styles.inputLabel, { marginBottom: 10 }]}>FARE SEGMENTS</Text>
+                                <Text style={[styles.inputLabel, { marginBottom: 10 }]}>SEGMENTY TARYFOWE</Text>
                                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
                                     {routeFares.map((fare, index) => (
                                         <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, backgroundColor: '#f9fafb', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
                                             <View style={{ flex: 1 }}>
-                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>From Station</Text>
+                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>Od Stacji</Text>
                                                 <select
                                                     style={styles.nativeSelectElement}
                                                     value={fare.start_station_id || ''}
@@ -1000,7 +1000,7 @@ export default function AdminSchedule() {
                                                         setRouteFares(prev => prev.map((f, i) => i === index ? { ...f, start_station_id: val } : f));
                                                     }}
                                                 >
-                                                    <option value="">-- Start --</option>
+                                                    <option value="">-- Początek --</option>
                                                     {availableStations.map(st => (
                                                         <option key={st.id} value={st.id}>{st.name}</option>
                                                     ))}
@@ -1010,7 +1010,7 @@ export default function AdminSchedule() {
                                             <Ionicons name="arrow-forward" size={16} color="#9ca3af" />
 
                                             <View style={{ flex: 1 }}>
-                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>To Station</Text>
+                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>Do Stacji</Text>
                                                 <select
                                                     style={styles.nativeSelectElement}
                                                     value={fare.end_station_id || ''}
@@ -1019,7 +1019,7 @@ export default function AdminSchedule() {
                                                         setRouteFares(prev => prev.map((f, i) => i === index ? { ...f, end_station_id: val } : f));
                                                     }}
                                                 >
-                                                    <option value="">-- End --</option>
+                                                    <option value="">-- Koniec --</option>
                                                     {availableStations.map(st => (
                                                         <option key={st.id} value={st.id}>{st.name}</option>
                                                     ))}
@@ -1027,7 +1027,7 @@ export default function AdminSchedule() {
                                             </View>
 
                                             <View style={{ width: 80 }}>
-                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>Price (PLN)</Text>
+                                                <Text style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>Cena (PLN)</Text>
                                                 <TextInput
                                                     style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14 }}
                                                     keyboardType="numeric"
@@ -1046,15 +1046,15 @@ export default function AdminSchedule() {
 
                                     <TouchableOpacity style={[styles.plusButtonRow, { marginTop: 10 }]} onPress={handleAddFareSegment}>
                                         <Ionicons name="add-circle" size={26} color="#059669" />
-                                        <Text style={{ color: '#059669', fontWeight: 'bold', fontSize: 14 }}>Add Fare Segment</Text>
+                                        <Text style={{ color: '#059669', fontWeight: 'bold', fontSize: 14 }}>Dodaj Segment Taryfowy</Text>
                                     </TouchableOpacity>
                                 </ScrollView>
                             </View>
                         )}
 
                         <View style={{ flexDirection: 'row', gap: 15, justifyContent: 'flex-end', marginTop: 25 }}>
-                            <TouchableOpacity onPress={() => { setFaresModalVisible(false); setSelectedFareRouteId(''); setRouteFares([]); setOpenDropdown(null); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Cancel</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20, backgroundColor: '#059669' }]} disabled={!selectedFareRouteId} onPress={handleSaveFares}><Text style={styles.primaryBtnText}>Save Fares</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => { setFaresModalVisible(false); setSelectedFareRouteId(''); setRouteFares([]); setOpenDropdown(null); }}><Text style={{ color: '#888', fontWeight: 'bold', padding: 10 }}>Anuluj</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.primaryBtn, { paddingHorizontal: 20, backgroundColor: '#059669' }]} disabled={!selectedFareRouteId} onPress={handleSaveFares}><Text style={styles.primaryBtnText}>Zapisz Cennik</Text></TouchableOpacity>
                         </View>
                     </View>
                 </View>

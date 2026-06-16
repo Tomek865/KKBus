@@ -83,23 +83,23 @@ export default function AdminDashboard() {
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             <View style={styles.pageHeader}>
                 <View>
-                    <Text style={styles.title}>Dashboard Overview</Text>
-                    <Text style={styles.subtitle}>REAL-TIME STATISTICS & METRICS</Text>
+                    <Text style={styles.title}>Przegląd Dashboardu</Text>
+                    <Text style={styles.subtitle}>STATYSTYKI I METRYKI W CZASIE RZECZYWISTYM</Text>
                 </View>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20, marginBottom: 30 }}>
-                <StatCard title="TOTAL REVENUE" value={stats?.revenue || "0.00 PLN"} icon="cash-outline" iconBg={COLORS.greenLight} />
-                <StatCard title="ACTIVE BUSES" value={stats?.buses || "0 / 0"} icon="bus-outline" iconBg={COLORS.redLight} />
-                <StatCard title="TOTAL PASSENGERS" value={stats?.passengers || "0"} icon="people-outline" iconBg={COLORS.blueLight} />
-                <StatCard title="SCHEDULED ROUTES" value={stats?.routes || "0"} icon="calendar-outline" iconBg="#e0e7ff" />
+                <StatCard title="CAŁKOWITY PRZYCHÓD" value={stats?.revenue || "0.00 PLN"} icon="cash-outline" iconBg={COLORS.greenLight} />
+                <StatCard title="AKTYWNE AUTOBUSY" value={stats?.buses || "0 / 0"} icon="bus-outline" iconBg={COLORS.redLight} />
+                <StatCard title="CAŁKOWITA LICZBA PASAŻERÓW" value={stats?.passengers || "0"} icon="people-outline" iconBg={COLORS.blueLight} />
+                <StatCard title="ZAPLANOWANE TRASY" value={stats?.routes || "0"} icon="calendar-outline" iconBg="#e0e7ff" />
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20, marginBottom: 30 }}>
 
                 <View style={{ flex: 2, gap: 20 }}>
                     <View style={[styles.card, { flex: 1 }]}>
-                        <Text style={localStyles.sectionTitle}>Fleet Overview</Text>
+                        <Text style={localStyles.sectionTitle}>Przegląd Floty</Text>
                         <ScrollView style={{ maxHeight: 420 }} nestedScrollEnabled showsVerticalScrollIndicator={true}>
                             {buses.map((bus) => (
                                 <View key={bus.id} style={localStyles.listItemRow}>
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
                                         </View>
                                     </View>
                                     <View style={[styles.statusBadge, { backgroundColor: bus.status === 'Available' ? COLORS.greenLight : COLORS.redLight }]}>
-                                        <Text style={[styles.statusText, { color: bus.status === 'Available' ? COLORS.green : COLORS.red }]}>{bus.status}</Text>
+                                        <Text style={[styles.statusText, { color: bus.status === 'Available' ? COLORS.green : COLORS.red }]}>{bus.status === 'Available' ? 'Dostępny' : bus.status}</Text>
                                     </View>
                                 </View>
                             ))}
@@ -129,7 +129,7 @@ export default function AdminDashboard() {
                             <View style={[localStyles.iconContainer, { backgroundColor: COLORS.redLight }]}>
                                 <Ionicons name="calendar" size={20} color={COLORS.red} />
                             </View>
-                            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Schedule Management</Text>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Zarządzanie Harmonogramem</Text>
                         </View>
                         <TouchableOpacity style={[styles.primaryBtn, { width: '100%', height: 40 }]} onPress={() => router.push('/admin/schedule')}>
                             <Text style={styles.primaryBtnText}>Otwórz organizator kursów</Text>
@@ -139,7 +139,7 @@ export default function AdminDashboard() {
 
                     <View style={[styles.card, { flex: 1 }]}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                            <Text style={localStyles.sectionTitle}>Top Customers (Pkt)</Text>
+                            <Text style={localStyles.sectionTitle}>Najlepsi Klienci (Pkt)</Text>
                             <TouchableOpacity onPress={() => router.push('/admin/clients')}>
                                 <Text style={{ fontSize: 12, color: COLORS.blue, fontWeight: 'bold' }}>Zarządzaj kontami</Text>
                             </TouchableOpacity>
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
 
             <View style={{ flexDirection: 'row', gap: 20 }}>
                 <View style={[styles.card, { flex: 1 }]}>
-                    <Text style={localStyles.sectionTitle}>Active Routes</Text>
+                    <Text style={localStyles.sectionTitle}>Aktywne Trasy</Text>
                     <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
                         {routes.map((route) => (
                             <View key={route.id} style={localStyles.listItemRow}>
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
                 </View>
 
                 <View style={[styles.card, { flex: 1 }]}>
-                    <Text style={localStyles.sectionTitle}>Stations Database</Text>
+                    <Text style={localStyles.sectionTitle}>Baza Przystanków</Text>
                     <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
                         {stations.map((station) => (
                             <View key={station.id} style={localStyles.listItemRow}>
